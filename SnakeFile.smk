@@ -2,6 +2,7 @@ configfile: "config_test.yaml"
 
 include: "src/FormatingFiltering.smk"
 include: "src/ProbabilityOfPreyDetection/ProbabilityOfPreyDetection.smk"
+include: "src/CellLineExtraction/GetCellLineFromPID.smk"
 
 rule all:
     input:

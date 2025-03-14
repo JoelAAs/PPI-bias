@@ -55,8 +55,8 @@ def filter_and_index(intact_df):
         reform_list.append({
             "bait": bait,
             "prey": prey,
-            "pubmedID": row["pubmedID"],
-            "detectionMethod": row["detectionMethod"].replace(":", "-")
+            "pubmed_id": row["pubmedID"],
+            "detection_method": row["detectionMethod"].replace(":", "-")
         })
 
     bait_prey_df = pd.DataFrame(reform_list)
@@ -80,10 +80,10 @@ def get_interaction_dict(bait_prey_df, method="Y2H-pooling", prey_file=None):
     max_interaction_dict = dict()
     observed_interaction_dict = dict()
 
-    studies = bait_prey_df["pubmedID"].unique()
+    studies = bait_prey_df["pubmed_id"].unique()
     for study in studies:
 
-            study_df = bait_prey_df[bait_prey_df["pubmedID"] == study]
+            study_df = bait_prey_df[bait_prey_df["pubmed_id"] == study]
             baits = set()
             preys = set()
 

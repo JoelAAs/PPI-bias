@@ -1,0 +1,2 @@
+https://ftp.ncbi.nlm.nih.gov/pub/lu/PubTator3/cellline2pubtator3.gz
+https://ftp.expasy.org/databases/cellosaurus/cellosaurus.txt

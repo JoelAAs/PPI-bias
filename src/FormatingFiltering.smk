@@ -57,22 +57,28 @@ rule subset_method:
     run:
         intact_df = pd.read_csv(input.formated, sep="\t")
         for method in config["methods"]:
-            method_subset = intact_df[intact_df["detectionMethod"] == method]
+            method_subset = intact_df[intact_df["detection_method"] == method]
             method_subset.to_csv(
                 f"work_folder/intact/method_subset/{method}.csv",
                 sep="\t",
                 index=False
             )
 
-rule subset_cellline:
+rule subset_cell_line:
     input:
-        proteome_pod = "",
+        pubmed_id = "work_folder/pid_cell_line/{cell_line}.csv",
         method_subset = "work_folder/intact/method_subset/{method}.csv"
     output:
         bait_prey_table = "work_folder/intact/method_subset/cell_line_subset/interactions_{cell_line}_{method}.csv",
     run:
-        ##TODO:
-        touch(output.bait_prey_table)
+        with open(input.pubmed_id, "r") as f:
+            pids = [l.strip() for l in f]
+            pids = pids[1:]
+
+        method_df = pd.read_csv(input.method_subset, sep = "\t")
+        method_df = method_df[method_df["pubmed_id"].isin(pids)]
+        method_df.to_csv(output.bait_prey_table, sep = "\t", index = False)
+
 
 rule get_ppi_counts:
     input:
