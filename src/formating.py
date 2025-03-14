@@ -126,7 +126,7 @@ def dict_to_pairs_file(max_interaction_dict, observed_interaction_dict, output_f
     if method == "MS":
         with open(prey_pod_file, "r") as f:
             for l in f:
-                protein_id, prey_pod = l.strip().split()
+                gene_name, protein_id, prey_pod = l.strip().split()
                 pod_dict[protein_id] = prey_pod
 
 

@@ -1,10 +1,11 @@
-configfile: "config.yaml"
+configfile: "config_test.yaml"
 
 include: "src/FormatingFiltering.smk"
+include: "src/ProbabilityOfPreyDetection/ProbabilityOfPreyDetection.smk"
 
 rule all:
     input:
         expand(
-            "work_folder/intact/method_subset/interaction_counts/pair_count_{method}.csv",
-            method = config["methods"]
+            "work_folder/intact/pair_count/ppi_pair_counts_{cell_line}_{method}.csv",
+            method = config["methods"], cell_line = "HeLa"
         )

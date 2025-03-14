@@ -47,7 +47,7 @@ rule get_protein_index:
                     wip.write(f"{i}\t{protein}\n")
                     wpi.write(f"{protein}\t{i}\n")
 
-rule method_filter:
+rule subset_method:
     input:
         formated = "work_folder/intact/method_subset/bait_prey_publications.csv"
     output:
@@ -64,53 +64,36 @@ rule method_filter:
                 index=False
             )
 
-rule get_interaction_matrices:
+rule subset_cellline:
     input:
-        bait_prey_table = "work_folder/intact/method_subset/interactions_{cell_line}_{method}.csv",
+        proteome_pod = "",
+        method_subset = "work_folder/intact/method_subset/{method}.csv"
+    output:
+        bait_prey_table = "work_folder/intact/method_subset/cell_line_subset/interactions_{cell_line}_{method}.csv",
+    run:
+        ##TODO:
+        touch(output.bait_prey_table)
+
+rule get_ppi_counts:
+    input:
+        bait_prey_table = "work_folder/intact/method_subset/cell_line_subset/interactions_{cell_line}_{method}.csv",
         prey_pod = "work_folder/cell_type_pod/{cell_line}_pod.csv"
     output:
-        protein_pairs = "work_folder/intact/pair_count/interaction_pairs_{cell_line}_{method}.csv"
+        protein_pairs = "work_folder/intact/pair_count/ppi_pair_counts_{cell_line}_{method}.csv"
 
     run:
         bait_prey_df = pd.read_csv(input.bait_prey_table, sep="\t")
         method =  config["methods"][wildcards.method]
         pod_file = config["cell_lines"][wildcards.cell_line]["pod"]
+
         max_interaction_dict, observed_interaction_dict  = get_interaction_dict(
             bait_prey_df,
             method=method,
             prey_file=pod_file)
 
-        = get_interaction_dict(
-            bait_prey_df,
-            method
-            protein_to_index,
-        )
-        for filename, matrix in zip(
-                [max_interaction_matrix, observed_interaction_matrix],
-                [output.max_interactions, output.observed_interactions]
-        ):
-            f = gzip.GzipFile(filename, "w")
-            np.save(f, matrix)
-            f.close()
-
-
-rule get_interaction_pairs:
-    input:
-        max_interactions = "work_folder/intact/method_subset/count_matrices/max_{method}.npy.gz",
-        observed_interactions = "work_folder/intact/method_subset/count_matrices/observed_{method}.npy.gz",
-        index_to_protein_file= "work_folder/intact/index/index_to_protein.csv"
-    output:
-        protein_pair_counts = "work_folder/intact/method_subset/interaction_counts/pair_count_{method}.csv"
-    run:
-        index_to_protein = get_index_dict(input.index_to_protein_file, (int, str))
-        f = gzip.GzipFile(input.max_interactions, "r")
-        max_interaction_matrix = np.load(f, allow_pickle=True); f.close()
-        f = gzip.GzipFile(input.observed_interactions,"r")
-        observed_interaction_matrix = np.load(f, allow_pickle=True); f.close()
-
-        max_interaction_matrix(
-            max_interaction_matrix,
-            observed_interaction_matrix,
-            index_to_protein,
-            output.protein_pair_counts
-        )
+        dict_to_pairs_file(
+            max_interaction_dict,
+            observed_interaction_dict,
+            output.protein_pairs,
+            method = method,
+            prey_pod_file = pod_file)

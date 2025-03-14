@@ -1,0 +1,8 @@
+methods:
+    MI-0007: "MS"# (anti tag coimmunoprecipitation)
+    MI-1112: "Y2H-pooling"# (two hybrid prey pooling approach)
+
+
+cell_lines:
+    HeLa:
+        pod: "data/geneGroups/relative_freq_wide_selected_N04547_M07444.csv"
