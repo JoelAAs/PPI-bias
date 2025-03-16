@@ -1,18 +1,11 @@
 import gzip
+from fileinput import input
+
 import pandas as pd
 import numpy as np
 from formating import *
 
 
-###
-def get_index_dict(filename, dtypes = (str, str)):
-    index_dict = dict()
-    with open(filename, "r") as f:
-        for l in f:
-            key, value = l.strip().split("\t")
-            index_dict[dtypes[0](key)] = dtypes[1](value)
-
-    return index_dict
 
 ##### Rules
 rule format_intact:
@@ -29,23 +22,13 @@ rule format_intact:
             index = None
         )
 
-rule get_protein_index:
+rule get_gene_name_uniprot:
     input:
-        formated = "work_folder/intact/method_subset/bait_prey_publications.csv"
+        intact = "data/intact/human.txt"
     output:
-        protein_to_index_file = "work_folder/intact/index/protein_to_index.csv",
-        index_to_protein_file = "work_folder/intact/index/index_to_protein.csv"
+        uniprot = "work_folder/intact/uniprot_to_gene_name.csv"
     run:
-        bait_prey_df = pd.read_csv(input.formated, sep = "\t")
-        all_proteins = sorted(list(set(
-            bait_prey_df["bait"].tolist() +
-            bait_prey_df["prey"].tolist()
-        )))
-        with open(output.index_to_protein_file, "w") as wip:
-            with open(output.protein_to_index_file, "w") as wpi:
-                for i, protein in enumerate(all_proteins):
-                    wip.write(f"{i}\t{protein}\n")
-                    wpi.write(f"{protein}\t{i}\n")
+        get_gene_names(input.intact, output.uniprot)
 
 rule subset_method:
     input:
@@ -71,13 +54,21 @@ rule subset_cell_line:
     output:
         bait_prey_table = "work_folder/intact/method_subset/cell_line_subset/interactions_{cell_line}_{method}.csv",
     run:
-        with open(input.pubmed_id, "r") as f:
-            pids = [l.strip() for l in f]
-            pids = pids[1:]
+        # Hacky reform later
+        if wildcards.cell_line == "all":
+            shell(f"cp {input.method_subset} {output.bait_prey_table}")
+        else:
+            with open(input.pubmed_id, "r") as f:
+                pids = [l.strip() for l in f]
+                pids = pids[1:]
 
-        method_df = pd.read_csv(input.method_subset, sep = "\t")
-        method_df = method_df[method_df["pubmed_id"].isin(pids)]
-        method_df.to_csv(output.bait_prey_table, sep = "\t", index = False)
+            method_df = pd.read_csv(
+                input.method_subset,
+                sep = "\t",
+                dtype="str"
+            )
+            method_df = method_df[method_df["pubmed_id"].isin(pids)]
+            method_df.to_csv(output.bait_prey_table, sep = "\t", index = False)
 
 
 rule get_ppi_counts:
@@ -90,16 +81,15 @@ rule get_ppi_counts:
     run:
         bait_prey_df = pd.read_csv(input.bait_prey_table, sep="\t")
         method =  config["methods"][wildcards.method]
-        pod_file = config["cell_lines"][wildcards.cell_line]["pod"]
 
         max_interaction_dict, observed_interaction_dict  = get_interaction_dict(
-            bait_prey_df,
+            bait_prey_df=bait_prey_df,
             method=method,
-            prey_file=pod_file)
+            prey_file=input.prey_pod)
 
         dict_to_pairs_file(
-            max_interaction_dict,
-            observed_interaction_dict,
-            output.protein_pairs,
+            max_interaction_dict=max_interaction_dict,
+            observed_interaction_dict=observed_interaction_dict,
+            output_filename=output.protein_pairs,
             method = method,
-            prey_pod_file = pod_file)
+            prey_pod_file = input.prey_pod)

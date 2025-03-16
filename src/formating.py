@@ -3,16 +3,49 @@ import re
 import numpy as np
 
 
-def read_intact(filename):
-    def _find_pattern(cell, pattern, single=True):
-        match = re.search(pattern, cell)
-        if match:
-            matches = match.groups()
-            if single:
-                return matches[0]
-            return match.groups()
-        return None
+def _find_pattern(cell, pattern, single=True):
+    match = re.search(pattern, cell)
+    if match:
+        matches = match.groups()
+        if single:
+            return matches[0]
+        return match.groups()
+    return None
 
+def get_gene_names(filename, output_file):
+    intact_df = pd.read_csv(filename, sep="\t")
+    intact_df = intact_df[
+        (
+                intact_df['Taxid interactor A'].str.contains("9606") &
+                intact_df['Taxid interactor B'].str.contains("9606")
+        )
+    ]
+    intact_df["IDA"] = intact_df["#ID(s) interactor A"].apply(
+        _find_pattern, args=(r"uniprotkb:(.+)",))
+    intact_df["IDB"] = intact_df["ID(s) interactor B"].apply(
+        _find_pattern, args=(r"uniprotkb:(.+)",))
+
+    gene_name_pattern = r"uniprotkb:([a-zA-Z0-9-]+)\(gene name\)"
+    intact_df["gene_name_a"] = intact_df["Alias(es) interactor A"].apply(
+        _find_pattern, args=(gene_name_pattern,))
+    intact_df["gene_name_b"] = intact_df["Alias(es) interactor B"].apply(
+        _find_pattern, args=(gene_name_pattern,))
+
+    name_dict = dict()
+    for i, row in intact_df.iterrows():
+        for uniprot_id, gene_name in zip(
+                [row["IDA"], row["IDB"]],
+                [row["gene_name_a"], row["gene_name_b"]]
+        ):
+            if uniprot_id and gene_name and uniprot_id not in name_dict:
+                name_dict[uniprot_id] = gene_name
+
+    with open(output_file, "w") as w:
+        w.write("uniprot_id\tgene_name\n")
+        for uniprot_id, gene_name in name_dict.items():
+            w.write(f"{uniprot_id}\t{gene_name}\n")
+
+def read_intact(filename):
     intact_df = pd.read_csv(filename, sep="\t")
     intact_df = intact_df[
         (
@@ -64,17 +97,25 @@ def filter_and_index(intact_df):
 
     return bait_prey_df
 
-def get_interaction_dict(bait_prey_df, method="Y2H-pooling", prey_file=None):
-    def create_or_update(current_dict, bait, prey):
-        if bait in current_dict:
-            if prey in current_dict[bait]:
-                current_dict[bait][prey] += 1
-            else:
-                current_dict[bait][prey] = 1
+def create_or_update(current_dict, bait, prey):
+    if bait in current_dict:
+        if prey in current_dict[bait]:
+            current_dict[bait][prey] += 1
         else:
-            current_dict[bait] = {prey: 1}
+            current_dict[bait][prey] = 1
+    else:
+        current_dict[bait] = {prey: 1}
 
-        return current_dict
+    return current_dict
+
+
+def get_interaction_dict(bait_prey_df, method="Y2H-pooling", prey_file=None):
+    cell_line_preys = []
+    if method == "MS":
+        prey_df = pd.read_csv(prey_file, sep="\t")
+        cell_line_preys = prey_df["uniprot_id"].tolist()
+    elif method != "Y2H-pooling":
+        raise ValueError(f"The method type: {method} is has no prey-bait matching strategy")
 
 
     max_interaction_dict = dict()
@@ -82,42 +123,39 @@ def get_interaction_dict(bait_prey_df, method="Y2H-pooling", prey_file=None):
 
     studies = bait_prey_df["pubmed_id"].unique()
     for study in studies:
+        study_df = bait_prey_df[bait_prey_df["pubmed_id"] == study]
+        baits = set()
+        preys = set()
+        for _, row in study_df.iterrows():
+            bait = row["bait"]
+            prey = row["prey"]
 
-            study_df = bait_prey_df[bait_prey_df["pubmed_id"] == study]
-            baits = set()
-            preys = set()
+            baits.update({bait})
+            preys.update({prey})
 
-            for _, row in study_df.iterrows():
-                bait = row["bait"]
-                prey = row["prey"]
+            observed_interaction_dict = create_or_update(
+                observed_interaction_dict,
+                bait=bait,
+                prey=prey
+            )
 
-                baits.update({bait})
-                preys.update({prey})
-
-                observed_interaction_dict = create_or_update(
-                    observed_interaction_dict,
-                    prey,
-                    bait
-                )
+            if method == "MS" and prey not in cell_line_preys:
+                # Identified prey without POD estimate
                 max_interaction_dict = create_or_update(
-                        max_interaction_dict,
-                        prey,
-                        bait
-                    )
+                    max_interaction_dict,
+                    bait=bait,
+                    prey=prey
+                )
+        if method == "MS":
+            preys = cell_line_preys
 
-            if method == "MS":
-                prey_df = pd.read_csv(prey_file, sep="\t")
-                preys = prey_df["uniprot"].tolist()
-            elif method != "Y2H-pooling":
-                raise ValueError(f"The method type: {method} is has no prey-bait matching strategy")
-
-            for bait in baits:
-                for prey in preys:
-                    max_interaction_dict = create_or_update(
-                        max_interaction_dict,
-                        prey,
-                        bait
-                    )
+        for bait in baits:
+            for prey in preys:
+                max_interaction_dict = create_or_update(
+                    max_interaction_dict,
+                    bait=bait,
+                    prey=prey
+                )
 
     return max_interaction_dict, observed_interaction_dict
 
@@ -126,23 +164,30 @@ def dict_to_pairs_file(max_interaction_dict, observed_interaction_dict, output_f
     if method == "MS":
         with open(prey_pod_file, "r") as f:
             for l in f:
-                gene_name, protein_id, prey_pod = l.strip().split()
+                gene_name, protein_id, prey_pod = l.strip().split("\t")
                 pod_dict[protein_id] = prey_pod
 
 
     with open(output_filename, "w") as w:
         w.write("prey\tbait\tmax_interactions\tobserved_interactions\tprey_pod\n")
         for bait in max_interaction_dict:
-            for prey in observed_interaction_dict:
+            for prey in max_interaction_dict[bait]:
                 if method == "MS":
-                    prey_pod = pod_dict[prey]
+                    if prey in pod_dict:
+                        prey_pod = pod_dict[prey]
+                    else:
+                        prey_pod = None
                 else:
                     prey_pod = 1
+
+                obs_count = 0
+                if prey in observed_interaction_dict[bait]:
+                    obs_count = observed_interaction_dict[bait][prey]
 
                 w.write(f"{bait}\t"
                         f"{prey}\t"
                         f"{max_interaction_dict[bait][prey]}\t"
-                        f"{observed_interaction_dict[bait][prey]}\t"
+                        f"{obs_count}\t"
                         f"{prey_pod}\n")
 
 

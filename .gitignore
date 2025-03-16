@@ -175,3 +175,5 @@ cython_debug/
 
 # work folder
 work_folder
+.idea/
+.snakemake/
