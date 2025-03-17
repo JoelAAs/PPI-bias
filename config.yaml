@@ -64,3 +64,7 @@ methods:
 cell_lines:
     HeLa:
         pod: "data/geneGroups/relative_freq_wide_selected_N04547_M07444.csv"
+    all:
+
+excluded_pubmedIDs:
+    - "33961781" # BioPlex

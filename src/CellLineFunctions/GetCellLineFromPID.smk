@@ -1,7 +1,7 @@
 
 rule get_pid_cla:
     input:
-        pubtator = "data/pubid_cell_line/pubtator/cellline2pubtator3_noblank.csv",
+        pubtator = config["pid_context"]
     output:
         expand(
             "work_folder/pid_cell_line/{cell_line}.csv",
@@ -12,7 +12,7 @@ rule get_pid_cla:
         with open(input.pubtator, "r") as f:
             for line in f:
                 values = line.strip().split("\t")
-                cell_line = values[3]
+                cell_line = values[2]
                 pid = values[0]
                 if cell_line in pub_dict:
                     pub_dict[cell_line].append(pid)

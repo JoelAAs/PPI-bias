@@ -2,6 +2,8 @@ import pandas as pd
 import re
 import numpy as np
 
+## TODO: separate and rename files, this isn't all formating
+
 
 def _find_pattern(cell, pattern, single=True):
     match = re.search(pattern, cell)
@@ -147,6 +149,8 @@ def get_interaction_dict(bait_prey_df, method="Y2H-pooling", prey_file=None):
                     prey=prey
                 )
         if method == "MS":
+            # Observe we assume that test all baits as separate MS runs.
+            # This should be the standard way of doing things.
             preys = cell_line_preys
 
         for bait in baits:

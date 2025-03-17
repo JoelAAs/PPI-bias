@@ -5,20 +5,21 @@ include: "src/ProbabilityOfPreyDetection/ProbabilityOfPreyDetection.smk"
 include: "src/CellLineFunctions/GetCellLineFromPID.smk"
 include: "src/CellLineFunctions/CellLinePPIOverlap.smk"
 
-current_ms_cl =[
-    "HeLa",
-    "HEK293",
-    "HEK293T",
-    "U2OS",
-]
+method_aggregate = dict()
+for method in config["methods"]:
+    try:
+        config[config["methods"][method]].append(method)
+    except KeyError:
+        config[config["methods"][method]] = [method,]
+
+
+
 
 rule all:
     input:
-        expand(
-            "work_folder/intact/pair_count/ppi_pair_counts_{cl}_MI-0007.csv",
-            cl = current_ms_cl),
-        "work_folder/intact/pair_count/ppi_pair_counts_all_MI-1112.csv",
-        "work_folder/ppi_cl_overlap/one_hot_MI-0007.csv"
+        # "work_folder/intact/pair_count/ppi_pair_counts_all_MI-1112.csv",
+        # "work_folder/ppi_cl_overlap/one_hot_MI-0007.csv"
+        "work_folder/ppi_cl_overlap/IoU_MS.csv"
         # expand(
         #     "work_folder/intact/pair_count/ppi_pair_counts_{cell_line}_{method}.csv",
         #     method = config["methods"], cell_line = "HeLa"

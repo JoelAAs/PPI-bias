@@ -3,25 +3,34 @@ import numpy as np
 import pandas as pd
 
 current_ms_cl =[
-    "HeLa",
-    "HEK293",
-    "HEK293T",
-    "U2OS",
+    "CVCL_0030",
+    "CVCL_0045",
+    "CVCL_0063",
+    "CVCL_0598",
+    "CVCL_0042"
 ]
+
+def get_overlap_input(wc):
+    expected_input = [
+        f"work_folder/intact/pair_count/ppi_pair_counts_{c_cl}_{method}.csv"
+        for method in config[wc.detection_method]
+        for c_cl in config["cell_lines"]
+        if c_cl != "all"
+    ]
+    return expected_input
+
+
 
 rule get_cell_line_ppi_overlap:
     params:
         bait_prey_specific = True
     input:
-        ppi_subset = expand(
-            "work_folder/intact/pair_count/ppi_pair_counts_{cl}_{{method}}.csv",
-            cl = current_ms_cl
-        )
+        ppi_subset = lambda wc: get_overlap_input(wc)
     output:
-        iou = "work_folder/ppi_cl_overlap/IoU_{method}.csv",
-        intersect_n = "work_folder/ppi_cl_overlap/intersection_{method}.csv",
-        unique_n = "work_folder/ppi_cl_overlap/unique_{method}.csv",
-        one_hot = "work_folder/ppi_cl_overlap/one_hot_{method}.csv"
+        iou = "work_folder/ppi_cl_overlap/IoU_{detection_method}.csv",
+        intersect_n = "work_folder/ppi_cl_overlap/intersection_{detection_method}.csv",
+        unique_n = "work_folder/ppi_cl_overlap/unique_{detection_method}.csv",
+        one_hot = "work_folder/ppi_cl_overlap/one_hot_{detection_method}.csv"
 
     run:
         cl_ppi_directional_dict = dict()
@@ -31,23 +40,28 @@ rule get_cell_line_ppi_overlap:
 
         for cl_ppi in input.ppi_subset:
             cl = re.search(
-                r"ppi_pair_counts_([a-zA-Z0-9-]+)_[A-Z0-9-]+.csv",
+                r"ppi_pair_counts_([a-zA-Z0-9-_]+)_[A-Z0-9-]+.csv",
                 cl_ppi).groups()[0]
             cl_df = pd.read_csv(
                 cl_ppi,
                 sep="\t"
             )
-            cl_df = cl_df[cl_df["observed_interactions"] != 0]
-            cl_ppi_directional_dict[cl] = set(
-                cl_df[["bait", "prey"]].apply("|".join, axis=1).tolist()
-            )
-            all_directional.update(cl_ppi_directional_dict[cl])
+            if not cl in  cl_ppi_directional_dict:
+                cl_ppi_directional_dict[cl] = set()
+                cl_ppi_dict[cl] = set()
 
-            sorted_id = lambda x: "|".join(sorted(x))
-            cl_ppi_dict[cl] = set(
-                cl_df[["bait", "prey"]].apply(sorted_id, axis=1).tolist()
-            )
-            all_undirectional.update(cl_ppi_dict[cl])
+            cl_df = cl_df[cl_df["observed_interactions"] != 0]
+            if not cl_df.empty:
+                cl_ppi_directional_dict[cl].update(set(
+                    cl_df[["bait", "prey"]].apply("|".join, axis=1).tolist()
+                ))
+                all_directional.update(cl_ppi_directional_dict[cl])
+
+                sorted_id = lambda x: "|".join(sorted(x))
+                cl_ppi_dict[cl].update(set(
+                    cl_df[["bait", "prey"]].apply(sorted_id, axis=1).tolist()
+                ))
+                all_undirectional.update(cl_ppi_dict[cl])
 
         cls = list(cl_ppi_dict.keys())
         iou_matrix = np.zeros((len(cls), len(cls)))
@@ -73,7 +87,7 @@ rule get_cell_line_ppi_overlap:
         for i in range(len(cls)):
             iou_matrix[i, i] = 1
             n_shared_matrix[i, i] = len(cl_ppi_dict[cls[i]])
-            n_unique_matrix[i, i] = len(cl_ppi_dict[cls[i]])
+            n_unique_matrix[i, i] = 0
 
 
         pd.DataFrame(
