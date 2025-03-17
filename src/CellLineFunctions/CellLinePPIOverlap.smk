@@ -2,13 +2,6 @@ import re
 import numpy as np
 import pandas as pd
 
-current_ms_cl =[
-    "CVCL_0030",
-    "CVCL_0045",
-    "CVCL_0063",
-    "CVCL_0598",
-    "CVCL_0042"
-]
 
 def get_overlap_input(wc):
     expected_input = [
