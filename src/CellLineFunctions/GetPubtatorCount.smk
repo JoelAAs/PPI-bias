@@ -49,16 +49,16 @@ rule percent_unique:
             cl = re.search(cl_pattern, input_file).groups()[0]
             type_pattern = f"work_folder/intact/pubtator_cl_count/interaction_min_{cl}_{wildcards.method}_([a-z]+).csv"
             type = re.search(type_pattern, input_file).groups()[0]
-            cl_count_df = pd.read_csv(input_file, sep="\t")
-            cl_count_df["cl"] = cl
-            cl_count_df["type"] = type
-            full_cl_count = pd.concat([full_cl_count, cl_count_df])
+            if cl != "all":
+                cl_count_df = pd.read_csv(input_file, sep="\t")
+                cl_count_df["cl"] = cl
+                cl_count_df["type"] = type
+                full_cl_count = pd.concat([full_cl_count, cl_count_df])
 
         with open(output.overlap, "w") as w:
             w.write(
                 "\t".join([
-                    "cell_line_a",
-                    "cell_line_b"
+                    "cell_line",
                     "max_cl_count",
                     "type",
                     "n_intersection",
@@ -74,28 +74,26 @@ rule percent_unique:
                 for cl_count in ss_type_df["min_cl_count"].unique():
                     ss_count_df = ss_type_df[ss_type_df["min_cl_count"] <= cl_count]
 
-                    for cl_a in ss_count_df["cl"].unique():
-                        cl_a_proteins = set(ss_count_df["uniprot_id"].tolist())
-                        ss_count_cl_a_df = ss_count_df[ss_count_df["cl"] == cl_a]
-                        for cl_b in ss_count_df["cl"].unique():
-                            ss_count_cl_b_df = ss_count_df[ss_count_df["cl"] == cl_a]
-                            cl_b_proteins = set(ss_count_cl_a_df["uniprot_id"].tolist())
+                    for cl in ss_count_df["cl"].unique():
+                        ss_count_rest_df = ss_count_df[ss_count_df["cl"] != cl]
+                        rest_proteins = set(ss_count_rest_df["uniprot_id"].tolist())
+                        ss_count_cl_df = ss_count_df[ss_count_df["cl"] == cl]
+                        cl_proteins = set(ss_count_cl_df["uniprot_id"].tolist())
 
 
-                            n_intersect_protein = len(cl_a_proteins.intersection(cl_b_proteins))
+                        n_intersect_protein = len(rest_proteins.intersection(cl_proteins))
 
-                            n_unique = len(cl_a_proteins) - n_intersect_protein
-                            
-                            w.write(
-                                "\t".join([
-                                    cl_a,
-                                    cl_b,
-                                    str(cl_count),
-                                    type,
-                                    str(n_intersect_protein),
-                                    str(n_unique)
-                                ]) + "\n"
-                            )
+                        n_unique = len(cl_proteins) - n_intersect_protein
+
+                        w.write(
+                            "\t".join([
+                                cl,
+                                str(cl_count),
+                                type,
+                                str(n_intersect_protein),
+                                str(n_unique)
+                            ]) + "\n"
+                        )
 
 
 

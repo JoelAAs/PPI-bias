@@ -10,26 +10,6 @@ rule get_pid_cla:
         ),
         pid_cl_count = "work_folder/pid_cell_line/pid_ppi_count.csv"
     run:
-        pub_dict = dict()
-        with open(input.pubtator, "r") as f:
-            for line in f:
-                values = line.strip().split("\t")
-                cell_line = values[2]
-                pid = values[0]
-                if cell_line in pub_dict:
-                    pub_dict[cell_line].append(pid)
-                else:
-                    pub_dict[cell_line] = [pid, ]
-
-        for cell_line in config["cell_lines"]:
-            print(cell_line)
-            with open(f"work_folder/pid_cell_line/{cell_line}.csv", "w") as w:
-                w.write("pubmed_id\n")
-                if cell_line == "all":
-                    continue
-
-                for pid in pub_dict[cell_line]:
-                    w.write(f"{pid}\n")
 
         pubtator_df = pd.read_csv(
             input.pubtator,
@@ -37,7 +17,8 @@ rule get_pid_cla:
         )
         pubtator_count = pubtator_df.groupby("pubmed_id").count()["info_type"]
         pubtator_count = pd.DataFrame(pubtator_count)
-        pubtator_count["pubmed_id"] = pubtator_count.index
+        #pubtator_count["pubmed_id"] = pubtator_count.index
+        pubtator_count.reset_index(inplace=True)
         pubtator_count = pubtator_count.rename({"info_type": "cl_count"}, axis = 1)
         pubtator_count.to_csv(
             output.pid_cl_count,
@@ -45,4 +26,36 @@ rule get_pid_cla:
             index=False
         )
 
+        pubtator_df = pubtator_df.merge(pubtator_count, on="pubmed_id")
+        for cell_line in config["cell_lines"]:
+            if cell_line == "all":
+                cl_ss_pubtator_df = pubtator_df
+            else:
+                cl_ss_pubtator_df = pubtator_df[pubtator_df["cl_id"] == cell_line]
+            cl_ss_pubtator_df[["pubmed_id", "cl_count"]].to_csv(
+                f"work_folder/pid_cell_line/{cell_line}.csv",
+                sep="\t",
+                index=False
+            )
+
+
+
+#
+# rule get_max_cl_pid_lists:
+#     """
+#     refactor later can be simplified
+#     """
+#     input:
+#         cl = "work_folder/pid_cell_line/{cell_line}.csv",
+#         pid_cl_count = "work_folder/pid_cell_line/pid_ppi_count.csv"
+#     output:
+#         cl = "work_folder/pid_cell_line//{cell_line}{n}.csv"
+#     run:
+#         pid_df = pd.read_csv(input.cl, sep = "\t")
+#         pid_count_df = pd.read_csv(input.pid_cl_count, sep="\t")
+#
+#         pid_df = pid_df.merge(pid_count_df, on="pubmed_id", how="inner")
+#         pid_df = pid_df[pid_df["cl_count"] <= int(wildcards.n)]
+#         print(pid_df)
+#         pid_df.to_csv(output.cl, sep="\t", index=False)
 

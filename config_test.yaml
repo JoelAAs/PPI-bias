@@ -1,5 +1,5 @@
 pid_context:
-    "data/pubid_cell_line/pubtator/cellline2pubtator3_human_single_cl.csv"
+    "data/pubid_cell_line/pubtator/cellline2pubtator3_human.csv"
 
 
 excluded_pubmedIDs:

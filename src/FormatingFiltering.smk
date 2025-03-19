@@ -48,20 +48,20 @@ rule subset_method:
             )
 
 rule subset_cell_line:
+    params:
+        max_cl_mentions = 2
     input:
         pubmed_id = "work_folder/pid_cell_line/{cell_line}.csv",
         method_subset = "work_folder/intact/method_subset/{method}.csv"
     output:
         bait_prey_table = "work_folder/intact/method_subset/cell_line_subset/interactions_{cell_line}_{method}.csv",
     run:
-        # Hacky reform later
-        if wildcards.cell_line == "all":
-            shell(f"cp {input.method_subset} {output.bait_prey_table}")
-        else:
-            with open(input.pubmed_id, "r") as f:
-                pids = [l.strip() for l in f]
-                pids = pids[1:]
-
+            pid_df = pd.read_csv(input.pubmed_id,
+                sep = "\t",
+                dtype={"pubmed_id":str, "cl_count":int}
+            )
+            pid_df = pid_df[pid_df["cl_count"] <= params.max_cl_mentions]
+            pids = pid_df["pubmed_id"].unique()
             method_df = pd.read_csv(
                 input.method_subset,
                 sep = "\t",
