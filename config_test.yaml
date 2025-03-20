@@ -15,8 +15,6 @@ methods:
     MI-0019: "MS"# (coimmunoprecipitation)
 
 cell_lines:
-    all:
-        pod:
     CVCL_0030: # HeLa
         pod: "data/geneGroups/relative_freq_wide_selected_N04547_M07444.csv"
     CVCL_0045: # HEK293

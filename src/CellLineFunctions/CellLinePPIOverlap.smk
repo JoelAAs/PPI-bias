@@ -1,103 +1,101 @@
-import re
-import numpy as np
 import pandas as pd
 
-
-def get_overlap_input(wc):
-    expected_input = [
-        f"work_folder/intact/pair_count/ppi_pair_counts_{c_cl}_{method}.csv"
-        for method in config[wc.detection_method]
-        for c_cl in config["cell_lines"]
-        if c_cl != "all"
-    ]
-    return expected_input
+def get_methods_input(wc):
+    method_files = [
+        f"work_folder/intact/method_subset/{method}.csv"
+        for method in config[wc.detection_method]]
+    return method_files
 
 
 
-rule get_cell_line_ppi_overlap:
+rule get_observed_cell_line_ppi_overlap:
     params:
         bait_prey_specific = True
     input:
-        ppi_subset = lambda wc: get_overlap_input(wc)
+        pid_cl_list = expand(
+            "work_folder/pid_cell_line/{cell_line}.csv", cell_line = config["cell_lines"]
+        ),
+        method_subsets = lambda wc: get_methods_input(wc)
+
     output:
-        iou = "work_folder/ppi_cl_overlap/IoU_{detection_method}.csv",
-        intersect_n = "work_folder/ppi_cl_overlap/intersection_{detection_method}.csv",
-        unique_n = "work_folder/ppi_cl_overlap/unique_{detection_method}.csv",
-        one_hot = "work_folder/ppi_cl_overlap/one_hot_{detection_method}.csv"
+        shared_ppi = "work_folder/method_cl_overlap/shared_ppi_{detection_method}.csv",
+        unique_ppi = "work_folder/method_cl_overlap/unique_ppi_{detection_method}.csv",
+        iou_ppi = "work_folder/method_cl_overlap/iou_ppi_{detection_method}.csv",
+        total_ppi = "work_folder/method_cl_overlap/total_ppi_{detection_method}.csv",
+        shared_pid = "work_folder/method_cl_overlap/shared_pid_{detection_method}.csv",
+        unique_pid = "work_folder/method_cl_overlap/unique_pid_{detection_method}.csv",
+        iou_pid= "work_folder/method_cl_overlap/iou_pid_{detection_method}.csv"
 
     run:
-        cl_ppi_directional_dict = dict()
-        all_directional = set()
-        cl_ppi_dict = dict()
-        all_undirectional = set()
+        df_list = []
+        for method_ppi in input.method_subsets:
+            for pid_cl in input.pid_cl_list:
+                pid_df = pd.read_csv(pid_cl,
+                    sep="\t",
+                    dtype={"pubmed_id": str, "cl_count": int}
+                )
+                method_df = pd.read_csv(
+                    method_ppi,
+                    sep="\t",
+                    dtype="str"
+                )
+                single_method_cl_df = method_df.merge(pid_df,on="pubmed_id",how="inner")
+                df_list.append(single_method_cl_df)
 
-        for cl_ppi in input.ppi_subset:
-            cl = re.search(
-                r"ppi_pair_counts_([a-zA-Z0-9-_]+)_[A-Z0-9-]+.csv",
-                cl_ppi).groups()[0]
-            cl_df = pd.read_csv(
-                cl_ppi,
-                sep="\t"
-            )
-            if not cl in  cl_ppi_directional_dict:
-                cl_ppi_directional_dict[cl] = set()
-                cl_ppi_dict[cl] = set()
+        methods_cl_df = pd.concat(df_list)
 
-            cl_df = cl_df[cl_df["observed_interactions"] != 0]
-            if not cl_df.empty:
-                cl_ppi_directional_dict[cl].update(set(
-                    cl_df[["bait", "prey"]].apply("|".join, axis=1).tolist()
-                ))
-                all_directional.update(cl_ppi_directional_dict[cl])
+        sorted_id = lambda x: "|".join(sorted(x))
+        methods_cl_df["ppi_id"] = methods_cl_df[["bait", "prey"]].apply(sorted_id,axis=1)
+        methods_cl_df.to_csv("test.csv", sep ="\t")
+        print(methods_cl_df["cl_count"])
+        print("här")
+        outputs_filenames = {
+            "shared_ppi": output.shared_ppi,
+            "unique_ppi": output.unique_ppi,
+            "iou_ppi": output.iou_ppi,
+            "total_ppi": output.total_ppi,
+            "shared_pid": output.shared_pid,
+            "unique_pid": output.unique_pid,
+            "iou_pid": output.iou_pid
+        }
+        file_dict = {
+            key: open(value, "w") for key, value in outputs_filenames.items()
+        }
 
-                sorted_id = lambda x: "|".join(sorted(x))
-                cl_ppi_dict[cl].update(set(
-                    cl_df[["bait", "prey"]].apply(sorted_id, axis=1).tolist()
-                ))
-                all_undirectional.update(cl_ppi_dict[cl])
+        for max_pid_cl in methods_cl_df["cl_count"].unique():
+            cl_count_max_ss = methods_cl_df[methods_cl_df["cl_count"] <= max_pid_cl]
+            # ppi overlap
+            uniq_ppi_cl = cl_count_max_ss.groupby(["cell_line"])["ppi_id"].unique()
+            count_ppi_cl = cl_count_max_ss.groupby(["cell_line"])["ppi_id"].count()
 
-        cls = list(cl_ppi_dict.keys())
-        iou_matrix = np.zeros((len(cls), len(cls)))
-        n_shared_matrix = np.zeros((len(cls), len(cls)))
-        n_unique_matrix = np.zeros((len(cls), len(cls)))
+            uniq_pid_cl = cl_count_max_ss.groupby(["cell_line"])["pubmed_id"].unique()
 
-        for i in range(len(cls)-1):
-            for j in range(i + 1, len(cls)):
-                intersect_ppi = cl_ppi_dict[cls[i]].intersection(
-                    cl_ppi_dict[cls[j]])
-                union_ppi = cl_ppi_dict[cls[i]].union(cl_ppi_dict[cls[j]])
+            cls = uniq_ppi_cl.index
 
-                iou_matrix[i, j] = len(intersect_ppi)/len(union_ppi)
-                iou_matrix[j, i] = iou_matrix[i, j]
+            # some symmetric some not
+            for cl_from in cls:
+                file_dict["total_ppi"].write(f"{cl_from}\t{count_ppi_cl[cl_from]}\t{max_pid_cl}\n")
+                for cl_to in cls:
+                    uniq_cl_from = set(uniq_ppi_cl[cl_from])
+                    uniq_cl_to = set(uniq_ppi_cl[cl_to])
+                    intersect_ppi_cls = uniq_cl_from.intersection(uniq_cl_to)
+                    union_ppi_cls = uniq_cl_from.union(uniq_cl_to)
+                    iou_ppi_cls = len(intersect_ppi_cls)/len(union_ppi_cls)
 
-                n_shared_matrix[i, j] = len(intersect_ppi)
-                n_shared_matrix[j, i] = n_shared_matrix [i, j]
+                    file_dict["shared_ppi"].write(f"{cl_from}\t{cl_to}\t{len(intersect_ppi_cls)}\t{max_pid_cl}\n")
+                    file_dict["unique_ppi"].write(
+                        f"{cl_from}\t{cl_to}\t{len(uniq_cl_from - intersect_ppi_cls)}\t{max_pid_cl}\n")
+                    file_dict["iou_ppi"].write(f"{cl_from}\t{cl_to}\t{iou_ppi_cls}\t{max_pid_cl}\n")
 
-                n_unique_matrix[i, j] = len(cl_ppi_dict[cls[i]] - intersect_ppi)
-                n_unique_matrix[j, i] = len(cl_ppi_dict[cls[j]] - intersect_ppi)
+                    uniq_pid_from = set(uniq_pid_cl[cl_from])
+                    uniq_pid_to = set(uniq_pid_cl[cl_to])
+                    intersect_pid_cls = uniq_pid_from.intersection(uniq_pid_to)
+                    union_pid_cls = uniq_pid_from.union(uniq_pid_to)
+                    iou_pid_cls = len(intersect_pid_cls)/len(union_pid_cls)
+                    file_dict["shared_pid"].write(f"{cl_from}\t{cl_to}\t{len(intersect_pid_cls)}\t{max_pid_cl}\n")
+                    file_dict["unique_pid"].write(
+                        f"{cl_from}\t{cl_to}\t{len(uniq_pid_from - intersect_pid_cls)}\t{max_pid_cl}\n")
+                    file_dict["iou_pid"].write(f"{cl_from}\t{cl_to}\t{iou_pid_cls}\t{max_pid_cl}\n")
 
-        #diagonal
-        for i in range(len(cls)):
-            iou_matrix[i, i] = 1
-            n_shared_matrix[i, i] = len(cl_ppi_dict[cls[i]])
-            n_unique_matrix[i, i] = 0
-
-
-        pd.DataFrame(
-            iou_matrix, index=cls, columns=cls).to_csv(
-            output.iou, sep="\t")
-        pd.DataFrame(
-            n_shared_matrix, index=cls, columns=cls).to_csv(
-            output.intersect_n, sep="\t")
-        pd.DataFrame(
-            n_unique_matrix, index=cls, columns=cls).to_csv(
-            output.unique_n, sep="\t")
-
-        one_hot_rows = []
-        for cl in cls:
-            row = {ppi: 1 for ppi in cl_ppi_dict[cl]}
-            row.update({"cell_line": cl})
-            one_hot_rows.append(row)
-        one_hot_df = pd.DataFrame(one_hot_rows)
-        one_hot_df.fillna(0, inplace=True)
-        one_hot_df.to_csv(output.one_hot, sep="\t", index=False)
+        for key, value in file_dict.items():
+            value.close()
