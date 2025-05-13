@@ -1,28 +1,14 @@
-configfile: "config_test.yaml"
+#configfile: "config_cell.yaml"
 
-include: "src/FormatingFiltering.smk"
-include: "src/ProbabilityOfPreyDetection/ProbabilityOfPreyDetection.smk"
-include: "src/CellLineFunctions/GetCellLineFromPID.smk"
-include: "src/CellLineFunctions/CellLinePPIOverlap.smk"
-include: "src/CellLineFunctions/GetPubtatorCount.smk"
+config["ppi_df"] = "../Cl-annotated-ppis/work_folder/CL_annotated_bait_prey.csv"
+config["id_pattern"] = "gene_name"
+config["cell_line_present"] = True
 
-method_aggregate = dict()
-for method in config["methods"]:
-    try:
-        config[config["methods"][method]].append(method)
-    except KeyError:
-        config[config["methods"][method]] = [method,]
-
-
+include: "src/FormatFiltering/FormatingFiltering.smk"
+include: "src/ExperimentalSearchSpace/experimental_searchspace.smk"
+include: "src/Analysis/CellLineAnalysis/cell_line_analysis.smk"
 
 
 rule all:
     input:
-        # "work_folder/intact/pair_count/ppi_pair_counts_all_MI-1112.csv",
-        # "work_folder/ppi_cl_overlap/one_hot_MI-0007.csv"
-        "work_folder/method_cl_overlap/shared_ppi_MS.csv"
-        # "work_folder/intact/pubtator_cl_count/overlap/MI-0007.csv"
-        # expand(
-        #     "work_folder/intact/pair_count/ppi_pair_counts_{cell_line}_{method}.csv",
-        #     method = config["methods"], cell_line = "HeLa"
-        # )
+        "work_folder/inferred_search_space/aggregated/cell_line_specific.csv"

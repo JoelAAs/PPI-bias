@@ -25,7 +25,6 @@ rule get_observed_cell_line_ppi_overlap:
         shared_pid = "work_folder/method_cl_overlap/shared_pid_{detection_method}.csv",
         unique_pid = "work_folder/method_cl_overlap/unique_pid_{detection_method}.csv",
         iou_pid= "work_folder/method_cl_overlap/iou_pid_{detection_method}.csv"
-
     run:
         df_list = []
         for method_ppi in input.method_subsets:
@@ -47,8 +46,7 @@ rule get_observed_cell_line_ppi_overlap:
         sorted_id = lambda x: "|".join(sorted(x))
         methods_cl_df["ppi_id"] = methods_cl_df[["bait", "prey"]].apply(sorted_id,axis=1)
         methods_cl_df.to_csv("test.csv", sep ="\t")
-        print(methods_cl_df["cl_count"])
-        print("här")
+
         outputs_filenames = {
             "shared_ppi": output.shared_ppi,
             "unique_ppi": output.unique_ppi,
