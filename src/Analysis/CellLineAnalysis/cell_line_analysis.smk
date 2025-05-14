@@ -1,14 +1,15 @@
 import pandas as pd
+from collections import defaultdict
+from scipy.stats import fisher_exact, false_discovery_control
 
 # Run only with the correct config file
 # It won't run otherwise
 
-from collections import defaultdict
 
 def nested_dict():
     return defaultdict(nested_dict)
 
-def get_input_for_aggregation(wc , filename):
+def get_input_for_aggregation(wc, filename):
     CL_FOLDER = checkpoints.infer_experimental_search_space.get().output[0]
     cl_df = pd.read_csv(filename, sep="\t")
     cl_df = cl_df[["pubmed_id", "detection_method", "cl_id"]]
@@ -22,10 +23,13 @@ def get_input_for_aggregation(wc , filename):
 
 
 rule aggregate_inferred_studies_cell_line:
+    """
+    Aggregate experiments assuming that any prey observed in studies is tested against all baits 
+    """
     input:
         cl_pids = lambda wc: get_input_for_aggregation(wc, config["ppi_df"])
     output:
-        cell_line_counts = "work_folder/inferred_search_space/aggregated/cell_line_specific.csv"
+        cell_line_counts = "work_folder/inferred_search_space/aggregated/cell_line_experimental_wise.csv"
     run:
         ppi_dict = nested_dict()
         for cl_study in input.cl_pids:
@@ -35,7 +39,7 @@ rule aggregate_inferred_studies_cell_line:
                     if header:
                         header = False
                     else:
-                        bait, prey ,n_tested, n_observed, detection_method, pubmed_id, cl_id = line.strip().split("\t")
+                        bait, prey, n_tested, n_observed, detection_method, pubmed_id, cl_id = line.strip().split("\t")
 
                         if not ppi_dict[bait][prey][cl_id]:
                             ppi_dict[bait][prey][cl_id]["n_tested"] = 0
@@ -61,4 +65,169 @@ rule aggregate_inferred_studies_cell_line:
                         )
 
 
+rule infer_bait_wise_tests:
+    """
+    Expand tests under the assumption that any prey that has been seen is tested in all 
+    other experiments with the same bait.
+    Params:
+        remove_single_ppi_papers = True # Remove single ppi studies, assuming that they only focused on one interaction
+    """
+    params:
+        remove_single_ppi_papers = True
+    input:
+        df = config["ppi_df"]
+    output:
+        baitwise_infered = "work_folder/inferred_search_space/aggregated/cell_line_bait_wise.csv"
+    run:
+        ppi_df = pd.read_csv(input.df, sep="\t")
+        ppi_df = ppi_df[
+            ~ppi_df[["gene_name_bait", "gene_name_prey", "pubmed_id", "detection_method", "cl_id"]].duplicated()
+        ] # TODO: check why there still is duplicates, isofroms?
+        ppi_df["study_id"] = ppi_df.apply(lambda row: str(row["pubmed_id"]) + row["detection_method"], axis=1)
 
+        if params.remove_single_ppi_papers:
+            single_experiment = ppi_df.groupby("study_id",as_index=False).size()
+            single_experiment = single_experiment[single_experiment["size"] == 1]["study_id"]
+            ppi_df = ppi_df[~ppi_df["study_id"].isin(single_experiment)]
+        n_experiments = ppi_df.groupby(["gene_name_bait", "cl_id"], as_index=False)["study_id"].nunique()
+        n_experiments = n_experiments.rename({
+            "study_id": "n_tested"
+        }, axis=1)
+
+        combinations = ppi_df[~ppi_df[["gene_name_bait", "gene_name_prey"]].duplicated()][["gene_name_bait", "gene_name_prey"]]
+        combinations = combinations.merge(n_experiments, on="gene_name_bait")
+        n_observed = ppi_df.groupby(["gene_name_bait", "gene_name_prey", "cl_id"], as_index=False).size()
+        n_observed = n_observed.rename({
+            "size": "n_observed"
+        }, axis=1)
+        full_df = combinations.merge(n_observed, on=["gene_name_bait", "gene_name_prey", "cl_id"], how="left").fillna(0)
+
+        tested = full_df[[
+            'gene_name_bait', 'gene_name_prey', 'cl_id', 'n_tested'
+        ]].pivot_table(
+            index=['gene_name_bait', 'gene_name_prey'],
+            columns='cl_id',
+            values='n_tested',
+            fill_value=0)
+        tested["total"] = tested.sum(axis=1)
+        tested = tested.rename({
+            column: f"{column}_tested" for column in tested.columns
+        },axis=1).reset_index()
+
+        observed = full_df[[
+            'gene_name_bait', 'gene_name_prey', 'cl_id', 'n_observed'
+        ]].pivot_table(
+            index=['gene_name_bait', 'gene_name_prey'],
+            columns='cl_id',
+            values='n_observed',
+            fill_value=0)
+        observed["total"] = observed.sum(axis=1)
+        observed = observed.rename({
+            column: f"{column}_observed" for column in observed.columns
+        },axis=1).reset_index()
+
+        tested_observed_wide = observed.merge(tested, on = ['gene_name_bait', 'gene_name_prey'])
+        tested_observed_wide.to_csv(output.baitwise_infered, sep="\t", index=False)
+
+
+rule test_prey_probability:
+    """
+    Assuming the probability of observing an interaction is the same regardless of experiment.
+    As P(p|b1) = P(p|b2) if P(p|b1), P(p|b2) != 0 
+    We test selected cell lines on a prey basis against all other cell lines (not only selected)  
+    """
+    params:
+        selected_celllines = [
+            "CVCL_0063",
+            "CVCL_0291",
+            "CVCL_0030"
+        ]
+    input:
+        bait_wise_inferred = "work_folder/inferred_search_space/aggregated/cell_line_bait_wise.csv"
+    output:
+        prey_bait_wise_tested = "work_folder/inferred_search_space/analysis/cell_line/bait_wise_prey_tested.csv"
+    run:
+        bait_wise_inferred      = pd.read_csv(input.bait_wise_inferred, sep="\t")
+        bait_wise_inferred_prey = bait_wise_inferred.groupby("gene_name_prey", as_index=False).sum()
+        columns_to_keep = ["gene_name_prey",] + [
+            f"{selected_cl}_observed" for selected_cl in params.selected_celllines
+        ] + [
+            f"{selected_cl}_tested" for selected_cl in params.selected_celllines
+        ] + ["total_tested", "total_observed"]
+        bait_wise_inferred_prey = bait_wise_inferred_prey[columns_to_keep]
+
+        def _fisher_exact(row, c_cl):
+            c_observed = row[f"{c_cl}_observed"]
+            c_tested = row[f"{c_cl}_tested"]
+            c_non_observed = c_tested - c_observed
+            other_observed = row["total_observed"] - c_observed
+            other_tested = row["total_tested"] - c_tested
+            other_non_observed = other_tested - other_observed
+
+            c_table = [
+                [c_observed, c_non_observed],
+                [other_observed, other_non_observed]
+            ]
+
+            # if c_tested == 0 | other_observed == 0:
+            #     OR = np.nan
+            OR, p_value  = fisher_exact(c_table)
+            return p_value, OR
+
+        for cl in params.selected_celllines:
+            bait_wise_inferred_prey[f"{cl}_p_value"], bait_wise_inferred_prey[f"{cl}_odds_ratio"] = zip(*bait_wise_inferred_prey.apply(
+        lambda row: _fisher_exact(row, cl), axis=1))
+
+
+        bait_wise_inferred_prey.to_csv(output.prey_bait_wise_tested , sep="\t", index=False)
+
+rule filter_tests:
+    """
+    Don't got changing these parameters after specific results are found.
+    That's cheating
+    """
+    params:
+        min_total_tests = 30,
+        min_total_observed = 10,
+        part_or_differenace_cutoff = 50,
+        min_fdr_pval = 0.05
+    input:
+        prey_bait_wise_tested = "work_folder/inferred_search_space/analysis/cell_line/bait_wise_prey_tested.csv",
+    output:
+        differential_interactions_filtered = "work_folder/inferred_search_space/analysis/cell_line/bait_wise_prey_filtered.csv",
+        differential_interactions_ploting  = "work_folder/inferred_search_space/analysis/cell_line/bait_wise_prey_plotting.csv"
+    run:
+        results_df = pd.read_csv(input.prey_bait_wise_tested, sep="\t")
+        results_df = results_df[
+            (results_df["total_observed"] > params.min_total_observed) &
+            (results_df["total_tested"] > params.min_total_tests)
+        ]
+        p_columns = [c for c in results_df.columns if "_p_value" in c]
+        p_value_df_long = pd.melt(
+            results_df[["gene_name_prey"] + p_columns],
+            id_vars='gene_name_prey',
+            var_name="cl_id",
+            value_name="p_value"
+        )
+        p_value_df_long["cl_id"] = p_value_df_long["cl_id"].apply(lambda x: x.replace("_p_value", ""))
+        p_value_df_long["p_value_adjusted"] = false_discovery_control(p_value_df_long["p_value"], method="by")
+
+        or_columns = [c for c in results_df.columns if "_odds_ratio" in c]
+        or_df_long = pd.melt(
+            results_df[["gene_name_prey"] + or_columns],
+            id_vars='gene_name_prey',
+            var_name="cl_id",
+            value_name="odds_ratio"
+        )
+        or_df_long["cl_id"] = or_df_long["cl_id"].apply(lambda x: x.replace("_odds_ratio", ""))
+
+        results_filtered_long = or_df_long.merge(p_value_df_long, on=["gene_name_prey", "cl_id"])
+        results_filtered_long = results_filtered_long[
+            (results_filtered_long["p_value_adjusted"] < params.min_fdr_pval)
+        ]
+        results_filtered_long.to_csv(output.differential_interactions_ploting, sep="\t", index=False)
+        results_filtered_long = results_filtered_long[
+                    (results_filtered_long["odds_ratio"] < 1/params.part_or_differenace_cutoff) |
+                    (results_filtered_long["odds_ratio"] > params.part_or_differenace_cutoff)
+        ]
+        results_filtered_long.to_csv(output.differential_interactions_filtered, sep="\t", index=False)
