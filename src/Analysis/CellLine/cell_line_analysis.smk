@@ -1,7 +1,3 @@
-import pandas as pd
-from collections import defaultdict
-from scipy.stats import fisher_exact, false_discovery_control
-
 # Run only with the correct config file
 # It won't run otherwise
 
@@ -29,41 +25,9 @@ rule aggregate_inferred_studies_cell_line:
     input:
         cl_pids = lambda wc: get_input_for_aggregation(wc, config["ppi_df"])
     output:
-        cell_line_counts = "work_folder/inferred_search_space/aggregated/cell_line_experimental_wise.csv"
+        cell_line_counts = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
     run:
-        ppi_dict = nested_dict()
-        for cl_study in input.cl_pids:
-            with open(cl_study, "r") as f:
-                header = True
-                for line in f:
-                    if header:
-                        header = False
-                    else:
-                        bait, prey, n_tested, n_observed, detection_method, pubmed_id, cl_id = line.strip().split("\t")
-
-                        if not ppi_dict[bait][prey][cl_id]:
-                            ppi_dict[bait][prey][cl_id]["n_tested"] = 0
-                            ppi_dict[bait][prey][cl_id]["n_observed"] = 0
-
-                        ppi_dict[bait][prey][cl_id]["n_tested"] += int(n_tested)
-                        ppi_dict[bait][prey][cl_id]["n_observed"] += int(n_observed)
-
-        with open(output.cell_line_counts, "w") as w:
-            w.write("gene_name_bait\tgene_name_prey\tn_tested\tn_observed\tcl_id\n")
-
-            for c_bait, prey_dict in ppi_dict.items():
-                for c_prey, cl_dict in prey_dict.items():
-                    for c_cl, count_dict in cl_dict.items():
-                        w.write(
-                            "\t".join([
-                                c_bait,
-                                c_prey,
-                                str(count_dict["n_tested"]),
-                                str(count_dict["n_observed"]),
-                                c_cl
-                            ]) + "\n"
-                        )
-
+        aggregate_inferred_experiments(input.cl_pids, output.cell_line_counts, cl=True)
 
 rule infer_bait_wise_tests:
     """
@@ -77,7 +41,7 @@ rule infer_bait_wise_tests:
     input:
         df = config["ppi_df"]
     output:
-        baitwise_infered = "work_folder/inferred_search_space/aggregated/cell_line_bait_wise.csv"
+        baitwise_infered = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_bait_wise.csv"
     run:
         ppi_df = pd.read_csv(input.df, sep="\t")
         ppi_df = ppi_df[
@@ -143,7 +107,7 @@ rule test_prey_probability:
             "CVCL_0030"
         ]
     input:
-        bait_wise_inferred = "work_folder/inferred_search_space/aggregated/cell_line_bait_wise.csv"
+        bait_wise_inferred = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_bait_wise.csv"
     output:
         prey_bait_wise_tested = "work_folder/inferred_search_space/analysis/cell_line/bait_wise_prey_tested.csv"
     run:

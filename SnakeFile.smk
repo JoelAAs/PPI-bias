@@ -1,14 +1,32 @@
 #configfile: "config_cell.yaml"
+import pandas as pd
+from collections import defaultdict
+from scipy.stats import fisher_exact, false_discovery_control
+from src.Analysis.aggregate_support import aggregate_inferred_experiments
 
-config["ppi_df"] = "../Cl-annotated-ppis/work_folder/CL_annotated_bait_prey.csv"
-config["id_pattern"] = "gene_name"
-config["cell_line_present"] = True
 
 include: "src/FormatFiltering/FormatingFiltering.smk"
-include: "src/ExperimentalSearchSpace/experimental_searchspace.smk"
-include: "src/Analysis/CellLineAnalysis/cell_line_analysis.smk"
+include: "src/ExperimentalSearchSpace/experimental_search_space.smk"
+include: "src/Analysis/CellLine/cell_line_analysis.smk"
+include: "src/Analysis/DetectionMethod/detection_method.smk"
+include: "src/Plotting/get_plots.smk"
 
+expected_output = []
+
+if "ms" or "y2h" in config:
+    expected_output += [
+        f"work_folder/inferred_search_space/aggregated/multi_methods/{multi_method}_experimental_wise.csv" for
+            multi_method in ["ms", "y2h"]
+    ]
+
+if config["cell_line_present"]:
+    expected_output.append(
+        "work_folder/plots/cell_line_prey.png"
+    )
+    expected_output.append(
+        "work_folder/inferred_search_space/aggregated/cell_line_experimental_wise.csv"
+    )
 
 rule all:
     input:
-        "work_folder/inferred_search_space/aggregated/cell_line_specific.csv"
+        expected_output
