@@ -29,10 +29,10 @@ rule format_miTab:
         bait_prey_df = reform_to_bait_prey(mitab_df)
         gene_name_df = pd.read_csv(input.gene_names, sep = "\t")
 
-        mitab_df = mitab_df.merge(gene_name_df, left_on="uniprot_bait", right_on="uniprot_id")
-        del mitab_df["uniprot_id"]
-        mitab_df = mitab_df.merge(gene_name_df, left_on="uniprot_prey", right_on="uniprot_id", suffixes=("_bait", "_prey"))
-        del mitab_df["uniprot_id"]
+        bait_prey_df = bait_prey_df.merge(gene_name_df, left_on="uniprot_bait", right_on="uniprot_id")
+        del bait_prey_df["uniprot_id"]
+        bait_prey_df = bait_prey_df.merge(gene_name_df, left_on="uniprot_prey", right_on="uniprot_id", suffixes=("_bait", "_prey"))
+        del bait_prey_df["uniprot_id"]
 
         bait_prey_df.to_csv(
             output.formated,
