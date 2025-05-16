@@ -27,7 +27,7 @@ rule method_comparison:
     Compare localisation
     """
     params:
-        localisation_csv = config["localisation_file"]
+        localisation_csv = config["localisation_file"],
         min_localisation_genes = 100
     input:
         multi_method_ms  = "work_folder/inferred_search_space/aggregated/multi_methods/ms_experimental_wise.csv",
