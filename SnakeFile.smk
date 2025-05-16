@@ -9,6 +9,7 @@ include: "src/FormatFiltering/FormatingFiltering.smk"
 include: "src/ExperimentalSearchSpace/experimental_search_space.smk"
 include: "src/Analysis/CellLine/cell_line_analysis.smk"
 include: "src/Analysis/DetectionMethod/detection_method.smk"
+include: "src/Analysis/Localisation/localisation.smk"
 include: "src/Plotting/get_plots.smk"
 
 expected_output = []
@@ -29,4 +30,5 @@ if config["cell_line_present"]:
 
 rule all:
     input:
-        expected_output
+        expected_output,
+        "work_folder/inferred_search_space/analysis/localisation/logistic_method.csv"
