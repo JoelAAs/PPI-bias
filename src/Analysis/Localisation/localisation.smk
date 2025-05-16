@@ -28,7 +28,7 @@ rule method_comparison:
     """
     params:
         localisation_csv = config["localisation_file"]
-        #min_localisation_genes = 200
+        min_localisation_genes = 100
     input:
         multi_method_ms  = "work_folder/inferred_search_space/aggregated/multi_methods/ms_experimental_wise.csv",
         multi_method_y2h = "work_folder/inferred_search_space/aggregated/multi_methods/y2h_experimental_wise.csv"
@@ -39,13 +39,13 @@ rule method_comparison:
         df_y2h = pd.read_csv(input.multi_method_y2h, sep="\t")
 
         df_localisation = pd.read_csv(params.localisation_csv, sep="\t")
-        # localisation_count = df_localisation.groupby("localisation", as_index=False).size()
-        # keep_localisations = localisation_count[
-        #     localisation_count["size"] > params.min_localisation_genes
-        # ]["localisation"]
-        # df_localisation = df_localisation[
-        #     df_localisation["localisation"].isin(keep_localisations)
-        # ]
+        localisation_count = df_localisation.groupby("localisation", as_index=False).size()
+        keep_localisations = localisation_count[
+            localisation_count["size"] > params.min_localisation_genes
+        ]["localisation"]
+        df_localisation = df_localisation[
+            df_localisation["localisation"].isin(keep_localisations)
+        ]
 
         df_ms = add_localisation(df_ms, df_localisation)
         df_ms = df_ms.groupby(['localisation_bait', 'localisation_match'], as_index=False).agg({
