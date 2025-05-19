@@ -10,6 +10,7 @@ include: "src/ExperimentalSearchSpace/experimental_search_space.smk"
 include: "src/Analysis/CellLine/cell_line_analysis.smk"
 include: "src/Analysis/DetectionMethod/detection_method.smk"
 include: "src/Analysis/Localisation/localisation.smk"
+include: "src/Analysis/ExperimentalNegatome/experimental_negatome.smk"
 include: "src/Plotting/get_plots.smk"
 
 expected_output = []
@@ -21,6 +22,9 @@ if "ms" or "y2h" in config:
     ]
     expected_output.append(
         "work_folder/plots/localisation_OR_y2h_ms.png"
+    )
+    expected_output.append(
+        "work_folder/inferred_search_space/aggregated/methods/ms_y2h_experimental_wise.csv"
     )
 
 if config["cell_line_present"]:
