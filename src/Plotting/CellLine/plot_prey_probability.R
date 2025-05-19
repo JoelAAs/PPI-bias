@@ -9,7 +9,7 @@ n_limit <- as.numeric(args[2])
 output  <- args[3]
 
 df <- read.table(
-  "work_folder/inferred_search_space/analysis/cell_line/bait_wise_prey_plotting.csv",
+  input,
   sep="\t",
   header=T)
 

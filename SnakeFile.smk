@@ -19,6 +19,9 @@ if "ms" or "y2h" in config:
         f"work_folder/inferred_search_space/aggregated/multi_methods/{multi_method}_experimental_wise.csv" for
             multi_method in ["ms", "y2h"]
     ]
+    expected_output.append(
+        "work_folder/plots/localisation_OR_y2h_ms.png"
+    )
 
 if config["cell_line_present"]:
     expected_output.append(
@@ -27,10 +30,6 @@ if config["cell_line_present"]:
     expected_output.append(
         "work_folder/inferred_search_space/aggregated/cell_line_experimental_wise.csv"
     )
-    expected_output.append(
-        "work_folder/inferred_search_space/analysis/localisation/same_localisation_method_diff.csv"
-    )
-
 rule all:
     input:
         expected_output
