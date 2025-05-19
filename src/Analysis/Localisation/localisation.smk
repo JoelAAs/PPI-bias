@@ -11,7 +11,7 @@ def add_localisation(ppi_df, localisation_df):
     del ppi_df["gene_name"]
     ppi_df = ppi_df.merge(
         localisation_df,
-        left_on="gene_name_bait",
+        left_on="gene_name_prey",
         right_on="gene_name",
         suffixes=("_bait", "_prey")
     )
