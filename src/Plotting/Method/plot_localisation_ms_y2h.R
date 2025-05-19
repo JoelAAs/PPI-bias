@@ -58,6 +58,7 @@ df_localisation$label <- ifelse(
 
 ## Plot
 max_or <- max(c(df_localisation$OR_ms, df_localisation$OR_y2h))
+min_or <- min(c(df_localisation$OR_ms, df_localisation$OR_y2h))
 p <- ggplot(
   df_localisation,
   aes(
@@ -68,8 +69,8 @@ p <- ggplot(
   geom_abline(slope = 1, intercept = 0) +
   geom_text_repel(aes(label = label), size = 2, color="forestgreen") +
   theme_bw() +
-  xlim(1, max_or) +
-  ylim(1, max_or) +
+  xlim(min_or, max_or) +
+  ylim(min_or, max_or) +
   xlab("OR Localisation MS") +
   ylab("OR Localisation Y2H") +
   theme(
