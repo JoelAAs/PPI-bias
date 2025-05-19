@@ -24,7 +24,7 @@ if "ms" or "y2h" in config:
         "work_folder/plots/localisation_OR_y2h_ms.png"
     )
     expected_output.append(
-        "work_folder/inferred_search_space/aggregated/methods/ms_y2h_experimental_wise.csv"
+        "work_folder/inferred_search_space/aggregated/methods/threshold_negatome.csv"
     )
 
 if config["cell_line_present"]:
