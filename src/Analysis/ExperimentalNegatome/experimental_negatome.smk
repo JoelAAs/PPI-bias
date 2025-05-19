@@ -1,3 +1,4 @@
+from openpyxl.styles.builtins import output
 
 rule aggregate_pids:
     """
@@ -18,7 +19,7 @@ rule aggregate_pids:
 rule filter_out:
     params:
         min_observations = 4,
-        prior = 0.1
+        pseudo_n = 1
     input:
         method_aggregate = "work_folder/inferred_search_space/aggregated/methods/ms_y2h_experimental_wise.csv"
     output:
@@ -29,8 +30,25 @@ rule filter_out:
             input.method_aggregate,
             sep="\t"
         )
-        inferred_negative_df[
-            (inferred_negative_df["n_observed"] == 0) &
-            (inferred_negative_df["n_tested"] > params.min_observations)
-        ].to_csv(output.experimental_negatome, sep="\t", index=False)
 
+        min_test_df = inferred_negative_df[
+            inferred_negative_df["n_tested"] > params.min_observations
+        ]
+        min_test_df["ratio"] = min_test_df["n_observed"]/min_test_df["n_tested"]
+        mean_p = min_test_df["ratio"].mean()
+        prior_alpha = params.pseudo_n*mean_p
+        prior_beta  = params.pseudo_n - prior_alpha
+
+        inferred_negative_df["alpha_post"] = prior_alpha + inferred_negative_df["n_observed"]
+        inferred_negative_df["beta_post"]  = prior_beta + min_test_df["n_tested"] - inferred_negative_df["n_observed"]
+
+        inferred_negative_df["p"] = inferred_negative_df["alpha_post"]/(
+                inferred_negative_df["alpha_post"] + inferred_negative_df["beta_post"])
+        inferred_negative_df[inferred_negative_df["p"] > 0.90].to_csv(
+            output.hcl,
+            sep="\t",
+            index=False
+        )
+        inferred_negative_df[
+            inferred_negative_df["p"] < prior_alpha/(prior_alpha + prior_beta + params.min_observations)
+        ].to_csv(output.experimental_negatome, sep="\t", index=False)
