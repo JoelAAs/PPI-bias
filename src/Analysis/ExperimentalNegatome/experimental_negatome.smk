@@ -25,7 +25,7 @@ rule filter_out:
         experimental_negatome = "work_folder/inferred_search_space/aggregated/methods/threshold_negatome.csv",
         hcl = "work_folder/inferred_search_space/aggregated/methods/high_confidence.csv"
     run:
-        inferred_negative_df = pd.read(
+        inferred_negative_df = pd.read_csv(
             input.method_aggregate,
             sep="\t"
         )
