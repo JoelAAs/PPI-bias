@@ -75,7 +75,7 @@ checkpoint infer_experimental_search_space:
                 "pubmed_id", "detection_method"
             ]
             bait_prey_df = bait_prey_df[
-                ~bait_prey_df[id_cols].duplicated()]  # Isoforms iof gene name gives more observed than tested
+                ~bait_prey_df[id_cols].duplicated(keep="first")]  # Isoforms iof gene name gives more observed than tested
 
         for pid in bait_prey_df["pubmed_id"].unique():
             pid_ss = bait_prey_df[bait_prey_df["pubmed_id"] == pid]
