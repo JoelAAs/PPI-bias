@@ -1,6 +1,5 @@
 import pandas as pd
-import statsmodels.api as sm
-import statsmodels.formula.api as smf
+from scipy.stats import fisher_exact
 
 
 def add_localisation(ppi_df, localisation_df):
@@ -21,6 +20,23 @@ def add_localisation(ppi_df, localisation_df):
 
     return ppi_df
 
+def fisher_exact_to_df(df_in, localisations, test_column):
+    p = []
+    for localisation in localisations:
+        loc_ss         = df_in[df_in["localisation_bait"] == localisation]
+        or_ln, p_value = fisher_exact(loc_ss[["n_observed", "not_observed"]])
+        direction = "->".join(loc_ss[test_column])
+        p.append({
+            "OR": or_ln,
+            "p_value": p_value,
+            "testdirection": direction
+        })
+
+    df_results = pd.DataFrame(p)
+    df_results["localisation"] = localisations
+    return  df_results
+
+
 
 rule method_comparison:
     """
@@ -33,7 +49,9 @@ rule method_comparison:
         multi_method_ms  = "work_folder/inferred_search_space/aggregated/multi_methods/ms_experimental_wise.csv",
         multi_method_y2h = "work_folder/inferred_search_space/aggregated/multi_methods/y2h_experimental_wise.csv"
     output:
-        localisation = "work_folder/inferred_search_space/analysis/localisation/logistic_method.csv"
+        method_diff_localisation = "work_folder/inferred_search_space/analysis/localisation/same_localisation_method_diff.csv",
+        ms_diff_localisation = "work_folder/inferred_search_space/analysis/localisation/diff_localisation_ms.csv",
+        y2h_diff_localisation= "work_folder/inferred_search_space/analysis/localisation/diff_localisation_ms.csv"
     run:
         df_ms  = pd.read_csv(input.multi_method_ms,  sep="\t")
         df_y2h = pd.read_csv(input.multi_method_y2h, sep="\t")
@@ -65,25 +83,26 @@ rule method_comparison:
         unseen  = full_df.groupby("localisation_bait", as_index=False).size()
         localisation_unseen = unseen[unseen["size"] != 4]["localisation_bait"]
         full_df = full_df[~full_df["localisation_bait"].isin(localisation_unseen)]
-
-        full_df["success_ratio"] = full_df["n_observed"]/full_df["n_tested"]
-        formula = 'success_ratio ~ localisation_match + method'
-        p = []
-
+        full_df["not_observed"] = full_df["n_tested"] - full_df["n_observed"]
         localisations = full_df["localisation_bait"].unique()
-        for localisation in localisations:
-            loc_ss = full_df[full_df["localisation_bait"] == localisation]
-            model = smf.glm(
-                formula=formula, data=loc_ss,
-                family=sm.families.Binomial(),
-                freq_weights=loc_ss['n_tested']).fit()
-            results = pd.concat([model.params, model.pvalues])
-            results.index = [
-                "intercept_coef", "match_coef", "method_coef",
-                "intercept_pvalue", "match_pvalue", "method_pvalue"
-            ]
-            p.append(results)
 
-        df_results = pd.DataFrame(p)
-        df_results["localisation"] = localisations
-        df_results.to_csv(output.localisation, sep="\t", index=False)
+        diff_true = fisher_exact_to_df(
+            full_df[full_df["localisation_matched"] == True],
+            localisations,
+            "method"
+        )
+        diff_true.to_csv(output.method_diff_localisation, sep="\t", index=False)
+
+        diff_ms = fisher_exact_to_df(
+            full_df[full_df["method"] == "ms"],
+            localisations,
+            "localisation_matched"
+        )
+        diff_ms.to_csv(output.ms_diff_localisation, sep="\t", index=False)
+
+        diff_y2h = fisher_exact_to_df(
+            full_df[full_df["method"] == "y2h"],
+            localisations,
+            "localisation_matched"
+        )
+        diff_y2h.to_csv(output.y2h_diff_localisation, sep="\t",index=False)
