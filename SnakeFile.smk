@@ -27,8 +27,10 @@ if config["cell_line_present"]:
     expected_output.append(
         "work_folder/inferred_search_space/aggregated/cell_line_experimental_wise.csv"
     )
+    expected_output.append(
+        "work_folder/inferred_search_space/analysis/localisation/same_localisation_method_diff.csv"
+    )
 
 rule all:
     input:
-        expected_output,
-        "work_folder/inferred_search_space/analysis/localisation/logistic_method.csv"
+        expected_output
