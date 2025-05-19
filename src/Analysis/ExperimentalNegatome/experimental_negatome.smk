@@ -1,5 +1,3 @@
-from openpyxl.styles.builtins import output
-
 rule aggregate_pids:
     """
     Aggregate data form studies of the same method
