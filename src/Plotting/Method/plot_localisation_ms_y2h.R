@@ -79,5 +79,5 @@ p <- ggplot(
     #plot.margin = margin(1, 1, 1, 1, "cm")
   )
 
-ggsave("work", p, height = 8, width = 8, units = "cm", dpi = 300)
+ggsave("work_folder/plots/localisation_OR_y2h_ms.png", p, height = 8, width = 8, units = "cm", dpi = 300)
 
