@@ -69,6 +69,14 @@ checkpoint infer_experimental_search_space:
         bait_prey_df = bait_prey_df[
             bait_prey_df[f"{params.id_pattern}_bait"] != bait_prey_df[f"{params.id_pattern}_prey"]
         ]
+        if params.id_pattern == "gene_name":
+            id_cols = [
+                f"{params.id_pattern}_bait", f"{params.id_pattern}_prey",
+                "pubmed_id", "detection_method"
+            ]
+            bait_prey_df = bait_prey_df[
+                ~bait_prey_df[id_cols].duplicated()]  # Isoforms iof gene name gives more observed than tested
+
         for pid in bait_prey_df["pubmed_id"].unique():
             pid_ss = bait_prey_df[bait_prey_df["pubmed_id"] == pid]
             for detection_method in pid_ss["detection_method"].unique():
@@ -77,8 +85,7 @@ checkpoint infer_experimental_search_space:
                 method_pid_ss = pid_ss[
                     pid_ss["detection_method"] == detection_method
                 ]
-                id_cols = [f"{params.id_pattern}_bait", f"{params.id_pattern}_prey"]
-                method_pid_ss = method_pid_ss[~method_pid_ss[id_cols].duplicated()] # Isoforms iof gene name gives more observed than tested
+
                 if params.cell_line_present:
                     for cl_id in method_pid_ss["cl_id"].unique():
                         output_file = f"work_folder/inferred_search_space/experimental/{pid}_{detection_method}_{cl_id}.csv"
