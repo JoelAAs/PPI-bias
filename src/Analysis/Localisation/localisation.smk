@@ -51,7 +51,7 @@ rule method_comparison:
     output:
         method_diff_localisation = "work_folder/inferred_search_space/analysis/localisation/same_localisation_method_diff.csv",
         ms_diff_localisation = "work_folder/inferred_search_space/analysis/localisation/diff_localisation_ms.csv",
-        y2h_diff_localisation= "work_folder/inferred_search_space/analysis/localisation/diff_localisation_ms.csv"
+        y2h_diff_localisation= "work_folder/inferred_search_space/analysis/localisation/diff_localisation_y2h.csv"
     run:
         df_ms  = pd.read_csv(input.multi_method_ms,  sep="\t")
         df_y2h = pd.read_csv(input.multi_method_y2h, sep="\t")
