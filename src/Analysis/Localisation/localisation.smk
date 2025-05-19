@@ -29,7 +29,7 @@ def fisher_exact_to_df(df_in, localisations, test_column):
         p.append({
             "OR": or_ln,
             "p_value": p_value,
-            "testdirection": direction
+            "test_direction": direction
         })
 
     df_results = pd.DataFrame(p)
@@ -94,14 +94,18 @@ rule method_comparison:
         diff_true.to_csv(output.method_diff_localisation, sep="\t", index=False)
 
         diff_ms = fisher_exact_to_df(
-            full_df[full_df["method"] == "ms"],
+            full_df[
+                full_df["method"] == "ms"
+            ].sort_values('localisation_match', ascending=False),
             localisations,
             "localisation_match"
         )
         diff_ms.to_csv(output.ms_diff_localisation, sep="\t", index=False)
 
         diff_y2h = fisher_exact_to_df(
-            full_df[full_df["method"] == "y2h"],
+            full_df[
+                full_df["method"] == "y2h"
+            ].sort_values('localisation_match', ascending=False),
             localisations,
             "localisation_match"
         )
