@@ -77,7 +77,7 @@ checkpoint infer_experimental_search_space:
                 method_pid_ss = pid_ss[
                     pid_ss["detection_method"] == detection_method
                 ]
-                id_cols = [f"{params.id_pattern}_baits", f"{params.id_pattern}_prey"]
+                id_cols = [f"{params.id_pattern}_bait", f"{params.id_pattern}_prey"]
                 method_pid_ss = method_pid_ss[~method_pid_ss[id_cols].duplicated()] # Isoforms iof gene name gives more observed than tested
                 if params.cell_line_present:
                     for cl_id in method_pid_ss["cl_id"].unique():
