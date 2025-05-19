@@ -66,6 +66,9 @@ checkpoint infer_experimental_search_space:
     run:
         os.makedirs(output[0], exist_ok=True)
         bait_prey_df = pd.read_csv(input.bait_prey_file, sep="\t")
+        bait_prey_df = bait_prey_df[
+            bait_prey_df[f"{params.id_pattern}_bait"] != bait_prey_df[f"{params.id_pattern}_prey"]
+        ]
         for pid in bait_prey_df["pubmed_id"].unique():
             pid_ss = bait_prey_df[bait_prey_df["pubmed_id"] == pid]
             for detection_method in pid_ss["detection_method"].unique():
@@ -74,18 +77,26 @@ checkpoint infer_experimental_search_space:
                 method_pid_ss = pid_ss[
                     pid_ss["detection_method"] == detection_method
                 ]
+                id_cols = [f"{params.id_pattern}_baits", f"{params.id_pattern}_prey"]
+                method_pid_ss = method_pid_ss[~method_pid_ss[id_cols].duplicated()] # Isoforms iof gene name gives more observed than tested
                 if params.cell_line_present:
                     for cl_id in method_pid_ss["cl_id"].unique():
                         output_file = f"work_folder/inferred_search_space/experimental/{pid}_{detection_method}_{cl_id}.csv"
                         cl_method_pid_ss = method_pid_ss[method_pid_ss["cl_id"] == cl_id]
                         tested_dict, obs_dict = get_tested_observed_dicts(cl_method_pid_ss, params.id_pattern)
-                        write_observed(tested_dict, obs_dict, output_file, params.id_pattern, detection_method, pid, cl_id)
+                        write_observed(
+                            tested_dict=tested_dict, obs_dict=obs_dict,
+                            output_file=output_file, id_pattern=params.id_pattern,
+                            detection_method=detection_method, pid=pid, cl=cl_id)
+
 
                 else:
                     output_file = f"work_folder/inferred_search_space/experimental/{pid}_{detection_method}.csv"
                     tested_dict, obs_dict = get_tested_observed_dicts(method_pid_ss, params.id_pattern)
-                    write_observed(tested_dict, obs_dict, output_file, detection_method, pid, params.id_pattern)
-
+                    write_observed(
+                        tested_dict=tested_dict,obs_dict=obs_dict,
+                        output_file=output_file,id_pattern=params.id_pattern,
+                        detection_method=detection_method,pid=pid)
 
 
 
