@@ -1,8 +1,11 @@
-def get_input_files(method, filename, remove_single=True):
+def get_input_files(method, id_pattern, filename, remove_single=True):
     STUDY_FOLDER = checkpoints.infer_experimental_search_space.get().output[0]
 
     ppi_df = pd.read_csv(filename, sep="\t")
     ppi_df = ppi_df[ppi_df["detection_method"] == method]
+    ppi_df = ppi_df[
+        ppi_df[f"{id_pattern}_bait"] != ppi_df[f"{id_pattern}_prey"]
+    ]
     if remove_single:
         ppi_df = ppi_df[ppi_df["pubmed_id"].duplicated()] # NOTE: Should this add to method too?
     expected = [
@@ -21,7 +24,7 @@ rule aggregate_single_method:
     Aggregate data form studies of the same method
     """
     input:
-        method = lambda wc: get_input_files(wc.single_method, config["ppi_df"])
+        method = lambda wc: get_input_files(wc.single_method, config["id_pattern"], config["ppi_df"])
     output:
         method_aggregate = "work_folder/inferred_search_space/aggregated/methods/{single_method}_experimental_wise.csv"
     run:
