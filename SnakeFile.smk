@@ -7,11 +7,13 @@ from src.Analysis.aggregate_support import aggregate_inferred_experiments
 
 include: "src/FormatFiltering/FormatingFiltering.smk"
 include: "src/ExperimentalSearchSpace/experimental_search_space.smk"
-include: "src/Analysis/CellLine/cell_line_analysis.smk"
-include: "src/Analysis/DetectionMethod/detection_method.smk"
-include: "src/Analysis/Localisation/localisation.smk"
-include: "src/Analysis/ExperimentalNegatome/experimental_negatome.smk"
-include: "src/Plotting/get_plots.smk"
+if  config["cell_line_present"]:
+    include: "src/Analysis/CellLine/cell_line_analysis.smk"
+else:
+    include: "src/Analysis/DetectionMethod/detection_method.smk"
+    include: "src/Analysis/Localisation/localisation.smk"
+    include: "src/Analysis/ExperimentalNegatome/experimental_negatome.smk"
+    include: "src/Plotting/get_plots.smk"
 
 expected_output = []
 
