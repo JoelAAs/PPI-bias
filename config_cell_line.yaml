@@ -1,3 +1,5 @@
-ppi_df: "../Cl-annotated-ppis/work_folder/CL_annotated_bait_prey.csv"
+ppi_df: "data/CL_annotated_bait_prey.csv"
 id_pattern: "gene_name"
 cell_line_present: 1
+
+localisation_file: "data/localisation/gene_to_location.csv"
