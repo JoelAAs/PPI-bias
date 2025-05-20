@@ -3,3 +3,20 @@ id_pattern: "gene_name"
 cell_line_present: 1
 
 localisation_file: "data/localisation/gene_to_location.csv"
+
+ms:
+  - "MI-0006"
+  - "MI-0007"
+  - "MI-0096"
+  - "MI-0676"
+  - "MI-1314"
+
+y2h:
+  - "MI-0397" # (two hybrid array)
+  - "MI-1112" # (two hybrid prey pooling approach)
+  - "MI-0398" # (two hybrid pooling approach)
+  - "MI-0018" # (two hybrid)
+  - "MI-0399" # (two hybrid fragment pooling approach) NOTE: One-to-one
+  - "MI-1356" # (validated two hybrid)
+  - "MI-2215" # (barcode fusion genetics two hybrid)
+  - "MI-1113" # (two hybrid bait and prey pooling approach)
