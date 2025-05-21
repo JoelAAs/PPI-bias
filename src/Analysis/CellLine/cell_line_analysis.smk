@@ -8,6 +8,17 @@ def nested_dict():
 def get_input_for_aggregation(wc, filename):
     CL_FOLDER = checkpoints.infer_experimental_search_space.get().output[0]
     cl_df = pd.read_csv(filename, sep="\t")
+    cl_df = cl_df[
+        cl_df[f"gene_name_bait"] != cl_df[f"gene_name_prey"]
+        ]
+
+    id_cols = [
+        "gene_name_bait", "gene_name_prey",
+        "pubmed_id", "detection_method", "cl_id"
+    ]
+    cl_df = cl_df[
+                ~cl_df[id_cols].duplicated(keep="first")]  # Isoforms iof gene name gives more observed than tested
+
     cl_df = cl_df[["pubmed_id", "detection_method", "cl_id"]]
     cl_df = cl_df[~cl_df.duplicated()]
 
