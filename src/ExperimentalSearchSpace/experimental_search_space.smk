@@ -74,6 +74,8 @@ checkpoint infer_experimental_search_space:
                 f"{params.id_pattern}_bait", f"{params.id_pattern}_prey",
                 "pubmed_id", "detection_method"
             ]
+            if params.cell_line_present:
+                id_cols.append("cl_id")
             bait_prey_df = bait_prey_df[
                 ~bait_prey_df[id_cols].duplicated(keep="first")]  # Isoforms iof gene name gives more observed than tested
 

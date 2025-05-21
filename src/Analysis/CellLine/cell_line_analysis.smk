@@ -46,7 +46,7 @@ rule infer_bait_wise_tests:
         ppi_df = pd.read_csv(input.df, sep="\t")
         ppi_df = ppi_df[
             ~ppi_df[["gene_name_bait", "gene_name_prey", "pubmed_id", "detection_method", "cl_id"]].duplicated()
-        ] # TODO: check why there still is duplicates, isofroms?
+        ]
         ppi_df["study_id"] = ppi_df.apply(lambda row: str(row["pubmed_id"]) + row["detection_method"], axis=1)
 
         if params.remove_single_ppi_papers:
@@ -195,3 +195,22 @@ rule filter_tests:
                     (results_filtered_long["odds_ratio"] > params.part_or_differenace_cutoff)
         ]
         results_filtered_long.to_csv(output.differential_interactions_filtered, sep="\t", index=False)
+
+## Will break if there is no var per cell line
+# def get_prey_prior(pair_wise_df):
+#     prey_counts = pair_wise_df.groupby("gene_name_prey")[["total_tested", "total_observed"]].sum()
+#     prey_counts["p"] = prey_counts["total_observed"]/prey_counts["total_tested"]
+#
+#
+#
+# rule create_cell_line_negatome_HCL:
+#     input:
+#         differential_interactions_filtered = "work_folder/inferred_search_space/analysis/cell_line/bait_wise_prey_filtered.csv",
+#         experiment_wise = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
+#     output:
+#         updated = ""
+#     run:
+#         cl_diff = pd.read_csv(input.differential_interactions_filtered, sep = "\t")
+#
+#         "work_folder/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
+#
