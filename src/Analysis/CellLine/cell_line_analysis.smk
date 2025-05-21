@@ -207,21 +207,51 @@ rule filter_tests:
         ]
         results_filtered_long.to_csv(output.differential_interactions_filtered, sep="\t", index=False)
 
-## Will break if there is no var per cell line
-# def get_prey_prior(pair_wise_df):
-#     prey_counts = pair_wise_df.groupby("gene_name_prey")[["total_tested", "total_observed"]].sum()
-#     prey_counts["p"] = prey_counts["total_observed"]/prey_counts["total_tested"]
-#
-#
-#
-# rule create_cell_line_negatome_HCL:
-#     input:
-#         differential_interactions_filtered = "work_folder/inferred_search_space/analysis/cell_line/bait_wise_prey_filtered.csv",
-#         experiment_wise = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
-#     output:
-#         updated = ""
-#     run:
-#         cl_diff = pd.read_csv(input.differential_interactions_filtered, sep = "\t")
-#
-#         "work_folder/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
-#
+
+rule create_cell_line_negatome_HCL:
+    params:
+        min_observations = 4,
+        pseudo_n = 1
+    input:
+        differential_interactions_filtered = "work_folder/inferred_search_space/analysis/cell_line/bait_wise_prey_filtered.csv",
+        experiment_wise = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
+    output:
+        cell_line_negatome = "work_folder/inferred_search_space/analysis/cell_line/negatome_cl.csv",
+        hcl = "work_folder/inferred_search_space/analysis/cell_line/HCL_cl.csv"
+    run:
+        cl_diff = pd.read_csv(input.differential_interactions_filtered, sep = "\t")
+        experimental_df = pd.read_csv(input.experiment_wise, sep = "\t")
+
+
+        min_test_df = experimental_df[
+            experimental_df["n_tested"] > params.min_observations
+            ]
+        min_test_df["ratio"] = min_test_df["n_observed"] / min_test_df["n_tested"]
+        mean_p = min_test_df["ratio"].mean()
+        prior_alpha = params.pseudo_n * mean_p
+        prior_beta = params.pseudo_n - prior_alpha
+
+        experimental_df["alpha_post"] = prior_alpha + experimental_df["n_observed"]
+        experimental_df["beta_post"] = prior_beta + min_test_df["n_tested"] - experimental_df["n_observed"]
+
+        experimental_df["p"] = experimental_df["alpha_post"] / (
+                experimental_df["alpha_post"] + experimental_df["beta_post"])
+
+        hcl_cell_line = experimental_df[experimental_df["p"] > 0.90]
+        hcl_cell_line = hcl_cell_line.merge(
+            cl_diff,
+            on=["gene_name_prey", "cl_id"]
+        )
+        hcl_cell_line.to_csv(
+            output.hcl,
+            sep="\t",
+            index=False
+        )
+        negatome = experimental_df[
+            experimental_df["p"] < prior_alpha / (prior_alpha + prior_beta + params.min_observations)
+            ]
+        negatome = negatome.merge(
+            cl_diff,
+            on=["gene_name_prey", "cl_id"]
+        )
+        negatome.to_csv(output.cell_line_negatome,sep="\t",index=False)
