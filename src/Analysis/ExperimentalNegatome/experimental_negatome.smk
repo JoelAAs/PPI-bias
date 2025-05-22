@@ -1,3 +1,5 @@
+from openpyxl.styles.builtins import output
+
 rule aggregate_pids:
     """
     Aggregate data form studies of the same method
@@ -59,9 +61,19 @@ rule create_cell_line_negatome_HCL:
         experimental_negatome= "work_folder/inferred_search_space/analysis/bias_reduced_ppis/threshold_negatome.csv",
         hcl= "work_folder/inferred_search_space/analysis/bias_reduced_ppis/high_confidence.csv"
     output:
-
+        cl_negatome_cell = "work_folder/inferred_search_space/analysis/bias_reduced_ppis/threshold_negatome.csv",
+        cl_hcl = "work_folder/inferred_search_space/analysis/bias_reduced_ppis/high_confidence.csv"
     run:
-        df = pd.read_csv(input.differential_interactions_filtered, sep="\t")
-        df_ = pd.read_csv(input.experimental_negatome, sep="\t")
-        df_ = pd.read_csv(input.hcl, sep="\t")
+        df_diff = pd.read_csv(input.differential_interactions_filtered, sep="\t")
+        df_nega = pd.read_csv(input.experimental_negatome, sep="\t")
+        df_hcl = pd.read_csv(input.hcl, sep="\t")
 
+
+        df_nega = df_nega.merge(
+            df_diff,
+            by="gene_name_prey"
+        ).to_csv(output.cl_negatome, sep="\t")
+        df_hcl = df_hcl.merge(
+            df_diff,
+            by="gene_name_prey"
+        ).to_csv(output.cl_hcl, sep="\t")
