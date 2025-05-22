@@ -21,7 +21,7 @@ def get_input_for_aggregation(wc, filename):
                 ~cl_df[id_cols].duplicated(keep="first")]  # Isoforms iof gene name gives more observed than tested
 
     cl_df = cl_df[["pubmed_id", "detection_method", "cl_id"]]
-    cl_df = cl_df[~cl_df.duplicated()]
+    cl_df = cl_df[cl_df.duplicated()]
 
     expected_input = [
         f"{CL_FOLDER}/{pubmed_id}_{detection_method}_{cl_id}.csv"

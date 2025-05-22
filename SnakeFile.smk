@@ -13,6 +13,8 @@ include: "src/Analysis/Localisation/localisation.smk"
 include: "src/Analysis/ExperimentalNegatome/experimental_negatome.smk"
 include: "src/Plotting/get_plots.smk"
 
+wildcard_constraints:
+    cell_line="_[_a-zA-Z]+"
 
 expected_output = [
     f"work_folder/inferred_search_space/aggregated/multi_methods/{multi_method}_experimental_wise.csv" for
