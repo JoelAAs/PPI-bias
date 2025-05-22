@@ -1,6 +1,5 @@
 def get_input_files(method, id_pattern, filename, remove_single=True):
-    wc["cell_line"] = ""
-    STUDY_FOLDER = checkpoints.infer_experimental_search_space.get().output[0]
+    STUDY_FOLDER = checkpoints.infer_experimental_search_space.get(cell_line="").output[0]
 
     ppi_df = pd.read_csv(filename, sep="\t")
     ppi_df = ppi_df[ppi_df["detection_method"] == method]

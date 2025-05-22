@@ -20,7 +20,7 @@ if not config["cell_line_present"]:
         f"work_folder/inferred_search_space/aggregated/multi_methods/{multi_method}_experimental_wise.csv" for
             multi_method in ["ms", "y2h"]
     ]
-       
+
     expected_output += [
         "work_folder/plots/localisation_OR_y2h_ms.png",
         "work_folder/inferred_search_space/aggregated/methods/threshold_negatome.csv",
