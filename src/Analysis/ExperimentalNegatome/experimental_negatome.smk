@@ -61,8 +61,8 @@ rule create_cell_line_negatome_HCL:
         experimental_negatome= "work_folder/inferred_search_space/analysis/bias_reduced_ppis/threshold_negatome.csv",
         hcl= "work_folder/inferred_search_space/analysis/bias_reduced_ppis/high_confidence.csv"
     output:
-        cl_negatome_cell = "work_folder/inferred_search_space/analysis/bias_reduced_ppis/threshold_negatome.csv",
-        cl_hcl = "work_folder/inferred_search_space/analysis/bias_reduced_ppis/high_confidence.csv"
+        cl_negatome_cell = "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/threshold_negatome.csv",
+        cl_hcl = "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/high_confidence.csv"
     run:
         df_diff = pd.read_csv(input.differential_interactions_filtered, sep="\t")
         df_nega = pd.read_csv(input.experimental_negatome, sep="\t")
