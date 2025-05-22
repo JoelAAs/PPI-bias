@@ -72,9 +72,9 @@ rule differential_detected_flat_negatome:
 
         df_nega = df_nega.merge(
             df_diff,
-            by="gene_name_prey"
+            on="gene_name_prey"
         ).to_csv(output.cl_negatome, sep="\t")
         df_hcl = df_hcl.merge(
             df_diff,
-            by="gene_name_prey"
+            on="gene_name_prey"
         ).to_csv(output.cl_hcl, sep="\t")
