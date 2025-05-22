@@ -13,20 +13,19 @@ def get_input_for_aggregation(wc, filename):
         cl_df[f"gene_name_bait"] != cl_df[f"gene_name_prey"]
         ] # remove bait-bait
 
-    id_cols = [
-        "gene_name_bait", "gene_name_prey",
-        "pubmed_id", "detection_method", "cl_id"
-    ]
     cl_df = cl_df[
-                ~cl_df[id_cols].duplicated(keep="first")]  # Isoforms iof gene name gives more observed than tested
+        ~cl_df[[
+            "gene_name_bait", "gene_name_prey",
+            "pubmed_id", "detection_method", "cl_id"
+        ]].duplicated(keep="first")] # remove isoforms
 
     cl_df = cl_df[["pubmed_id", "detection_method", "cl_id"]]
-    cl_df = cl_df[cl_df.duplicated()]
+    cl_df = cl_df[cl_df.duplicated(keep=False)]
 
-    expected_input = [
+    expected_input = {
         f"{CL_FOLDER}/{pubmed_id}_{detection_method}_{cl_id}.csv"
         for _, (pubmed_id, detection_method, cl_id) in cl_df.iterrows()
-    ]
+    }
     return expected_input
 
 
