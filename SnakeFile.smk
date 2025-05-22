@@ -20,12 +20,12 @@ if not config["cell_line_present"]:
         f"work_folder/inferred_search_space/aggregated/multi_methods/{multi_method}_experimental_wise.csv" for
             multi_method in ["ms", "y2h"]
     ]
-    expected_output.append(
-        "work_folder/plots/localisation_OR_y2h_ms.png"
-    )
-    expected_output.append(
-        "work_folder/inferred_search_space/aggregated/methods/threshold_negatome.csv"
-    )
+       
+    expected_output += [
+        "work_folder/plots/localisation_OR_y2h_ms.png",
+        "work_folder/inferred_search_space/aggregated/methods/threshold_negatome.csv",
+        "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/high_confidence.csv"
+    ]
 
 else:
     expected_output.append(

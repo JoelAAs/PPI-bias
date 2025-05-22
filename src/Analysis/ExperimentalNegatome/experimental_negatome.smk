@@ -53,7 +53,10 @@ rule all_methods_filter_out:
         ].to_csv(output.experimental_negatome, sep="\t", index=False)
 
 
-rule create_cell_line_negatome_HCL:
+rule differential_detected_flat_negatome:
+    """
+    Flat interaction/non-interactions given cl specific prey-detection 
+    """
     input:
         differential_interactions_filtered = "work_folder/inferred_search_space/analysis/cell_line/bait_wise_prey_filtered.csv",
         experimental_negatome= "work_folder/inferred_search_space/analysis/bias_reduced_ppis/threshold_negatome.csv",
