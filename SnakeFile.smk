@@ -21,9 +21,9 @@ expected_output = [
 
 expected_output += [
     "work_folder/plots/localisation_OR_y2h_ms.png",
-    "work_folder/inferred_search_space/aggregated/methods/threshold_negatome.csv",
-    "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/high_confidence.csv"
-    "work_folder/plots/cell_line_prey.png"
+    "work_folder/inferred_search_space/analysis/bias_reduced_ppis/threshold_negatome.csv",
+    "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/high_confidence.csv",
+    "work_folder/plots/cell_line_prey.png",
     "work_folder/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
 ]
 
