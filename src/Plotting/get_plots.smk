@@ -1,6 +1,6 @@
 rule get_cell_line_prey_plot:
     params:
-        or_n = 50,
+        or_n = config["or_n"],
         script_location = "src/Plotting/CellLine/plot_prey_probability.R"
     input:
         cl_prey = "work_folder/inferred_search_space/analysis/cell_line/bait_wise_prey_plotting.csv"

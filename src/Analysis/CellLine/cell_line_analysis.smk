@@ -35,13 +35,14 @@ rule aggregate_inferred_studies_cell_line:
     Aggregate experiments assuming that any prey observed in studies is tested against all baits 
     """
     input:
-        cl_pids = lambda wc: get_input_for_aggregation(wc, config["ppi_df"])
+        ppi_file = config["cell_line_ppis"],
+        cl_pids = lambda wc: get_input_for_aggregation(wc, config["cell_line_ppis"])
     output:
         cell_line_counts = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
     run:
         aggregate_inferred_experiments(input.cl_pids, output.cell_line_counts, cl=True)
 
-rule infer_bait_wise_tests:
+rule infer_bait_wise_tests_cell_line:
     """
     Expand tests under the assumption that any prey that has been seen is tested in all 
     other experiments with the same bait.
@@ -49,9 +50,9 @@ rule infer_bait_wise_tests:
         remove_single_ppi_papers = True # Remove single ppi studies, assuming that they only focused on one interaction
     """
     params:
-        remove_single_ppi_papers = True
+        remove_single_ppi_papers = config["remove_single_publications"]
     input:
-        df = config["ppi_df"]
+        df = config["cell_line_ppis"]
     output:
         baitwise_infered = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_bait_wise.csv"
     run:
@@ -113,11 +114,7 @@ rule test_prey_probability:
     We test selected cell lines on a prey basis against all other cell lines (not only selected)  
     """
     params:
-        selected_celllines = [
-            "CVCL_0063",
-            "CVCL_0291",
-            "CVCL_0030"
-        ]
+        selected_celllines = config["selected_cell_lines"]
     input:
         bait_wise_inferred = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_bait_wise.csv"
     output:

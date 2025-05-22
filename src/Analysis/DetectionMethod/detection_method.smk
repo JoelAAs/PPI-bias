@@ -24,7 +24,8 @@ rule aggregate_single_method:
     Aggregate data form studies of the same method
     """
     input:
-        method = lambda wc: get_input_files(wc.single_method, config["id_pattern"], config["ppi_df"])
+        input_ppi = config["formated_ppi"],
+        method = lambda wc: get_input_files(wc.single_method, config["id_pattern"], config["formated_ppi"])
     output:
         method_aggregate = "work_folder/inferred_search_space/aggregated/methods/{single_method}_experimental_wise.csv"
     run:

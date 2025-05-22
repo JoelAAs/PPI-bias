@@ -3,7 +3,6 @@ import pandas as pd
 import os
 
 
-
 def create_or_update(c_dict, key, value):
     if key in c_dict:
         if value != dict():
@@ -54,13 +53,18 @@ def write_observed(tested_dict, obs_dict, output_file, id_pattern, detection_met
                     f"{bait}\t{prey}\t{n_tests}\t{observed}\t{detection_method}\t{pid}\t{cl}\n")
                 w.write(lineout)
 
+def get_input_ppi_file(cell_line_wc):
+    if cell_line_wc == "_cell_line":
+        return config["cell_line_ppis"]
+    else:
+        return config["formated_ppi"]
+
 
 checkpoint infer_experimental_search_space:
     params:
         id_pattern = config["id_pattern"],
-        cell_line_present = config["cell_line_present"]
     input:
-        bait_prey_file = config["ppi_df"]
+        bait_prey_file = lambda wc: get_input_ppi_file(wc.cell_line)
     output:
         directory("work_folder/inferred_search_space/experimental{cell_line}")
     run:
@@ -74,7 +78,7 @@ checkpoint infer_experimental_search_space:
                 f"{params.id_pattern}_bait", f"{params.id_pattern}_prey",
                 "pubmed_id", "detection_method"
             ]
-            if params.cell_line_present:
+            if wildcards.cell_line == "_cell_line":
                 id_cols.append("cl_id")
             bait_prey_df = bait_prey_df[
                 ~bait_prey_df[id_cols].duplicated(keep="first")]  # Isoforms iof gene name gives more observed than tested
@@ -88,7 +92,7 @@ checkpoint infer_experimental_search_space:
                     pid_ss["detection_method"] == detection_method
                 ]
 
-                if params.cell_line_present:
+                if wildcards.cell_line == "_cell_line":
                     for cl_id in method_pid_ss["cl_id"].unique():
                         output_file = f"{output[0]}/{pid}_{detection_method}_{cl_id}.csv"
                         cl_method_pid_ss = method_pid_ss[method_pid_ss["cl_id"] == cl_id]
