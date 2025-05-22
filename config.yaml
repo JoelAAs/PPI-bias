@@ -1,9 +1,16 @@
 formated_ppi: "work_folder/formated/bait_prey_publications.csv"
 cell_line_ppis: "data/CL_annotated_bait_prey.csv"
 
+remove_single_publications: True
+or_n: 50
 id_pattern: "gene_name"
 
 localisation_file: "data/localisation/gene_to_location.csv"
+
+selected_cell_lines:
+  - "CVCL_0063"
+  - "CVCL_0291"
+  - "CVCL_0030"
 
 ms:
   - "MI-0006"
