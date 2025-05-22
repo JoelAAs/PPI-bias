@@ -14,15 +14,16 @@ rule aggregate_pids:
 
 
 
-rule filter_out:
+rule all_methods_filter_out:
     params:
         min_observations = 4,
-        pseudo_n = 1
+        pseudo_n = 1,
+        HCL_fraction = 0.8
     input:
         method_aggregate = "work_folder/inferred_search_space/aggregated/methods/ms_y2h_experimental_wise.csv"
     output:
-        experimental_negatome = "work_folder/inferred_search_space/aggregated/methods/threshold_negatome.csv",
-        hcl = "work_folder/inferred_search_space/aggregated/methods/high_confidence.csv"
+        experimental_negatome = "work_folder/inferred_search_space/analysis/bias_reduced_ppis/threshold_negatome.csv",
+        hcl = "work_folder/inferred_search_space/analysis/bias_reduced_ppis/high_confidence.csv"
     run:
         inferred_negative_df = pd.read_csv(
             input.method_aggregate,
@@ -42,7 +43,7 @@ rule filter_out:
 
         inferred_negative_df["p"] = inferred_negative_df["alpha_post"]/(
                 inferred_negative_df["alpha_post"] + inferred_negative_df["beta_post"])
-        inferred_negative_df[inferred_negative_df["p"] > 0.90].to_csv(
+        inferred_negative_df[inferred_negative_df["p"] > params.HCL_fraction].to_csv(
             output.hcl,
             sep="\t",
             index=False
@@ -50,3 +51,17 @@ rule filter_out:
         inferred_negative_df[
             inferred_negative_df["p"] < prior_alpha/(prior_alpha + prior_beta + params.min_observations)
         ].to_csv(output.experimental_negatome, sep="\t", index=False)
+
+
+rule create_cell_line_negatome_HCL:
+    input:
+        differential_interactions_filtered = "work_folder/inferred_search_space/analysis/cell_line/bait_wise_prey_filtered.csv",
+        experimental_negatome= "work_folder/inferred_search_space/analysis/bias_reduced_ppis/threshold_negatome.csv",
+        hcl= "work_folder/inferred_search_space/analysis/bias_reduced_ppis/high_confidence.csv"
+    output:
+
+    run:
+        df = pd.read_csv(input.differential_interactions_filtered, sep="\t")
+        df_ = pd.read_csv(input.experimental_negatome, sep="\t")
+        df_ = pd.read_csv(input.hcl, sep="\t")
+

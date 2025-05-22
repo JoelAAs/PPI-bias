@@ -62,7 +62,7 @@ checkpoint infer_experimental_search_space:
     input:
         bait_prey_file = config["ppi_df"]
     output:
-        directory("work_folder/inferred_search_space/experimental")
+        directory("work_folder/inferred_search_space/experimental{cell_line}")
     run:
         os.makedirs(output[0], exist_ok=True)
         bait_prey_df = pd.read_csv(input.bait_prey_file, sep="\t")
