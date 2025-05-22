@@ -90,7 +90,7 @@ checkpoint infer_experimental_search_space:
 
                 if params.cell_line_present:
                     for cl_id in method_pid_ss["cl_id"].unique():
-                        output_file = f"work_folder/inferred_search_space/experimental/{pid}_{detection_method}_{cl_id}.csv"
+                        output_file = f"{output[0]}/{pid}_{detection_method}_{cl_id}.csv"
                         cl_method_pid_ss = method_pid_ss[method_pid_ss["cl_id"] == cl_id]
                         tested_dict, obs_dict = get_tested_observed_dicts(cl_method_pid_ss, params.id_pattern)
                         write_observed(
@@ -100,7 +100,7 @@ checkpoint infer_experimental_search_space:
 
 
                 else:
-                    output_file = f"work_folder/inferred_search_space/experimental/{pid}_{detection_method}.csv"
+                    output_file = f"{output[0]}/{pid}_{detection_method}.csv"
                     tested_dict, obs_dict = get_tested_observed_dicts(method_pid_ss, params.id_pattern)
                     write_observed(
                         tested_dict=tested_dict,obs_dict=obs_dict,
