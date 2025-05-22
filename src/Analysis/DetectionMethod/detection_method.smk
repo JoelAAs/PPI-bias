@@ -7,7 +7,7 @@ def get_input_files(method, id_pattern, filename, remove_single=True):
         ppi_df[f"{id_pattern}_bait"] != ppi_df[f"{id_pattern}_prey"]
     ]
     if remove_single:
-        ppi_df = ppi_df[ppi_df["pubmed_id"].duplicated()] # NOTE: Should this add to method too?
+        ppi_df = ppi_df[ppi_df["pubmed_id", "detection_method"].duplicated()] # NOTE: Should this add to method too?
     expected = [
         f"{STUDY_FOLDER}/{pid}_{method}.csv" for pid in ppi_df["pubmed_id"].unique()
     ]
