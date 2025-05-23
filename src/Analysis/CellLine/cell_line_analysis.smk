@@ -285,8 +285,10 @@ rule marginalised_prey_probability:
         df_prey_probability = df_tests.groupby("gene_name_prey", as_index=False)[cl_alpha_prior_cols].sum()
 
         for cell_line in params.selected_celllines:
-            df_prey_probability[f"p_{cell_line}"] = df_tests[f"{cell_line}_post_alpha"]/(
-                df_tests[f"{cell_line}_post_beta"] + df_tests[f"{cell_line}_post_alpha"])
+            df_prey_probability[f"p_{cell_line}"] = df_prey_probability.apply(lambda row:
+            row[f"{cell_line}_post_alpha"]/(row[f"{cell_line}_post_beta"] + row[f"{cell_line}_post_alpha"]),
+                axis=1
+            )
 
         df_prey_probability.to_csv(
             output.bait_based_prior,
