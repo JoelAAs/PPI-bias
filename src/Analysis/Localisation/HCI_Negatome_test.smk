@@ -11,7 +11,7 @@ rule compare_HCI_negatome:
     output:
         test_results = "work_folder/inferred_search_space/analysis/localisation/HCL_vs_negatome_table.csv",
         test_table = "work_folder/inferred_search_space/analysis/localisation/HCL_vs_negatome_test.txt"
-    run:s
+    run:
         df_negatome  = pd.read_csv(input.experimental_negatome,  sep="\t")
         df_negatome["group"] = "negatome"
         df_hci = pd.read_csv(input.hci, sep="\t")
