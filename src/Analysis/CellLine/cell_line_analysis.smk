@@ -265,7 +265,7 @@ rule marginalised_prey_probability:
     output:
         bait_based_prior = "work_folder/inferred_search_space/analysis/cell_line/bait_prior.csv"
     run:
-        df_tests = pd.read_csv(bait_wise_inferred, sep="\t")
+        df_tests = pd.read_csv(input.bait_wise_inferred, sep="\t")
         df_tests["total_not_observed"] = df_tests[f"total_tested"] - df_tests[f"total_observed"]
         df_tests["prior_alpha"] = params.prior_strength * df_tests[f"total_observed"]
         df_tests["prior_beta"] = params.prior_strength * df_tests["total_not_observed"]
