@@ -11,6 +11,7 @@ include: "src/Analysis/CellLine/cell_line_analysis.smk"
 include: "src/Analysis/DetectionMethod/detection_method.smk"
 include: "src/Analysis/Localisation/localisation.smk"
 include: "src/Analysis/ExperimentalNegatome/experimental_negatome.smk"
+include: "src/Analysis/Localisation/HCI_Negatome_test.smk"
 include: "src/Plotting/get_plots.smk"
 
 wildcard_constraints:
@@ -26,7 +27,8 @@ expected_output += [
     "work_folder/inferred_search_space/analysis/bias_reduced_ppis/threshold_negatome.csv",
     "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/high_confidence.csv",
     "work_folder/plots/cell_line_prey.png",
-    "work_folder/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
+    "work_folder/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv",
+    "work_folder/inferred_search_space/analysis/cell_line/bait_prior.csv"
 ]
 
 rule all:

@@ -56,6 +56,7 @@ rule infer_bait_wise_tests_cell_line:
         baitwise_infered = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_bait_wise.csv"
     run:
         ppi_df = pd.read_csv(input.df, sep="\t")
+        # TODO: remove isoforms and bait-bait interactions
         ppi_df = ppi_df[
             ~ppi_df[["gene_name_bait", "gene_name_prey", "pubmed_id", "detection_method", "cl_id"]].duplicated()
         ]
@@ -253,3 +254,39 @@ rule create_cell_line_negatome_HCL:
             on=["gene_name_prey", "cl_id"]
         )
         negatome.to_csv(output.cell_line_negatome,sep="\t",index=False)
+
+
+rule marginalised_prey_probability:
+    params:
+        prior_strength = 0.3,
+        selected_celllines = config["selected_cell_lines"]
+    input:
+        bait_wise_inferred = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_bait_wise.csv"
+    output:
+        bait_based_prior = "work_folder/inferred_search_space/analysis/cell_line/bait_prior.csv"
+    run:
+        df_tests = pd.read_csv(bait_wise_inferred, sep="\t")
+        df_tests["total_not_observed"] = df_tests[f"total_tested"] - df_tests[f"total_observed"]
+        df_tests["prior_alpha"] = params.prior_strength * df_tests[f"total_observed"]
+        df_tests["prior_beta"] = params.prior_strength * df_tests["total_not_observed"]
+
+        for cell_line in params.selected_celllines:
+            df_tests[f"{cell_line}_post_alpha"] = df_tests["prior_alpha"] + df_tests[f"{cell_line}_observed"]
+            df_tests[f"{cell_line}_post_beta"]  = df_tests["prior_beta"]  + df_tests[f"{cell_line}_tested"] - df_tests[f"{cell_line}_observed"]
+
+        cl_alpha_prior_cols = [
+            f"{cell_line}_post_alpha" for cell_line in params.selected_celllines
+        ] + [
+            f"{cell_line}_post_beta" for cell_line in params.selected_celllines
+        ]
+        df_prey_probability = df_tests.groupby("gene_name_prey", as_index=False)[cl_alpha_prior_cols].sum()
+
+        for cell_line in params.selected_celllines:
+            df_prey_probability[f"p_{cell_line}"] = df_tests[f"{cell_line}_post_alpha"]/(
+                df_tests[f"{cell_line}_post_beta"] + df_tests[f"{cell_line}_post_alpha"])
+
+        df_prey_probability.to_csv(
+            output.bait_based_prior,
+            sep="\t",
+            index=False
+        )

@@ -16,9 +16,9 @@ rule aggregate_pids:
 
 rule all_methods_filter_out:
     params:
-        min_observations = 4,
-        pseudo_n = 1,
-        HCL_fraction = 0.8
+        min_observations = config["min_observations"],
+        pseudo_n = config["pseudo_n"],
+        HCL_fraction = config["HCL_frac"]
     input:
         method_aggregate = "work_folder/inferred_search_space/aggregated/methods/ms_y2h_experimental_wise.csv"
     output:
