@@ -258,7 +258,7 @@ rule create_cell_line_negatome_HCL:
 
 rule marginalised_prey_probability:
     params:
-        prior_strength = 0.3,
+        prior_strength = 1,
         selected_celllines = config["selected_cell_lines"]
     input:
         bait_wise_inferred = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_bait_wise.csv"
@@ -278,6 +278,9 @@ rule marginalised_prey_probability:
             f"{cell_line}_post_alpha" for cell_line in params.selected_celllines
         ] + [
             f"{cell_line}_post_beta" for cell_line in params.selected_celllines
+        ] + [
+            "prior_alpha",
+            "prior_beta"
         ]
         df_prey_probability = df_tests.groupby("gene_name_prey", as_index=False)[cl_alpha_prior_cols].sum()
 
