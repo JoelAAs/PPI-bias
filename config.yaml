@@ -4,6 +4,7 @@ cell_line_ppis: "data/CL_annotated_bait_prey.csv"
 remove_single_publications: True
 or_n: 50
 min_observations: 4
+min_total_observed: 4
 pseudo_n: 1
 HCL_frac: 0.8
 id_pattern: "gene_name"
