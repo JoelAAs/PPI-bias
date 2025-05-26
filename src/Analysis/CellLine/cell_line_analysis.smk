@@ -1,6 +1,13 @@
-# Run only with the correct config file
-# It won't run otherwise
 
+def reformat_long_cl(df, pattern, col_name, id_column="gene_name_prey"):
+    df_col = [c for c in df.columns if pattern in c]
+    df_long = pd.melt(
+        df[[id_column,] + df_col],
+        id_vars=id_column,var_name="cl_id",value_name=col_name
+    )
+    df_long["cl_id"] = df_long["cl_id"].apply(lambda x: x.replace(pattern,""))
+
+    return df_long
 
 def nested_dict():
     return defaultdict(nested_dict)
@@ -259,7 +266,8 @@ rule create_cell_line_negatome_HCL:
 rule marginalised_prey_probability:
     params:
         prior_strength = 1,
-        selected_celllines = config["selected_cell_lines"]
+        selected_celllines = config["selected_cell_lines"],
+        min_total_tests = config["min_total_observed"]
     input:
         bait_wise_inferred = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_bait_wise.csv"
     output:
@@ -273,25 +281,47 @@ rule marginalised_prey_probability:
         for cell_line in params.selected_celllines:
             df_tests[f"{cell_line}_post_alpha"] = df_tests["prior_alpha"] + df_tests[f"{cell_line}_observed"]
             df_tests[f"{cell_line}_post_beta"]  = df_tests["prior_beta"]  + df_tests[f"{cell_line}_tested"] - df_tests[f"{cell_line}_observed"]
+            df_tests[f"p_bait_{cell_line}"] = df_tests[f"{cell_line}_post_alpha"]/(df_tests[f"{cell_line}_post_beta"] + df_tests[f"{cell_line}_post_alpha"])
+            df_tests[f"{cell_line}_bait_weight"] = df_tests[f"{cell_line}_tested"]/df_tests.groupby("gene_name_prey")[f"{cell_line}_tested"].transform("sum")
+            df_tests[f"{cell_line}_p_bait_weighted"]  = df_tests[f"p_bait_{cell_line}"] * df_tests[f"{cell_line}_bait_weight"] # Weighted mean of P
 
         cl_alpha_prior_cols = [
-            f"{cell_line}_post_alpha" for cell_line in params.selected_celllines
+            f"{cell_line}_observed" for cell_line in params.selected_celllines
         ] + [
-            f"{cell_line}_post_beta" for cell_line in params.selected_celllines
+            f"{cell_line}_tested" for cell_line in params.selected_celllines
         ] + [
-            "prior_alpha",
-            "prior_beta"
+            f"p_bait_{cell_line}_weighted" for cell_line in params.selected_celllines
+        ] + [
+            "total_observed",
+            "total_tested"
         ]
         df_prey_probability = df_tests.groupby("gene_name_prey", as_index=False)[cl_alpha_prior_cols].sum()
-
-        for cell_line in params.selected_celllines:
-            df_prey_probability[f"p_{cell_line}"] = df_prey_probability.apply(lambda row:
-            row[f"{cell_line}_post_alpha"]/(row[f"{cell_line}_post_beta"] + row[f"{cell_line}_post_alpha"]),
-                axis=1
-            )
-
         df_prey_probability.to_csv(
             output.bait_based_prior,
             sep="\t",
             index=False
         )
+
+        n_tests = df_prey_probability[[
+            "gene_name_prey",
+            "total_tested",
+            "total_observed"
+        ]].copy()
+        del df_prey_probability["total_tested"]
+        del df_prey_probability["total_observed"]
+
+        p_long = reformat_long_cl(df_prey_probability, "_p_bait_weighted", "prey_p")
+        tested_long = reformat_long_cl(df_prey_probability,"_tested","n_tested")
+        observed_long = reformat_long_cl(df_prey_probability,"_observed","n_observed")
+
+        df_long = p_long.merge(
+            tested_long.merge(
+                observed_long.merge(
+                    n_tests, on="gene_name_prey"
+                ), on = ["gene_name_prey", "cl_id"]
+            ),on=["gene_name_prey", "cl_id"]
+        )
+
+
+
+
