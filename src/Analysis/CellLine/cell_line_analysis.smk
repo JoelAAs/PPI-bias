@@ -265,13 +265,14 @@ rule create_cell_line_negatome_HCL:
 
 rule marginalised_prey_probability:
     params:
-        prior_strength = 1,
+        prior_strength = 1/3,
         selected_celllines = config["selected_cell_lines"],
         min_total_tests = config["min_total_observed"]
     input:
         bait_wise_inferred = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_bait_wise.csv"
     output:
-        bait_based_prior = "work_folder/inferred_search_space/analysis/cell_line/bait_prior.csv"
+        bait_based_prior = "work_folder/inferred_search_space/analysis/cell_line/bait_prior.csv",
+        bait_based_prior_long= "work_folder/inferred_search_space/analysis/cell_line/bait_prior_long.csv",
     run:
         df_tests = pd.read_csv(input.bait_wise_inferred, sep="\t")
         df_tests["total_not_observed"] = df_tests[f"total_tested"] - df_tests[f"total_observed"]
@@ -322,6 +323,11 @@ rule marginalised_prey_probability:
             ),on=["gene_name_prey", "cl_id"]
         )
 
+        df_long.to_csv(
+            output.bait_based_prior_long,
+            sep="\t",
+            index=False
+        )
 
 
 
