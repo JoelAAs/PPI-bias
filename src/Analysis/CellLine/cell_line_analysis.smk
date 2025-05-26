@@ -291,7 +291,7 @@ rule marginalised_prey_probability:
         ] + [
             f"{cell_line}_tested" for cell_line in params.selected_celllines
         ] + [
-            f"p_bait_{cell_line}_weighted" for cell_line in params.selected_celllines
+            f"{cell_line}_p_bait_weighted" for cell_line in params.selected_celllines
         ] + [
             "total_observed",
             "total_tested"
