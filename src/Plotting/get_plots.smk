@@ -1,6 +1,6 @@
 rule get_cell_line_prey_plot:
     params:
-        or_n = config["or_n"],
+        part_or_difference_cutoff = config["part_or_difference_cutoff"],
         script_location = "src/Plotting/CellLine/plot_prey_probability.R"
     input:
         cl_prey = "work_folder/inferred_search_space/analysis/cell_line/bait_wise_prey_plotting.csv"
@@ -10,7 +10,7 @@ rule get_cell_line_prey_plot:
         """
         Rscript {params.script_location} \
              {input.cl_prey} \
-             {params.or_n} \
+             {params.part_or_difference_cutoff} \
              {output.plot}
         """
 
