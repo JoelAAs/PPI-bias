@@ -17,17 +17,18 @@ include: "src/Plotting/get_plots.smk"
 wildcard_constraints:
     cell_line="_[_a-zA-Z]+"
 
-expected_output = [
-    f"work_folder/inferred_search_space/aggregated/multi_methods/{multi_method}_experimental_wise.csv" for
-        multi_method in ["ms", "y2h"]
-]
+# expected_output = [
+#     f"work_folder/inferred_search_space/aggregated/multi_methods/{multi_method}_experimental_wise.csv" for
+#         multi_method in ["ms", "y2h"]
+# ]
 
-expected_output += [
+expected_output = [
     "work_folder/plots/localisation_OR_y2h_ms.png",
     "work_folder/inferred_search_space/analysis/bias_reduced_ppis/threshold_negatome.csv",
     "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/high_confidence.csv",
     "work_folder/plots/cell_line_prey.png",
-    "work_folder/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv",
+    "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/threshold_negatome.csv",
+    "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/high_confidence.csv",
     "work_folder/inferred_search_space/analysis/cell_line/bait_prior.csv"
 ]
 

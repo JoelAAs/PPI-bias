@@ -1,5 +1,3 @@
-import pandas as pd
-
 rule placeholder_POD_calc:
     input:
         uniprot_to_gene = "work_folder/intact/uniprot_to_gene_name.csv"

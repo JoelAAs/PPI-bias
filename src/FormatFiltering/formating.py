@@ -1,6 +1,5 @@
 import pandas as pd
 import re
-import numpy as np
 
 def _find_pattern(cell, pattern, single=True):
     match = re.search(pattern, cell)

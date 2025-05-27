@@ -167,9 +167,9 @@ rule filter_tests:
     That's cheating
     """
     params:
-        min_total_tests = 30,
-        min_total_observed = 10,
-        part_or_differenace_cutoff = 50,
+        min_total_tests = config["min_total_tests"],
+        min_total_observed = config["min_total_observed"],
+        part_or_difference_cutoff = config["part_or_difference_cutoff"],
         min_fdr_pval = 0.05
     input:
         prey_bait_wise_tested = "work_folder/inferred_search_space/analysis/cell_line/bait_wise_prey_tested.csv",
@@ -207,8 +207,8 @@ rule filter_tests:
         ]
         results_filtered_long.to_csv(output.differential_interactions_ploting, sep="\t", index=False)
         results_filtered_long = results_filtered_long[
-                    (results_filtered_long["odds_ratio"] < 1/params.part_or_differenace_cutoff) |
-                    (results_filtered_long["odds_ratio"] > params.part_or_differenace_cutoff)
+                    (results_filtered_long["odds_ratio"] < 1/params.part_or_difference_cutoff) |
+                    (results_filtered_long["odds_ratio"] > params.part_or_difference_cutoff)
         ]
         results_filtered_long.to_csv(output.differential_interactions_filtered, sep="\t", index=False)
 
@@ -267,7 +267,6 @@ rule marginalised_prey_probability:
     params:
         prior_strength = 1/3,
         selected_celllines = config["selected_cell_lines"],
-        min_total_tests = config["min_total_observed"]
     input:
         bait_wise_inferred = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_bait_wise.csv"
     output:
