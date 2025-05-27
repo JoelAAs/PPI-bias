@@ -16,7 +16,7 @@ rule aggregate_pids:
 
 rule all_methods_filter_out:
     params:
-        min_observations = config["min_observations"],
+        negatome_tested_threshold = config["negatome_tested_threshold"],
         pseudo_n = config["pseudo_n"],
         HCL_fraction = config["HCL_frac"]
     input:
@@ -31,7 +31,7 @@ rule all_methods_filter_out:
         )
 
         min_test_df = inferred_negative_df[
-            inferred_negative_df["n_tested"] > params.min_observations
+            inferred_negative_df["n_tested"] > params.negatome_tested_threshold
         ]
         min_test_df["ratio"] = min_test_df["n_observed"]/min_test_df["n_tested"]
         mean_p = min_test_df["ratio"].mean()
