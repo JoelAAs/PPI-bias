@@ -49,7 +49,7 @@ rule all_methods_filter_out:
             index=False
         )
         inferred_negative_df[
-            inferred_negative_df["p"] < prior_alpha/(prior_alpha + prior_beta + params.min_observations)
+            inferred_negative_df["p"] < prior_alpha/(prior_alpha + prior_beta + params.negatome_tested_threshold)
         ].to_csv(output.experimental_negatome, sep="\t", index=False)
 
 
