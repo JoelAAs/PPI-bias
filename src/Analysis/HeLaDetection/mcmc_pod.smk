@@ -102,7 +102,7 @@ rule fit_parameters:
             bait_parameters = "work_folder/analysis/Hela_pod/baits/{bait}_parameters.csv"
         shell:
             """
-            python fit_model_mp.py \
+            python src/Analysis/HeLaDetection/fit_model_mp.py \
                 --bait {input.bait} \
                 --pod_base_reform {input.pod_base_reform} \
                 --bait_output {output.bait_parameters} \
