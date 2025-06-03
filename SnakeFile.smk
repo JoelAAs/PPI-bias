@@ -31,7 +31,7 @@ expected_output = [
     "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/threshold_negatome.csv",
     "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/high_confidence.csv",
     "work_folder/inferred_search_space/analysis/cell_line/bait_prior.csv",
-    "work_folder/analysis/Hela_pod/logistic_mcmc.csv"
+    "work_folder/analysis/Hela_pod/all_parameters.csv"
 ]
 
 rule all:
