@@ -1,5 +1,4 @@
 import pandas as pd
-import pymc as pm
 import glob
 import os
 
@@ -13,26 +12,6 @@ def get_bait_parameters(wildcards):
     ]
     return expected
 
-def detection_model(y_detections, x_baits, samples=1000, tunings=500, cores=2):
-    with pm.Model() as logistic_model:
-        beta_detection = pm.Normal('beta_detection',mu=0,sigma=10)
-        beta_bait = pm.Normal('beta_bait',mu=0,sigma=10)
-
-
-        logit_p = beta_detection + beta_bait * x_baits
-
-        p = pm.Deterministic('p',pm.math.sigmoid(logit_p))
-        y_obs = pm.Bernoulli('y_obs',p=p,observed=y_detections)
-
-        trace = pm.sample(samples,tune=tunings,cores=cores,return_inferencedata=True)
-
-    beta_detection_mu = trace.posterior["beta_detection"].mean(("chain", "draw")).item()
-    beta_detection_sd = trace.posterior["beta_detection"].std(("chain", "draw")).item()
-
-    beta_bait_mu = trace.posterior["beta_bait"].mean(("chain", "draw")).item()
-    beta_bait_sd = trace.posterior["beta_bait"].std(("chain", "draw")).item()
-
-    return beta_detection_mu, beta_detection_sd, beta_bait_mu, beta_bait_sd
 
 
 rule split_double_columns:
@@ -56,10 +35,8 @@ rule split_double_columns:
 
 checkpoint estimate_bait_interaction:
     params:
-        prior = 1,
         min_tested = 4,
         celline = "CVCL_0030",
-        max_workers = 4
     input:
         pod_base_reform = "work_folder/POD/HeLa.csv",
         cl_specific_interactions = "data/CL_annotated_bait_prey.csv"
@@ -116,29 +93,22 @@ checkpoint estimate_bait_interaction:
 
 
 rule fit_parameters:
+        params:
+            workers = 5
         input:
             bait = "work_folder/analysis/Hela_pod/baits/{bait}.csv",
             pod_base_reform = "work_folder/POD/HeLa.csv"
         output:
             bait_parameters = "work_folder/analysis/Hela_pod/baits/{bait}_parameters.csv"
-        run:
-            bait_df = pd.read_csv(input.bait, sep="\t")
-            baseline_pod = pd.read_csv(input.pod_base_reform, sep="\t")
-            with open(output.bait_parameters, "w") as w:
-                for i, (bait_name, possible_prey, interaction_observations, n_studies_bait) in bait_df.iterrows():
+        shell:
+            """
+            python fit_model_mp.py \
+                --bait {input.bait} \
+                --pod_base_reform {input.pod_base_reform} \
+                --bait_output {output.bait_parameters} \
+                --workers {params.workers}
+            """
 
-                    detections = baseline_pod[possible_prey].tolist()
-                    baits = [0] * len(detections)
-
-                    detections += [1] * interaction_observations + [0] * (
-                            n_studies_bait - interaction_observations)
-                    baits += [1] * n_studies_bait
-
-                    detection_parameters = detection_model(detections,baits)
-
-                    w.write(f"{bait_name}\t{possible_prey}"
-                            f"\t{interaction_observations}"
-                            f"\t{n_studies_bait}" + "\t".join(map(str,detection_parameters)) + "\n")
 
 
 rule aggregate:
