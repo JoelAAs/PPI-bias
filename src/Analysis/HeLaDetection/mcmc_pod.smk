@@ -2,7 +2,7 @@ import concurrent.futures
 import pandas as pd
 import pymc as pm
 import glob
-
+import os
 
 
 def model_per_bait(output_csv, baseline_pod, n_bait_prey_tests, n_studies_bait, bait_name):
@@ -61,6 +61,7 @@ rule estimate_bait_interaction:
         bait_folder = directory("work_folder/analysis/Hela_pod/baits"),
         all_found   = "work_folder/analysis/Hela_pod/logistic_mcmc.csv"
     run:
+        os.makedirs(output.bait_folder, exist_ok=True)
         PPI_interactions = pd.read_csv(input.cl_specific_interactions, sep="\t")
         baseline_pod = pd.read_csv(input.pod_base).fillna(0)
         cols_to_split = [col for col in baseline_pod.columns if ';' in col]
@@ -117,3 +118,7 @@ rule estimate_bait_interaction:
                     "beta_bait_sd",
                 ]
             ) + "\n")
+            for (bait_name, n_studies_bait) in n_studies.iterrows():
+                with open(f"{output.bait_folder}/{bait_name}.csv", "r") as f:
+                    for line in f:
+                        w.write(line)
