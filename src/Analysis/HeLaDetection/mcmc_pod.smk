@@ -91,6 +91,14 @@ checkpoint estimate_bait_interaction:
 
         for i, (bait_name, n_studies_bait) in n_studies.iterrows():
             with open(f"{output.bait_folder}/{bait_name}.csv","w") as w:
+                w.write("\t".join(
+                    [
+                        "gene_name_bait",
+                        "gene_name_prey",
+                        "n_observed",
+                        "n_tested"
+                    ]
+                ))
                 for possible_prey in baseline_pod.columns.values:
                     try:
                         interaction_observations = n_bait_prey_tests[bait_name][possible_prey]
