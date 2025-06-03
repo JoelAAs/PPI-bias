@@ -26,10 +26,10 @@ def detection_model(y_detections, x_baits, samples=1000, tunings=500, cores=2):
     return beta_detection_mu, beta_detection_sd, beta_bait_mu, beta_bait_sd
 
 def process_row(row, baseline_pod):
-    bait_name = row['bait_name']
-    possible_prey = row['possible_prey']
-    interaction_observations = row['interaction_observations']
-    n_studies_bait = row['n_studies_bait']
+    bait_name = row['gene_name_prey']
+    possible_prey = row['gene_name_prey']
+    interaction_observations = row['n_observed']
+    n_studies_bait = row['n_tested']
 
     detections = baseline_pod[possible_prey].tolist()
     baits = [0] * len(detections)
