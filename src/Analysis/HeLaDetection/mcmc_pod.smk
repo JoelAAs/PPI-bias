@@ -4,27 +4,17 @@ import pymc as pm
 import glob
 import os
 
+from openpyxl.styles.builtins import output
 
-def model_per_bait(output_csv, baseline_pod, n_bait_prey_tests, n_studies_bait, bait_name):
-    with open(output_csv,"w") as w:
-        for possible_prey in baseline_pod.columns.values:
 
-            detections = baseline_pod[possible_prey].tolist()
-            baits = [0] * len(detections)
+def get_bait_parameters():
+    BAIT_FOLDER = checkpoints.estimate_bait_interaction.get().output[0]
+    bait_files = glob.glob(BAIT_FOLDER +"/*")
 
-            try:
-                interaction_observations = n_bait_prey_tests[bait_name][possible_prey]
-            except KeyError:
-                interaction_observations = 0
-
-            detections += [1] * interaction_observations + [0] * (n_studies_bait - interaction_observations)
-            baits += [1] * n_studies_bait
-
-            detection_parameters = detection_model(detections,baits)
-
-            w.write(f"{bait_name}\t{possible_prey}"
-                    f"\t{interaction_observations}"
-                    f"\t{n_studies_bait}" + "\t".join(map(str,detection_parameters)) + "\n")
+    expected = [
+        c_file.replace(".csv", "_parameters.csv") for c_file in bait_files
+    ]
+    return expected
 
 def detection_model(y_detections, x_baits, samples=1000, tunings=500, cores=2):
     with pm.Model() as logistic_model:
@@ -48,21 +38,12 @@ def detection_model(y_detections, x_baits, samples=1000, tunings=500, cores=2):
     return beta_detection_mu, beta_detection_sd, beta_bait_mu, beta_bait_sd
 
 
-rule estimate_bait_interaction:
-    params:
-        prior = 1,
-        min_tested = 4,
-        celline = "CVCL_0030",
-        max_workers = 4
+rule split_double_columns:
     input:
-        pod_base = "data/absent_0_present_1_selected_N07444_M04547.csv",
-        cl_specific_interactions = "data/CL_annotated_bait_prey.csv"
+        pod_base = "data/absent_0_present_1_selected_N07444_M04547.csv"
     output:
-        bait_folder = directory("work_folder/analysis/Hela_pod/baits"),
-        all_found   = "work_folder/analysis/Hela_pod/logistic_mcmc.csv"
+        pod_base_reform = "work_folder/POD/HeLa.csv"
     run:
-        os.makedirs(output.bait_folder, exist_ok=True)
-        PPI_interactions = pd.read_csv(input.cl_specific_interactions, sep="\t")
         baseline_pod = pd.read_csv(input.pod_base).fillna(0)
         cols_to_split = [col for col in baseline_pod.columns if ';' in col]
 
@@ -72,7 +53,25 @@ rule estimate_bait_interaction:
                 baseline_pod[new_col] = baseline_pod[col] # TODO: DataFrame is highly fragmented ... fix
             baseline_pod = baseline_pod.drop(columns=[col])
 
-        baseline_pod= baseline_pod.drop(columns=["Unnamed: 0"]) # R index prob
+        baseline_pod = baseline_pod.drop(columns=["Unnamed: 0"]) # R index prob
+        baseline_pod.to_csv(output.pod_base_reform, sep="\t", index=False)
+
+
+checkpoint estimate_bait_interaction:
+    params:
+        prior = 1,
+        min_tested = 4,
+        celline = "CVCL_0030",
+        max_workers = 4
+    input:
+        pod_base_reform = "work_folder/POD/HeLa.csv",
+        cl_specific_interactions = "data/CL_annotated_bait_prey.csv"
+    output:
+        bait_folder = directory("work_folder/analysis/Hela_pod/baits")
+    run:
+        os.makedirs(output.bait_folder, exist_ok=True)
+        PPI_interactions = pd.read_csv(input.cl_specific_interactions, sep="\t")
+        baseline_pod = pd.read_csv(input.pod_base_reform)
 
         PPI_interactions = PPI_interactions[
             (PPI_interactions["gene_name_bait"] != PPI_interactions["gene_name_prey"]) &
@@ -93,32 +92,73 @@ rule estimate_bait_interaction:
 
         n_studies = n_studies[n_studies["n_tested"] >= params.min_tested]
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=params.max_workers) as executor:
-            futures = [
-                executor.submit(model_per_bait,
-                    f"{output.bait_folder}/{bait_name}.csv",
-                    baseline_pod, n_bait_prey_tests,
-                    n_studies_bait, bait_name)
-                for _, (bait_name, n_studies_bait) in n_studies.iterrows()
-            ]
+        for (bait_name, n_studies_bait) in n_studies.iterrows():
+            with open(f"{output.bait_folder}/{bait_name}.csv","w") as w:
+                for possible_prey in baseline_pod.columns.values:
+                    try:
+                        interaction_observations = n_bait_prey_tests[bait_name][possible_prey]
+                    except KeyError:
+                        interaction_observations = 0
 
-            for future in concurrent.futures.as_completed(futures):
-                future.result()
+                    w.write("\t".join(
+                        map(str,[
+                            bait_name,
+                            possible_prey,
+                            interaction_observations,
+                            n_studies_bait
+                        ])
+                    ))
 
-        with open(output.all_found, "w") as w:
-            w.write("\t".join(
-                [
-                    "gene_name_bait",
-                    "gene_name_prey",
-                    "n_observed",
-                    "n_tested",
-                    "beta_prediction_mean",
-                    "beta_prediction_sd",
-                    "beta_bait_mean",
-                    "beta_bait_sd",
-                ]
-            ) + "\n")
-            for (bait_name, n_studies_bait) in n_studies.iterrows():
-                with open(f"{output.bait_folder}/{bait_name}.csv", "r") as f:
-                    for line in f:
-                        w.write(line)
+
+rule fit_parameters:
+        input:
+            bait = "work_folder/analysis/Hela_pod/baits/{bait}.csv",
+            pod_base_reform = "work_folder/POD/HeLa.csv"
+        output:
+            bait_parameters = "work_folder/analysis/Hela_pod/baits/{bait}_parameters.csv"
+        run:
+            touch(output.bait_parameters)
+            # bait_df = pd.read_csv(input.bait, sep="\t", header=False)
+            # baseline_pod = pd.read_csv(input.pod_base_reform, sep="\t")
+            # with open(output.bait_parameters, "w") as w:
+            #     for i, (bait_name, possible_prey, interaction_observations, n_studies_bait) in bait_df.iterrows():
+            #
+            #         detections = baseline_pod[possible_prey].tolist()
+            #         baits = [0] * len(detections)
+            #
+            #         detections += [1] * interaction_observations + [0] * (
+            #                 n_studies_bait - interaction_observations)
+            #         baits += [1] * n_studies_bait
+            #
+            #         detection_parameters = detection_model(detections,baits)
+            #
+            #         w.write(f"{bait_name}\t{possible_prey}"
+            #                 f"\t{interaction_observations}"
+            #                 f"\t{n_studies_bait}" + "\t".join(map(str,detection_parameters)) + "\n")
+
+
+rule aggregate:
+        input:
+            bait_parameters = get_bait_parameters()
+        output:
+            aggregate_parameters = "work_folder/analysis/Hela_pod/all_parameters.csv"
+        run:
+            with open(output.aggregate_parameters, "w") as w:
+                w.write("\t".join(
+                    [
+                        "gene_name_bait",
+                        "gene_name_prey",
+                        "n_observed",
+                        "n_tested",
+                        "beta_prediction_mean",
+                        "beta_prediction_sd",
+                        "beta_bait_mean",
+                        "beta_bait_sd",
+                    ]
+                ) + "\n")
+                for bait_parameters in input.bait_parameters:
+                    with open(bait_parameters, "r") as f:
+                        for line in f:
+                            w.write(line)
+
+
