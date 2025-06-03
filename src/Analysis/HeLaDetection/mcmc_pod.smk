@@ -114,7 +114,7 @@ rule fit_parameters:
         output:
             bait_parameters = "work_folder/analysis/Hela_pod/baits/{bait}_parameters.csv"
         run:
-            bait_df = pd.read_csv(input.bait, sep="\t", header=False)
+            bait_df = pd.read_csv(input.bait, sep="\t", header=None)
             baseline_pod = pd.read_csv(input.pod_base_reform, sep="\t")
             with open(output.bait_parameters, "w") as w:
                 for i, (bait_name, possible_prey, interaction_observations, n_studies_bait) in bait_df.iterrows():
