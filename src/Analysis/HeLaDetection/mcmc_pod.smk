@@ -98,7 +98,7 @@ checkpoint estimate_bait_interaction:
                         "n_observed",
                         "n_tested"
                     ]
-                ))
+                ) + "\n")
                 for possible_prey in baseline_pod.columns.values:
                     try:
                         interaction_observations = n_bait_prey_tests[bait_name][possible_prey]
