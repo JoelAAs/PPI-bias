@@ -62,7 +62,7 @@ def main():
         func = partial(process_row, baseline_pod=baseline_pod)
         results = list(executor.map(func, rows))
 
-    with open(args.bait_parameters, "w") as w:
+    with open(args.bait_output, "w") as w:
         for line in results:
             w.write(line + "\n")
 
