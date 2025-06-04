@@ -1,10 +1,10 @@
 import argparse
+from datetime import datetime
 import pandas as pd
-from concurrent.futures import ProcessPoolExecutor
-import os
 import pymc as pm
+import ray
 
-def detection_model(y_detections, x_baits, samples=1000, tunings=500, cores=2):
+def detection_model(y_detections, x_baits, samples=1000, tunings=500):
     with pm.Model() as logistic_model:
         beta_detection = pm.Normal('beta_detection',mu=0,sigma=10)
         beta_bait = pm.Normal('beta_bait',mu=0,sigma=10)
@@ -15,7 +15,7 @@ def detection_model(y_detections, x_baits, samples=1000, tunings=500, cores=2):
         p = pm.Deterministic('p',pm.math.sigmoid(logit_p))
         y_obs = pm.Bernoulli('y_obs',p=p,observed=y_detections)
 
-        trace = pm.sample(samples,tune=tunings,cores=cores,return_inferencedata=True)
+        trace = pm.sample(samples,tune=tunings,cores=1,return_inferencedata=True)
 
     beta_detection_mu = trace.posterior["beta_detection"].mean(("chain", "draw")).item()
     beta_detection_sd = trace.posterior["beta_detection"].std(("chain", "draw")).item()
@@ -23,8 +23,11 @@ def detection_model(y_detections, x_baits, samples=1000, tunings=500, cores=2):
     beta_bait_mu = trace.posterior["beta_bait"].mean(("chain", "draw")).item()
     beta_bait_sd = trace.posterior["beta_bait"].std(("chain", "draw")).item()
 
-    return beta_detection_mu, beta_detection_sd, beta_bait_mu, beta_bait_sd
+    n_diverging = sum(sum(trace.sample_stats.diverging.values))
 
+    return beta_detection_mu, beta_detection_sd, beta_bait_mu, beta_bait_sd, n_diverging
+
+@ray.remote
 def process_row(row, baseline_pod):
     bait_name = row['gene_name_prey']
     possible_prey = row['gene_name_prey']
@@ -56,15 +59,22 @@ def main():
     bait_df = pd.read_csv(args.bait, sep="\t")
     baseline_pod = pd.read_csv(args.pod_base_reform, sep="\t")
     rows = [row for _, row in bait_df.iterrows()]
+    ray.init(num_cpus=args.workers)
 
-    with ProcessPoolExecutor(max_workers=args.workers) as executor:
-        from functools import partial
-        func = partial(process_row, baseline_pod=baseline_pod)
-        results = list(executor.map(func, rows))
+    start = datetime.now()
+
+    futures = [process_row.remote(row, baseline_pod.copy()) for row in rows]
+
+    results = ray.get(futures)
+
+    stop = datetime.now()
+    print(f"Estimated probability for {len(rows)} in {stop - start} acorss {args.workers} cores")
 
     with open(args.bait_output, "w") as w:
         for line in results:
             w.write(line + "\n")
+
+    ray.shutdown()
 
 if __name__ == "__main__":
     main()

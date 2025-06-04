@@ -94,7 +94,7 @@ checkpoint estimate_bait_interaction:
 
 rule fit_parameters:
         params:
-            workers = 5
+            workers = 25
         input:
             bait = "work_folder/analysis/Hela_pod/baits/{bait}.csv",
             pod_base_reform = "work_folder/POD/HeLa.csv"
