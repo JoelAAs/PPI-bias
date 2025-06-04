@@ -3,9 +3,9 @@ from datetime import datetime
 import pandas as pd
 import pymc as pm
 import ray
-import logging
-logger = logging.getLogger("pymc")
-logger.propagate = False
+# import logging
+# logger = logging.getLogger("pymc")
+# logger.propagate = False
 
 def detection_model(y_detections, x_baits, samples=1000, tunings=500):
     with pm.Model() as logistic_model:
@@ -18,7 +18,7 @@ def detection_model(y_detections, x_baits, samples=1000, tunings=500):
         p = pm.Deterministic('p',pm.math.sigmoid(logit_p))
         y_obs = pm.Bernoulli('y_obs',p=p,observed=y_detections)
 
-        trace = pm.sample(samples,tune=tunings,cores=1,return_inferencedata=True)
+        trace = pm.sample(samples, tune=tunings, cores=1, return_inferencedata=True, progressbar = False)
 
     beta_detection_mu = trace.posterior["beta_detection"].mean(("chain", "draw")).item()
     beta_detection_sd = trace.posterior["beta_detection"].std(("chain", "draw")).item()
@@ -67,7 +67,7 @@ def main():
             return list
         return [list[:size]] + bin_it(list[size:], size)
 
-    batched_rows = bin_it(all_rows, 400)
+    batched_rows = bin_it(all_rows, 200)
     for rows in batched_rows:
         ray.init(num_cpus=args.workers)
 
