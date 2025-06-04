@@ -68,6 +68,8 @@ def main():
 
     batched_rows = bin_it(all_rows, 200)
     for rows in batched_rows:
+        start = datetime.now()
+
         ray.init(num_cpus=args.workers)
 
         futures = [process_row.remote(row, baseline_pod.copy()) for row in rows]
