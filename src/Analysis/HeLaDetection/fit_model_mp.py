@@ -3,6 +3,9 @@ from datetime import datetime
 import pandas as pd
 import pymc as pm
 import ray
+import logging
+logger = logging.getLogger("pymc")
+logger.propagate = False
 
 def detection_model(y_detections, x_baits, samples=1000, tunings=500):
     with pm.Model() as logistic_model:
@@ -54,27 +57,32 @@ def main():
     parser.add_argument("--workers", type=int,
                         help="Number of worker processes for multiprocessing")
 
-    args = parser.parse_args()
 
     bait_df = pd.read_csv(args.bait, sep="\t")
     baseline_pod = pd.read_csv(args.pod_base_reform, sep="\t")
-    rows = [row for _, row in bait_df.iterrows()]
-    ray.init(num_cpus=args.workers)
+    all_rows = [row for _, row in bait_df.iterrows()]
 
-    start = datetime.now()
+    def bin_it(list, size):
+        if size > len(list):
+            return list
+        return [list[:size]] + bin_it(list[size:], size)
 
-    futures = [process_row.remote(row, baseline_pod.copy()) for row in rows]
+    batched_rows = bin_it(all_rows, 400)
+    for rows in batched_rows:
+        ray.init(num_cpus=args.workers)
 
-    results = ray.get(futures)
+        futures = [process_row.remote(row, baseline_pod.copy()) for row in rows]
 
-    stop = datetime.now()
-    print(f"Estimated probability for {len(rows)} in {stop - start} acorss {args.workers} cores")
+        results = ray.get(futures)
 
-    with open(args.bait_output, "w") as w:
-        for line in results:
-            w.write(line + "\n")
+        stop = datetime.now()
+        print(f"Estimated probability for {len(rows)} in {stop - start} acorss {args.workers} cores")
 
-    ray.shutdown()
+        with open(args.bait_output, "a+") as w:
+            for line in results:
+                w.write(line + "\n")
+
+        ray.shutdown()
 
 if __name__ == "__main__":
     main()
