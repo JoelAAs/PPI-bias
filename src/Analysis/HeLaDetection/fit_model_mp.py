@@ -56,8 +56,7 @@ def main():
     parser.add_argument("--bait_output", required=True, help="Path to output file for bait parameters")
     parser.add_argument("--workers", type=int,
                         help="Number of worker processes for multiprocessing")
-
-
+    args = parser.parse_args()
     bait_df = pd.read_csv(args.bait, sep="\t")
     baseline_pod = pd.read_csv(args.pod_base_reform, sep="\t")
     all_rows = [row for _, row in bait_df.iterrows()]
