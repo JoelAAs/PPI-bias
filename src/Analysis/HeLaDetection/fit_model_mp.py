@@ -32,7 +32,7 @@ def detection_model(y_detections, x_baits, samples=1000, tunings=500):
 
 @ray.remote
 def process_row(row, baseline_pod):
-    bait_name = row['gene_name_prey']
+    bait_name = row['gene_name_bait']
     possible_prey = row['gene_name_prey']
     interaction_observations = row['n_observed']
     n_studies_bait = row['n_tested']
