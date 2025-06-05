@@ -63,7 +63,7 @@ def main():
 
     def bin_it(list, size):
         if size > len(list):
-            return list
+            return [list]
         return [list[:size]] + bin_it(list[size:], size)
 
     batched_rows = bin_it(all_rows, 200)
