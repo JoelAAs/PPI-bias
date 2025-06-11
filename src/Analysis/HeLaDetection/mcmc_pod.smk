@@ -36,9 +36,9 @@ rule split_double_columns:
 checkpoint estimate_bait_interaction:
     params:
         min_tested = 4,
-        celline = "CVCL_0030",
+        cellines = ["CVCL_0030", "CVCL_0291", "CVCL_0063"]
     input:
-        pod_base_reform = "work_folder/POD/HeLa.csv",
+        pod_base_reform = "~/resources/proteome/cl_proteome/shared_detection.csv",
         cl_specific_interactions = "data/CL_annotated_bait_prey.csv"
     output:
         bait_folder = directory("work_folder/analysis/Hela_pod/baits")
@@ -49,12 +49,12 @@ checkpoint estimate_bait_interaction:
 
         PPI_interactions = PPI_interactions[
             (PPI_interactions["gene_name_bait"] != PPI_interactions["gene_name_prey"]) &
-            (PPI_interactions["cl_id"] == params.celline)
+            (PPI_interactions["cl_id"].isin(params.cellines))
         ]
         PPI_interactions["study_id"] = PPI_interactions[
             ["pubmed_id", "detection_method"]
         ].apply(lambda row: "-".join(map(str, row)), axis=1)
-        n_studies = PPI_interactions.groupby("gene_name_bait", as_index=False
+        n_studies = PPI_interactions.groupby(["gene_name_bait", "cl_id"], as_index=False
         )["study_id"].nunique()
         n_studies = n_studies.rename(
             {
@@ -62,34 +62,40 @@ checkpoint estimate_bait_interaction:
             }, axis = 1
         )
         n_bait_prey_tests = PPI_interactions.groupby(
-            ["gene_name_bait", "gene_name_prey"])["study_id"].nunique()
+            ["gene_name_bait", "gene_name_prey", "cl_id"])["study_id"].nunique()
 
-        n_studies = n_studies[n_studies["n_tested"] >= params.min_tested]
+        total_studies = n_studies.groupby("gene_name_bait")["n_tested"].sum()
+        baits_to_keep = total_studies[total_studies > params.min_tested].index.values
+        n_studies = n_studies[n_studies["gene_name_bait"].isin(baits_to_keep)]
 
-        for i, (bait_name, n_studies_bait) in n_studies.iterrows():
+        for bait_name in n_studies["gene_name_bait"].unique():
+            cl_ss = n_studies[n_studies["gene_name_bait"] == bait_name]
             with open(f"{output.bait_folder}/{bait_name}.csv","w") as w:
                 w.write("\t".join(
                     [
                         "gene_name_bait",
                         "gene_name_prey",
                         "n_observed",
-                        "n_tested"
+                        "n_tested",
+                        "cl_id"
                     ]
                 ) + "\n")
-                for possible_prey in baseline_pod.columns.values:
-                    try:
-                        interaction_observations = n_bait_prey_tests[bait_name][possible_prey]
-                    except KeyError:
-                        interaction_observations = 0
+                for i, (_, cl_id, n_studies_bait) in cl_ss.iterrows():
+                    for possible_prey in baseline_pod["gene_name"].unique():
+                        try:
+                            interaction_observations = n_bait_prey_tests[bait_name][possible_prey][cl_id]
+                        except KeyError:
+                            interaction_observations = 0
 
-                    w.write("\t".join(
-                        map(str,[
-                            bait_name,
-                            possible_prey,
-                            interaction_observations,
-                            n_studies_bait
-                        ])
-                    ) + "\n")
+                        w.write("\t".join(
+                            map(str,[
+                                bait_name,
+                                possible_prey,
+                                interaction_observations,
+                                n_studies_bait,
+                                cl_id
+                            ])
+                        ) + "\n")
 
 
 rule fit_parameters:
@@ -97,7 +103,7 @@ rule fit_parameters:
             workers = 25
         input:
             bait = "work_folder/analysis/Hela_pod/baits/{bait}.csv",
-            pod_base_reform = "work_folder/POD/HeLa.csv"
+            pod_base_reform = "~/resources/proteome/cl_proteome/shared_detection.csv"
         output:
             bait_parameters = "work_folder/analysis/Hela_pod/baits/{bait}_parameters.csv"
         shell:
@@ -128,6 +134,7 @@ rule aggregate:
                         "beta_prediction_sd",
                         "beta_bait_mean",
                         "beta_bait_sd",
+                        "n_divergences"
                     ]
                 ) + "\n")
                 for bait_parameters in input.bait_parameters:
