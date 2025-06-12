@@ -35,7 +35,7 @@ rule split_double_columns:
 
 checkpoint estimate_bait_interaction:
     params:
-        min_tested = 4,
+        min_tested = 5,
         cellines = ["CVCL_0030", "CVCL_0291", "CVCL_0063"]
     input:
         pod_base_reform = "~/resources/proteome/cl_proteome/shared_detection.csv",
@@ -100,7 +100,7 @@ checkpoint estimate_bait_interaction:
 
 rule fit_parameters:
         params:
-            workers = 25
+            workers = 45
         input:
             bait = "work_folder/analysis/Hela_pod/baits/{bait}.csv",
             pod_base_reform = "~/resources/proteome/cl_proteome/shared_detection.csv"
@@ -118,6 +118,7 @@ rule fit_parameters:
 
 
 rule aggregate:
+    # TODO: fix header
         input:
             bait_parameters = get_bait_parameters
         output:
@@ -130,8 +131,12 @@ rule aggregate:
                         "gene_name_prey",
                         "n_observed",
                         "n_tested",
-                        "beta_prediction_mean",
-                        "beta_prediction_sd",
+                        "beta_prediction_0030_mean",
+                        "beta_prediction_0030_sd",
+                        "beta_prediction_0291_mean",
+                        "beta_prediction_0291_sd",
+                        "beta_prediction_0063_mean",
+                        "beta_prediction_0063_sd",
                         "beta_bait_mean",
                         "beta_bait_sd",
                         "n_divergences"
