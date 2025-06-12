@@ -69,8 +69,9 @@ colnames = [
 ]
 pubtator_df = pubtator_df.rename({i:name for i, name in enumerate(colnames)},axis=1)
 pubtator_taxon_df = pubtator_df.merge(cellosaurus_df, on="cl_id")
+pub_ids = pubtator_taxon_df[pubtator_taxon_df["taxon_id"] == "9606"]["pubmed_id"].unique()
 
-human_df = pubtator_taxon_df[pubtator_taxon_df["taxon_id"] == "9606"]
+human_df = pubtator_taxon_df[pubtator_taxon_df["pubmed_id"].isin(pub_ids)]
 human_df.to_csv("pubtator/cellline2pubtator3_human.csv", sep="\t", index=None)
 
 pids_cl_count = human_df.groupby(["pubmed_id"])["cl_id"].count()
