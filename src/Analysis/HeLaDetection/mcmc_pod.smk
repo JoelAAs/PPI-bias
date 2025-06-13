@@ -132,7 +132,7 @@ rule get_shared_tests:
         unique_tests = pivot_df.reset_index()
         del unique_tests["gene_name_bait"]
         unique_tests = unique_tests[~unique_tests[["gene_name_prey"] + id_cols].duplicated()]
-        unique_tests.write_csv(output.unique_prey_test_combinations, sep="\t", index=False)
+        unique_tests.to_csv(output.unique_prey_test_combinations, sep="\t", index=False)
 
 
 checkpoint batch_tests:
