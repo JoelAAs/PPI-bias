@@ -2,11 +2,9 @@ import pandas as pd
 import glob
 import os
 
-from openpyxl.styles.builtins import output
-
 
 def get_bait_parameters(wildcards):
-    BAIT_FOLDER = checkpoints.estimate_bait_interaction.get().output[0]
+    BAIT_FOLDER = checkpoints.batch_tests.get().output[0]
     bait_files = glob.glob(BAIT_FOLDER +"/*")
 
     expected = [
@@ -46,7 +44,7 @@ checkpoint estimate_bait_interaction:
         min_tested = 2,
         cellines = ["CVCL_0030", "CVCL_0291", "CVCL_0063"]
     input:
-        pod_base_reform = "~/resources/proteome/cl_proteome/shared_detection.csv",
+        pod_base_reform = "data/shared_detection.csv",
         cl_specific_interactions = "data/CL_annotated_bait_prey.csv"
     output:
         bait_folder = directory("work_folder/analysis/Hela_pod/baits")
@@ -164,7 +162,7 @@ rule fit_parameters:
             workers = 20
         input:
             bait = "work_folder/analysis/Hela_pod/batched_prey_tests/batch_{batch}.csv",
-            pod_base_reform = "~/resources/proteome/cl_proteome/shared_detection.csv"
+            pod_base_reform = "data/shared_detection.csv"
         output:
             bait_parameters = "work_folder/analysis/Hela_pod/batched_prey_tests/batch_{batch}_parameters.csv"
         shell:

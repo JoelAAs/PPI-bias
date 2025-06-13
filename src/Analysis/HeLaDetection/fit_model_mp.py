@@ -37,7 +37,7 @@ def detection_model(value_matrix, samples=1000, tunings=500):
         y_obs = pm.Bernoulli('y_obs', p=p, observed=value_matrix[:, 0])
 
         trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=.9, return_inferencedata=True,
-                          progressbar=True)
+                          progressbar=False)
 
     beta_detection_mu = trace.posterior["beta_detection"].mean(("chain", "draw")).values
     beta_detection_sd = trace.posterior["beta_detection"].std(("chain", "draw")).values
@@ -77,7 +77,7 @@ def main():
     parser.add_argument("--pod_base_reform", required=True, help="Path to baseline pod TSV file")
     parser.add_argument("--bait_output", required=True, help="Path to output file for bait parameters")
     parser.add_argument("--workers", type=int,
-                        help="Number of worker processes for multiprocessing")
+                        help="Number of worker processes for ray")
     args = parser.parse_args()
     prey_interaction_df = pd.read_csv(args.prey_tested, sep="\t")
     numeric_cols = prey_interaction_df.columns[2:]
