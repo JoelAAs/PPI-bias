@@ -53,7 +53,7 @@ def detection_model(value_matrix, samples=1000, tunings=500):
 
 
 @ray.remote
-def process_prey(interaction_row, obs_c, tested_c, cl_categories, prey_name, detection_matrix):
+def process_prey(interaction_row, obs_c, tested_c, cl_categories, detection_matrix):
     bait_matrix = np.zeros((interaction_row[tested_c].sum(), len(cl_categories) + 2))
     bait_matrix[:, 1] = 1
     i = 0
