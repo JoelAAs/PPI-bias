@@ -41,7 +41,7 @@ rule split_double_columns:
 
 checkpoint estimate_bait_interaction:
     params:
-        min_tested = 2,
+        min_tested = 4,
         cellines = ["CVCL_0030", "CVCL_0291", "CVCL_0063"]
     input:
         pod_base_reform = "data/shared_detection.csv",
@@ -168,7 +168,7 @@ rule fit_parameters:
         shell:
             """
             python src/Analysis/HeLaDetection/fit_model_mp.py \
-                --bait {input.bait} \
+                --prey_tested {input.bait} \
                 --pod_base_reform {input.pod_base_reform} \
                 --bait_output {output.bait_parameters} \
                 --workers {params.workers}
