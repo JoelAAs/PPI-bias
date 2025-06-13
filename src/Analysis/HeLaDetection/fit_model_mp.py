@@ -80,7 +80,7 @@ def main():
                         help="Number of worker processes for ray")
     args = parser.parse_args()
     prey_interaction_df = pd.read_csv(args.prey_tested, sep="\t")
-    numeric_cols = prey_interaction_df.columns[2:]
+    numeric_cols = prey_interaction_df.columns[1:]
     prey_interaction_df[numeric_cols] = prey_interaction_df[numeric_cols].astype(int)
     baseline_pod = pd.read_csv(args.pod_base_reform, sep="\t")
 
