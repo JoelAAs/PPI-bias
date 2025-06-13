@@ -3,7 +3,6 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-import pymc as pm
 import ray
 
 
@@ -17,14 +16,60 @@ def get_one_hot_untargeted(cl_categories, cell_line_annotations):
     return untargeted_matrix
 
 
-def detection_model(value_matrix, samples=1000, tunings=500):
-    """
-    :param value_matrix: shape (detection, bait, cell_line variables)
-    :param samples: number of MCMC sampling
-    :param tunings: number of burn-in samples
-    :return:
-    """
+# def detection_model(value_matrix, samples=1000, tunings=500):
+#     """
+#     :param value_matrix: shape (detection, bait, cell_line variables)
+#     :param samples: number of MCMC sampling
+#     :param tunings: number of burn-in samples
+#     :return:
+#     """
+#
+#     with pm.Model() as multi_env_model:
+#         # start = pm.find_MAP()
+#         beta_detection = pm.Normal('beta_detection', mu=0, sigma=10,
+#                                    shape=value_matrix.shape[1] - 2)
+#         beta_bait = pm.Normal('beta_bait', mu=0, sigma=10)
+#
+#         logit_p = pm.math.dot(value_matrix[:, 2:], beta_detection) + beta_bait * value_matrix[:, 1]
+#         p = pm.Deterministic('p', pm.math.sigmoid(logit_p))
+#
+#         y_obs = pm.Bernoulli('y_obs', p=p, observed=value_matrix[:, 0])
+#
+#         trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=.9, return_inferencedata=True,
+#                           progressbar=False)
+#
+#     beta_detection_mu = trace.posterior["beta_detection"].mean(("chain", "draw")).values
+#     beta_detection_sd = trace.posterior["beta_detection"].std(("chain", "draw")).values
+#
+#     ordered_values = [val for pair in zip(beta_detection_mu, beta_detection_sd) for val in pair]
+#
+#     beta_bait_mu = trace.posterior["beta_bait"].mean(("chain", "draw")).item()
+#     beta_bait_sd = trace.posterior["beta_bait"].std(("chain", "draw")).item()
+#
+#     n_diverging = sum(sum(trace.sample_stats.diverging.values))
+#
+#     return ordered_values + [beta_bait_mu, beta_bait_sd, n_diverging]
 
+
+@ray.remote(num_cpus=1)
+def process_prey(interaction_row, obs_c, tested_c, cl_categories, detection_matrix, samples=1000, tunings=500):
+    import pymc as pm
+    import logging
+    logger = logging.getLogger("pymc")
+    logger.setLevel(logging.ERROR)
+
+    start = datetime.now()
+
+    bait_matrix = np.zeros((interaction_row[tested_c].sum(), len(cl_categories) + 2))
+    bait_matrix[:, 1] = 1
+    i = 0
+    cl_i = 2
+    for cl_obs, cl_test in zip(obs_c, tested_c):
+        bait_matrix[i:(i + interaction_row[cl_obs]), 0] = 1
+        bait_matrix[i:(i + interaction_row[cl_test]), cl_i] = 1
+        i += interaction_row[cl_test]
+        cl_i += 1
+    value_matrix = np.concat((detection_matrix, bait_matrix))
     with pm.Model() as multi_env_model:
         # start = pm.find_MAP()
         beta_detection = pm.Normal('beta_detection', mu=0, sigma=10,
@@ -49,24 +94,9 @@ def detection_model(value_matrix, samples=1000, tunings=500):
 
     n_diverging = sum(sum(trace.sample_stats.diverging.values))
 
-    return ordered_values + [beta_bait_mu, beta_bait_sd, n_diverging]
-
-
-@ray.remote
-def process_prey(interaction_row, obs_c, tested_c, cl_categories, detection_matrix):
-    bait_matrix = np.zeros((interaction_row[tested_c].sum(), len(cl_categories) + 2))
-    bait_matrix[:, 1] = 1
-    i = 0
-    cl_i = 2
-    for cl_obs, cl_test in zip(obs_c, tested_c):
-        bait_matrix[i:(i + interaction_row[cl_obs]), 0] = 1
-        bait_matrix[i:(i + interaction_row[cl_test]), cl_i] = 1
-        i += interaction_row[cl_test]
-        cl_i += 1
-    input_matrix = np.concat((detection_matrix, bait_matrix))
-
-    detection_parameters = detection_model(input_matrix)
-
+    detection_parameters =  ordered_values + [beta_bait_mu, beta_bait_sd, n_diverging]
+    end = datetime.now()
+    print(f"A job took {end-start} time")
     # Return a tab-separated string for writing later
     return "\t".join(map(str, interaction_row.values)) + "\t" + "\t".join(map(str, detection_parameters))
 
@@ -86,7 +116,7 @@ def main():
 
     cl_categories = np.array(["CVCL_0030", "CVCL_0063", "CVCL_0291"])
 
-    batch_size = 200
+    batch_size = 8
     i = 0
     while prey_interaction_df.shape[0] > i:
         def get_order(cols, pattern, pos=0):
@@ -104,8 +134,8 @@ def main():
         tested_cols = tested_cols[idx_t]
 
         start = datetime.now()
-
         ray.init(num_cpus=args.workers)
+
         futures = []
         for _, row in prey_interaction_df.iloc[i:(i + batch_size)].iterrows():
             prey = row["gene_name_prey"]
@@ -113,6 +143,8 @@ def main():
             detection_matrix = get_one_hot_untargeted(cl_categories, baseline_pod_prey["cl_id"])
             detection_matrix[:, 0] = baseline_pod_prey["value"]
 
+            p = datetime.now()
+            print(f"Estimated start at {p - start} ")
             futures.append(process_prey.remote(
                 interaction_row=row,
                 obs_c=observed_cols,
