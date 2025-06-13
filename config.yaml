@@ -9,6 +9,7 @@ pseudo_n: 1
 HCL_frac: 0.8
 negatome_tested_threshold: 4
 id_pattern: "gene_name"
+prey_n_MCMC_batch: 2000
 
 localisation_file: "data/localisation/gene_to_location.csv"
 

@@ -2,6 +2,8 @@ import pandas as pd
 import glob
 import os
 
+from openpyxl.styles.builtins import output
+
 
 def get_bait_parameters(wildcards):
     BAIT_FOLDER = checkpoints.estimate_bait_interaction.get().output[0]
@@ -11,6 +13,12 @@ def get_bait_parameters(wildcards):
         c_file.replace(".csv", "_parameters.csv") for c_file in bait_files
     ]
     return expected
+
+def get_cell_line_total(wildcards):
+    BAIT_FOLDER = checkpoints.estimate_bait_interaction.get().output[0]
+    bait_files = glob.glob(BAIT_FOLDER +"/*")
+
+    return bait_files
 
 
 
@@ -35,7 +43,7 @@ rule split_double_columns:
 
 checkpoint estimate_bait_interaction:
     params:
-        min_tested = 5,
+        min_tested = 2,
         cellines = ["CVCL_0030", "CVCL_0291", "CVCL_0063"]
     input:
         pod_base_reform = "~/resources/proteome/cl_proteome/shared_detection.csv",
@@ -98,14 +106,67 @@ checkpoint estimate_bait_interaction:
                         ) + "\n")
 
 
+rule get_shared_tests:
+    input:
+        bait_parameters = get_cell_line_total
+    output:
+        unique_prey_test_combinations = "work_folder/analysis/Hela_pod/uniquely_tested_prey.csv"
+    run:
+        all_dfs = [
+            pd.read_csv(bait_file, sep="\t") for bait_file in input.bait_parameters
+        ]
+        all_dfs = pd.concat(all_dfs)
+        pivot_observed = all_dfs.pivot_table(index=['gene_name_bait', 'gene_name_prey'],
+            columns='cl_id', values='n_observed', fill_value=0)
+        pivot_observed = pivot_observed.rename({
+            c_name: f"n_observed_{c_name}" for c_name in pivot_observed
+        }, axis = 1)
+
+        pivot_tested = all_dfs.pivot_table(index=['gene_name_bait', 'gene_name_prey'],
+            columns='cl_id',values='n_tested',fill_value=0)
+        pivot_tested = pivot_tested.rename({
+            c_name: f"n_tested_{c_name}" for c_name in pivot_tested
+        },axis=1)
+
+        pivot_df = pivot_tested.join(pivot_observed)
+        id_cols = pivot_df.columns.values.tolist()
+
+        unique_tests = pivot_df.reset_index()
+        del unique_tests["gene_name_bait"]
+        unique_tests = unique_tests[~unique_tests[["gene_name_prey"] + id_cols].duplicated()]
+        unique_tests.write_csv(output.unique_prey_test_combinations, sep="\t", index=False)
+
+
+checkpoint batch_tests:
+    params:
+        batch_size = config["prey_n_MCMC_batch"]
+    input:
+        unique_prey_test_combinations = "work_folder/analysis/Hela_pod/uniquely_tested_prey.csv"
+    output:
+        batch_folder = directory("work_folder/analysis/Hela_pod/batched_prey_tests")
+    run:
+        os.makedirs(output.batch_folder, exist_ok=True)
+        unique_per_prey_df = pd.read_csv(input.unique_prey_test_combinations, sep="\t")
+        i = 0
+        batch = 0
+        nrow = unique_per_prey_df.shape[0]
+        while nrow > i:
+            unique_per_prey_df.iloc[i:(i + params.batch_size)].to_csv(
+                f"{output.batch_folder}/batch_{batch}.csv", sep="\t", index=False
+            )
+            i += params.batch_size
+            batch += 1
+
+
+
 rule fit_parameters:
         params:
-            workers = 45
+            workers = 20
         input:
-            bait = "work_folder/analysis/Hela_pod/baits/{bait}.csv",
+            bait = "work_folder/analysis/Hela_pod/batched_prey_tests/batch_{batch}.csv",
             pod_base_reform = "~/resources/proteome/cl_proteome/shared_detection.csv"
         output:
-            bait_parameters = "work_folder/analysis/Hela_pod/baits/{bait}_parameters.csv"
+            bait_parameters = "work_folder/analysis/Hela_pod/batched_prey_tests/batch_{batch}_parameters.csv"
         shell:
             """
             python src/Analysis/HeLaDetection/fit_model_mp.py \
@@ -127,10 +188,14 @@ rule aggregate:
             with open(output.aggregate_parameters, "w") as w:
                 w.write("\t".join(
                     [
-                        "gene_name_bait",
-                        "gene_name_prey",
-                        "n_observed",
-                        "n_tested",
+                        'gene_name_bait',
+                        'gene_name_prey',
+                        'n_tested_CVCL_0030',
+                        'n_tested_CVCL_0063',
+                        'n_tested_CVCL_0291',
+                        'n_observed_CVCL_0030',
+                        'n_observed_CVCL_0063',
+                        'n_observed_CVCL_0291'
                         "beta_prediction_0030_mean",
                         "beta_prediction_0030_sd",
                         "beta_prediction_0291_mean",
