@@ -8,7 +8,7 @@ def get_bait_parameters(wildcards):
     bait_files = glob.glob(BAIT_FOLDER +"/*")
 
     expected = [
-        c_file.replace(".csv", "_parameters.csv") for c_file in bait_files
+        c_file.replace(".csv", "_parameters.csv") for c_file in bait_files if "_parameters" not in c_file
     ]
     return expected
 
@@ -41,7 +41,7 @@ rule split_double_columns:
 
 checkpoint estimate_bait_interaction:
     params:
-        min_tested = 4,
+        min_tested = 3,
         cellines = ["CVCL_0030", "CVCL_0291", "CVCL_0063"]
     input:
         pod_base_reform = "data/shared_detection.csv",
@@ -159,7 +159,7 @@ checkpoint batch_tests:
 
 rule fit_parameters:
         params:
-            workers = 20
+            workers = 8
         input:
             bait = "work_folder/analysis/Hela_pod/batched_prey_tests/batch_{batch}.csv",
             pod_base_reform = "data/shared_detection.csv"
@@ -186,14 +186,13 @@ rule aggregate:
             with open(output.aggregate_parameters, "w") as w:
                 w.write("\t".join(
                     [
-                        'gene_name_bait',
                         'gene_name_prey',
                         'n_tested_CVCL_0030',
                         'n_tested_CVCL_0063',
                         'n_tested_CVCL_0291',
                         'n_observed_CVCL_0030',
                         'n_observed_CVCL_0063',
-                        'n_observed_CVCL_0291'
+                        'n_observed_CVCL_0291',
                         "beta_prediction_0030_mean",
                         "beta_prediction_0030_sd",
                         "beta_prediction_0291_mean",
