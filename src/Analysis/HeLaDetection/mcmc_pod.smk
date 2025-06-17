@@ -210,3 +210,31 @@ rule aggregate:
                             w.write(line)
 
 
+rule get_bait_prey_pairs:
+    input:
+        baits_preys = get_cell_line_total,
+        models = "work_folder/analysis/Hela_pod/all_parameters.csv"
+    output:
+        all_bait_prey_models = "work_folder/analysis/Hela_pod/bait_prey_model.csv"
+    run:
+        all_bait_dfs = [pd.read_csv(bp, sep="\t") for bp in input.baits_preys]
+        all_bait_dfs = pd.concat(all_bait_dfs)
+        pivot_observed = all_bait_dfs.pivot_table(index=['gene_name_bait', 'gene_name_prey'],
+            columns='cl_id', values='n_observed', fill_value=0)
+        pivot_observed = pivot_observed.rename({
+            c_name: f"n_observed_{c_name}" for c_name in pivot_observed
+        }, axis = 1)
+
+        pivot_tested = all_bait_dfs.pivot_table(index=['gene_name_bait', 'gene_name_prey'],
+            columns='cl_id',values='n_tested',fill_value=0)
+        pivot_tested = pivot_tested.rename({
+            c_name: f"n_tested_{c_name}" for c_name in pivot_tested
+        },axis=1)
+
+        pivot_df = pivot_tested.join(pivot_observed)
+        id_cols = pivot_df.columns.values.tolist()
+        unique_tests = pivot_df.reset_index()
+
+        model_params = pd.read_csv(input.models, sep="\t")
+        full = unique_tests.merge(model_params, on = ["gene_name_prey"] + id_cols)
+
