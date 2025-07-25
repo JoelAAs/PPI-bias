@@ -158,7 +158,7 @@ rule fit_parameters:
             workers = 8
         input:
             bait = "work_folder/analysis/abundance_aware/batched_prey_tests/batch_{batch}.csv",
-            abundance_cell_lines = "data/normalised_abundance.csv"
+            abundance_cell_lines = "data/normalised_log_ra.csv"
         output:
             bait_parameters = "work_folder/analysis/abundance_aware/batched_prey_tests/batch_{batch}_parameters.csv"
         shell:
