@@ -20,23 +20,16 @@ def get_cell_line_total(wildcards):
 
 
 
-rule split_double_columns:
+rule get_shared_detections:
     input:
-        pod_base = "data/absent_0_present_1_selected_N07444_M04547.csv"
+        all_genes = "data/normalised_abundance.csv"
     output:
-        pod_base_reform = "work_folder/POD/HeLa.csv"
+        detectable_genes = "work_folder/analysis/abundance/detectable_genes.csv"
     run:
-        baseline_pod = pd.read_csv(input.pod_base).fillna(0)
-        cols_to_split = [col for col in baseline_pod.columns if ';' in col]
-
-        for col in cols_to_split:
-            new_cols = col.split(';')
-            for new_col in new_cols:
-                baseline_pod[new_col] = baseline_pod[col] # TODO: DataFrame is highly fragmented ... fix
-            baseline_pod = baseline_pod.drop(columns=[col])
-
-        baseline_pod = baseline_pod.drop(columns=["Unnamed: 0"]) # R index prob
-        baseline_pod.to_csv(output.pod_base_reform, sep="\t", index=False)
+        cl_abundances = pd.read_csv(input.all_genes, sep="\t")
+        genes = cl_abundances.columns[:(len(cl_abundances.columns)-2)]
+        with open(output.detectable_genes) as w:
+            _ = [w.write(gene + "\n") for gene in genes]
 
 
 checkpoint estimate_bait_interaction:
@@ -44,14 +37,15 @@ checkpoint estimate_bait_interaction:
         min_tested = 3,
         cellines = ["CVCL_0030", "CVCL_0291", "CVCL_0063"]
     input:
-        pod_base_reform = "data/shared_detection.csv",
+        detectable_genes = "work_folder/analysis/abundance/detectable_genes.csv",
         cl_specific_interactions = "data/CL_annotated_bait_prey.csv"
     output:
-        bait_folder = directory("work_folder/analysis/Hela_pod/baits")
+        bait_folder = directory("work_folder/analysis/abundance_aware/baits")
     run:
         os.makedirs(output.bait_folder, exist_ok=True)
         PPI_interactions = pd.read_csv(input.cl_specific_interactions, sep="\t")
-        baseline_pod = pd.read_csv(input.pod_base_reform, sep="\t")
+        with open(input.detectable_genes, "r") as f:
+            detectable_genes = {l.strip() for l in f}
 
         PPI_interactions = PPI_interactions[
             (PPI_interactions["gene_name_bait"] != PPI_interactions["gene_name_prey"]) &
@@ -87,7 +81,7 @@ checkpoint estimate_bait_interaction:
                     ]
                 ) + "\n")
                 for i, (_, cl_id, n_studies_bait) in cl_ss.iterrows():
-                    for possible_prey in baseline_pod["gene_name"].unique():
+                    for possible_prey in detectable_genes:
                         try:
                             interaction_observations = n_bait_prey_tests[bait_name][possible_prey][cl_id]
                         except KeyError:
@@ -108,7 +102,7 @@ rule get_shared_tests:
     input:
         bait_parameters = get_cell_line_total
     output:
-        unique_prey_test_combinations = "work_folder/analysis/Hela_pod/uniquely_tested_prey.csv"
+        unique_prey_test_combinations = "work_folder/analysis/abundance_aware/uniquely_tested_prey.csv"
     run:
         all_dfs = [
             pd.read_csv(bait_file, sep="\t") for bait_file in input.bait_parameters
@@ -139,9 +133,9 @@ checkpoint batch_tests:
     params:
         batch_size = config["prey_n_MCMC_batch"]
     input:
-        unique_prey_test_combinations = "work_folder/analysis/Hela_pod/uniquely_tested_prey.csv"
+        unique_prey_test_combinations = "work_folder/analysis/abundance_aware/uniquely_tested_prey.csv"
     output:
-        batch_folder = directory("work_folder/analysis/Hela_pod/batched_prey_tests")
+        batch_folder = directory("work_folder/analysis/abundance_aware/batched_prey_tests")
     run:
         os.makedirs(output.batch_folder, exist_ok=True)
         unique_per_prey_df = pd.read_csv(input.unique_prey_test_combinations, sep="\t")
@@ -161,15 +155,15 @@ rule fit_parameters:
         params:
             workers = 8
         input:
-            bait = "work_folder/analysis/Hela_pod/batched_prey_tests/batch_{batch}.csv",
-            pod_base_reform = "data/shared_detection.csv"
+            bait = "work_folder/analysis/abundance_aware/batched_prey_tests/batch_{batch}.csv",
+            abundance_cell_lines = "data/normalised_abundance.csv"
         output:
-            bait_parameters = "work_folder/analysis/Hela_pod/batched_prey_tests/batch_{batch}_parameters.csv"
+            bait_parameters = "work_folder/analysis/abundance_aware/batched_prey_tests/batch_{batch}_parameters.csv"
         shell:
             """
-            python src/Analysis/HeLaDetection/fit_model_mp.py \
+            python src/Analysis/AbundanceAwareDetection/fit_model_mp.py \
                 --prey_tested {input.bait} \
-                --pod_base_reform {input.pod_base_reform} \
+                --abundance_cell_lines {input.abundance_cell_lines} \
                 --bait_output {output.bait_parameters} \
                 --workers {params.workers}
             """
@@ -181,7 +175,7 @@ rule aggregate:
         input:
             bait_parameters = get_bait_parameters
         output:
-            aggregate_parameters = "work_folder/analysis/Hela_pod/all_parameters.csv"
+            aggregate_parameters = "work_folder/analysis/abundance_aware/all_parameters.csv"
         run:
             with open(output.aggregate_parameters, "w") as w:
                 w.write("\t".join(
@@ -213,9 +207,9 @@ rule aggregate:
 rule get_bait_prey_pairs:
     input:
         baits_preys = get_cell_line_total,
-        models = "work_folder/analysis/Hela_pod/all_parameters.csv"
+        models = "work_folder/analysis/abundance_aware/all_parameters.csv"
     output:
-        all_bait_prey_models = "work_folder/analysis/Hela_pod/bait_prey_model.csv"
+        all_bait_prey_models = "work_folder/analysis/abundance_aware/bait_prey_model.csv"
     run:
         all_bait_dfs = [pd.read_csv(bp, sep="\t") for bp in input.baits_preys]
         all_bait_dfs = pd.concat(all_bait_dfs)

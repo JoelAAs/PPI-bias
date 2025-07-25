@@ -7,49 +7,16 @@ import pandas as pd
 import ray
 
 
-def get_one_hot_untargeted(cl_categories, cell_line_annotations):
-    untargeted_matrix = np.zeros(shape=(len(cell_line_annotations), len(cl_categories) + 2))
-    for i, cl_annotation in enumerate(cell_line_annotations):
+def get_one_hot_untargeted(cl_categories, untargeted_protein_relactive_abundance):
+    untargeted_matrix = np.zeros(shape=(len(untargeted_protein_relactive_abundance), len(cl_categories) + 2))
+    i=0
+    for _, (abundance, cl_annotation) in untargeted_protein_relactive_abundance.iterrows():
         cl_match = np.where(cl_categories == cl_annotation)[0]  ## try except key error
-
-        untargeted_matrix[i, cl_match + 2] = 1
+        untargeted_matrix[i, cl_match + 2] = abundance
+        i += 1
 
     return untargeted_matrix
 
-
-# def detection_model(value_matrix, samples=1000, tunings=500):
-#     """
-#     :param value_matrix: shape (detection, bait, cell_line variables)
-#     :param samples: number of MCMC sampling
-#     :param tunings: number of burn-in samples
-#     :return:
-#     """
-#
-#     with pm.Model() as multi_env_model:
-#         # start = pm.find_MAP()
-#         beta_detection = pm.Normal('beta_detection', mu=0, sigma=10,
-#                                    shape=value_matrix.shape[1] - 2)
-#         beta_bait = pm.Normal('beta_bait', mu=0, sigma=10)
-#
-#         logit_p = pm.math.dot(value_matrix[:, 2:], beta_detection) + beta_bait * value_matrix[:, 1]
-#         p = pm.Deterministic('p', pm.math.sigmoid(logit_p))
-#
-#         y_obs = pm.Bernoulli('y_obs', p=p, observed=value_matrix[:, 0])
-#
-#         trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=.9, return_inferencedata=True,
-#                           progressbar=False)
-#
-#     beta_detection_mu = trace.posterior["beta_detection"].mean(("chain", "draw")).values
-#     beta_detection_sd = trace.posterior["beta_detection"].std(("chain", "draw")).values
-#
-#     ordered_values = [val for pair in zip(beta_detection_mu, beta_detection_sd) for val in pair]
-#
-#     beta_bait_mu = trace.posterior["beta_bait"].mean(("chain", "draw")).item()
-#     beta_bait_sd = trace.posterior["beta_bait"].std(("chain", "draw")).item()
-#
-#     n_diverging = sum(sum(trace.sample_stats.diverging.values))
-#
-#     return ordered_values + [beta_bait_mu, beta_bait_sd, n_diverging]
 
 
 @ray.remote(num_cpus=1)
@@ -105,7 +72,7 @@ def process_prey(interaction_row, obs_c, tested_c, cl_categories, detection_matr
 def main():
     parser = argparse.ArgumentParser(description="Process bait interaction data with multiprocessing.")
     parser.add_argument("--prey_tested", required=True, help="Path to prey combination TSV file")
-    parser.add_argument("--pod_base_reform", required=True, help="Path to baseline pod TSV file")
+    parser.add_argument("--abundance_cell_lines", required=True, help="Path to baseline pod TSV file")
     parser.add_argument("--bait_output", required=True, help="Path to output file for bait parameters")
     parser.add_argument("--workers", type=int,
                         help="Number of worker processes for ray")
@@ -113,8 +80,9 @@ def main():
     prey_interaction_df = pd.read_csv(args.prey_tested, sep="\t")
     numeric_cols = prey_interaction_df.columns[1:]
     prey_interaction_df[numeric_cols] = prey_interaction_df[numeric_cols].astype(int)
-    baseline_pod = pd.read_csv(args.pod_base_reform, sep="\t")
-
+    cell_line_abundance = pd.read_csv(args.abundance_cell_lines, sep="\t")
+    num_cols = cell_line_abundance.select_dtypes(np.float64).columns
+    cell_line_abundance[num_cols] = 2**cell_line_abundance[num_cols] # as its in log2
     cl_categories = np.array(["CVCL_0030", "CVCL_0063", "CVCL_0291"])
 
     batch_size = 8
@@ -140,9 +108,10 @@ def main():
         futures = []
         for _, row in prey_interaction_df.iloc[i:(i + batch_size)].iterrows():
             prey = row["gene_name_prey"]
-            baseline_pod_prey = baseline_pod[baseline_pod["gene_name"] == prey]
-            detection_matrix = get_one_hot_untargeted(cl_categories, baseline_pod_prey["cl_id"])
-            detection_matrix[:, 0] = baseline_pod_prey["value"]
+            detection_matrix = get_one_hot_untargeted(
+                cl_categories,
+                cell_line_abundance[[prey, "cell_line"]].dropna()) #remove non-observations
+            detection_matrix[:, 0] = 1
 
             p = datetime.now()
             print(f"Estimated start at {p - start} ")
@@ -163,6 +132,7 @@ def main():
                 w.write(line + "\n")
 
         ray.shutdown()
+        i += batch_size
 
 
 if __name__ == "__main__":

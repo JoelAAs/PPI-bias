@@ -10,13 +10,15 @@ def set_relative_frequency(infile, outfile):
     relative_freq.to_csv(
         outfile,
         sep="\t",
-        index_label=["gene_name", "relative_frequence"]
+        index_label=["gene_name", "relative_frequency"]
     )
 
 set_relative_frequency(
     "intensities_wide_selected_N04547_M07444.csv",
     "relative_freq_wide_selected_N04547_M07444.csv"
     )
+
+
 
 #set_relative_frequency(
 #    "intensities_wide_selected_N07444_M04547.csv",

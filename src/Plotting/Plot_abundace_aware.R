@@ -7,7 +7,8 @@ df[,"total_observed"] <- df[,'n_observed_CVCL_0030'] + df[,'n_observed_CVCL_0063
 df[,"total_tested"] <- df[,'n_tested_CVCL_0030'] + df[,'n_tested_CVCL_0063'] + df[,'n_tested_CVCL_0291']
 df[,"rate_of_detection"] <- df[,"total_observed"]/df[,"total_tested"]
 
-
+df[, "CL_max"] <- apply(df, 1, function(x) c("CVCL_0030", "CVCL_0063", "CVCL_0291")[
+  which.max(x[c('n_tested_CVCL_0030', 'n_tested_CVCL_0063', 'n_tested_CVCL_0291')])])
 
 df[,"mixure_mean"] <- df["beta_prediction_0030_mean"]*df["n_tested_CVCL_0030"]/df[,"total_tested"] +
   df["beta_prediction_0063_mean"]*df["n_tested_CVCL_0063"]/df[,"total_tested"] +
@@ -58,10 +59,20 @@ ggplot(
   xlab("Upper bounds 95% log(OR detection) baited") +
   ylab("lower bounds 95% log(OR detection) baited") 
   
-  
-
-
 ggplot(
+  df,
+  aes(
+    y = beta_bait_sd,
+    x = mixure_mean,
+    colour = CL_max
+  )
+) + 
+  geom_point() +
+  theme_bw() 
+
+
+
+ ggplot(
   df,
   aes(
     x=rate_of_detection,

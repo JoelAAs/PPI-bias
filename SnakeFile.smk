@@ -13,7 +13,7 @@ include: "src/Analysis/Localisation/localisation.smk"
 include: "src/Analysis/ExperimentalNegatome/experimental_negatome.smk"
 include: "src/Analysis/Localisation/HCI_Negatome_test.smk"
 include: "src/Plotting/get_plots.smk"
-include: "src/Analysis/HeLaDetection/mcmc_pod.smk"
+include: "src/Analysis/AbundanceAwareDetection/mcmc_pod.smk"
 
 wildcard_constraints:
     cell_line="_[_a-zA-Z]+"
@@ -24,13 +24,13 @@ wildcard_constraints:
 # ]
 
 expected_output = [
-    "work_folder/plots/localisation_OR_y2h_ms.png",
-    "work_folder/inferred_search_space/analysis/bias_reduced_ppis/threshold_negatome.csv",
-    "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/high_confidence.csv",
-    "work_folder/plots/cell_line_prey.png",
-    "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/threshold_negatome.csv",
-    "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/high_confidence.csv",
-    "work_folder/inferred_search_space/analysis/cell_line/bait_prior.csv",
+    # "work_folder/plots/localisation_OR_y2h_ms.png",
+    # "work_folder/inferred_search_space/analysis/bias_reduced_ppis/threshold_negatome.csv",
+    # "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/high_confidence.csv",
+    # "work_folder/plots/cell_line_prey.png",
+    # "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/threshold_negatome.csv",
+    # "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/high_confidence.csv",
+    # "work_folder/inferred_search_space/analysis/cell_line/bait_prior.csv",
     "work_folder/analysis/Hela_pod/all_parameters.csv"
 ]
 
