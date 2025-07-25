@@ -1,6 +1,7 @@
 import pandas as pd
 import glob
 import os
+import numpy as np
 
 
 def get_bait_parameters(wildcards):
@@ -22,13 +23,14 @@ def get_cell_line_total(wildcards):
 
 rule get_shared_detections:
     input:
-        all_genes = "data/normalised_abundance.csv"
+        all_genes = "data/normalised_log_ra.csv"
     output:
         detectable_genes = "work_folder/analysis/abundance/detectable_genes.csv"
     run:
         cl_abundances = pd.read_csv(input.all_genes, sep="\t")
-        genes = cl_abundances.columns[:(len(cl_abundances.columns)-2)]
-        with open(output.detectable_genes) as w:
+        genes = cl_abundances.select_dtypes(np.float64).columns
+
+        with open(output.detectable_genes, "w") as w:
             _ = [w.write(gene + "\n") for gene in genes]
 
 
