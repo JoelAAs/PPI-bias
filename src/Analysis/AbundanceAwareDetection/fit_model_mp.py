@@ -17,10 +17,14 @@ def get_one_hot_untargeted(cl_categories, untargeted_protein_relactive_abundance
 
     return untargeted_matrix
 
+def get_prey_sd_mu(df, prey):
+    df_mu = df.groupby("cell_line", as_index=False).mean().rename({prey: "mu"}, axis=1)
+    df_sd = df.groupby("cell_line", as_index=False).std().rename({prey:"sd"}, axis=1)
+    return df_mu.merge(df_sd, on="cell_line").set_index("cell_line")
 
 
 @ray.remote(num_cpus=1)
-def process_prey(interaction_row, obs_c, tested_c, cl_categories, detection_matrix, samples=1000, tunings=500):
+def process_prey(interaction_row, obs_c, tested_c, cl_categories, prey_distribution, samples=1000, tunings=500):
     import pymc as pm
     import logging
     logger = logging.getLogger("pymc")
@@ -28,37 +32,55 @@ def process_prey(interaction_row, obs_c, tested_c, cl_categories, detection_matr
 
     start = datetime.now()
 
-    bait_matrix = np.zeros((interaction_row[tested_c].sum(), len(cl_categories) + 2))
+    N_tests = interaction_row[tested_c].sum()
+    bait_matrix = np.zeros((N_tests, len(cl_categories) + 2))
     bait_matrix[:, 1] = 1
     i = 0
     cl_i = 2
+    cl_idx = np.zeros(bait_matrix.shape[0], dtype=int)
+
     for cl_obs, cl_test in zip(obs_c, tested_c):
+        cl_idx[i:(i + interaction_row[cl_test])] = cl_i-2
         bait_matrix[i:(i + interaction_row[cl_obs]), 0] = 1
         bait_matrix[i:(i + interaction_row[cl_test]), cl_i] = 1
         i += interaction_row[cl_test]
         cl_i += 1
-    value_matrix = np.concat((detection_matrix, bait_matrix))
+
+    ## lets do normal distribution so, therefore do log2
+    mu_untargeted = np.zeros(len(cl_categories))
+    sd_untargeted = np.zeros(len(cl_categories))
+    for cl, (mu, sd) in prey_distribution.iterrows():
+        mu_untargeted[np.where(cl_categories == cl)[0]] = mu
+        sd_untargeted[np.where(cl_categories == cl)[0]] = sd
+
+
+
+
     with pm.Model() as multi_env_model:
-        # start = pm.find_MAP()
-        beta_detection = pm.Normal('beta_detection', mu=0, sigma=10,
-                                   shape=value_matrix.shape[1] - 2)
-        beta_bait = pm.Normal('beta_bait', mu=0, sigma=10)
+        b_bait = pm.Normal('b_bait', mu=0, sigma=10)
+        x_untargeted = pm.Normal(
+            'x_untargeted',
+            mu=mu_untargeted,
+            sigma=sd_untargeted,
+            shape=mu_untargeted.shape[0]
+        )
 
-        logit_p = pm.math.dot(value_matrix[:, 2:], beta_detection) + beta_bait * value_matrix[:, 1]
-        p = pm.Deterministic('p', pm.math.sigmoid(logit_p))
+        x_to_samples = x_untargeted[cl_idx]
+        mu_y = pm.Deterministic("mu_y", pm.math.sigmoid(b_bait*(2**x_to_samples))) # we estimate mean on log
+        sigma_y = 0.05
 
-        y_obs = pm.Bernoulli('y_obs', p=p, observed=value_matrix[:, 0])
+        y_lh = pm.Normal('y_lh', mu=mu_y, sigma=sigma_y, observed=bait_matrix[:, 0])
 
-        trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=.9, return_inferencedata=True,
-                          progressbar=False)
+        trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=0.95, return_inferencedata=True,
+                          progressbar=True)
 
-    beta_detection_mu = trace.posterior["beta_detection"].mean(("chain", "draw")).values
-    beta_detection_sd = trace.posterior["beta_detection"].std(("chain", "draw")).values
+    beta_detection_mu = trace.posterior["x_untargeted"].mean(("chain", "draw")).values
+    beta_detection_sd = trace.posterior["x_untargeted"].std(("chain", "draw")).values
 
     ordered_values = [val for pair in zip(beta_detection_mu, beta_detection_sd) for val in pair]
 
-    beta_bait_mu = trace.posterior["beta_bait"].mean(("chain", "draw")).item()
-    beta_bait_sd = trace.posterior["beta_bait"].std(("chain", "draw")).item()
+    beta_bait_mu = trace.posterior["b_bait"].mean(("chain", "draw")).item()
+    beta_bait_sd = trace.posterior["b_bait"].std(("chain", "draw")).item()
 
     n_diverging = sum(sum(trace.sample_stats.diverging.values))
 
@@ -81,11 +103,11 @@ def main():
     numeric_cols = prey_interaction_df.columns[1:]
     prey_interaction_df[numeric_cols] = prey_interaction_df[numeric_cols].astype(int)
     cell_line_abundance = pd.read_csv(args.abundance_cell_lines, sep="\t")
-    num_cols = cell_line_abundance.select_dtypes(np.float64).columns
-    cell_line_abundance[num_cols] = 2**cell_line_abundance[num_cols] # as its in log2
+    #num_cols = cell_line_abundance.select_dtypes(np.float64).columns
+    #cell_line_abundance[num_cols] = 2**cell_line_abundance[num_cols] # as its in log2
     cl_categories = np.array(["CVCL_0030", "CVCL_0063", "CVCL_0291"])
 
-    batch_size = 8
+    batch_size = 1000
     i = 0
     while prey_interaction_df.shape[0] > i:
         def get_order(cols, pattern, pos=0):
@@ -108,10 +130,12 @@ def main():
         futures = []
         for _, row in prey_interaction_df.iloc[i:(i + batch_size)].iterrows():
             prey = row["gene_name_prey"]
-            detection_matrix = get_one_hot_untargeted(
-                cl_categories,
-                cell_line_abundance[[prey, "cell_line"]].dropna()) #remove non-observations
-            detection_matrix[:, 0] = 1
+            prey_mu_sd = get_prey_sd_mu(cell_line_abundance[[prey, "cell_line"]].dropna(), prey)
+
+            #detection_matrix = get_one_hot_untargeted(
+            #    cl_categories,
+            #    cell_line_abundance[[prey, "cell_line"]].dropna()) #remove non-observations
+            #detection_matrix[:, 0] = 1
 
             p = datetime.now()
             print(f"Estimated start at {p - start} ")
@@ -120,7 +144,7 @@ def main():
                 obs_c=observed_cols,
                 tested_c=tested_cols,
                 cl_categories=cl_categories,
-                detection_matrix=detection_matrix))
+                prey_distribution=prey_mu_sd))
 
         results = ray.get(futures)
 
