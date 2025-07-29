@@ -237,7 +237,7 @@ rule aggregate:
 rule get_bait_prey_pairs:
     input:
         baits_preys = get_cell_line_total,
-        models = "work_folder/analysis/abundance_aware/all_parameters_{model}.csv"
+        models = "work_folder/analysis/abundance_aware/parameters_{model}/all_parameters.csv"
     output:
         all_bait_prey_models = "work_folder/analysis/abundance_aware/bait_prey_{model}.csv"
     run:
