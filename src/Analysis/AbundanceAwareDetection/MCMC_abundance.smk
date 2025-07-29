@@ -1,3 +1,5 @@
+import re
+
 import pandas as pd
 import glob
 import os
@@ -7,10 +9,14 @@ import numpy as np
 def get_bait_parameters(wildcards):
     BAIT_FOLDER = checkpoints.batch_tests.get().output[0]
     bait_files = glob.glob(BAIT_FOLDER +"/*")
-
-    expected = [
-        c_file.replace(".csv", "_parameters.csv") for c_file in bait_files if "_parameters" not in c_file
+    batches = [
+        re.search("/batch_(.*).csv$", f).groups()[0] for f in bait_files
     ]
+    expected = [
+    f"work_folder/analysis/abundance_aware/parameters_{wildcards.model}/batch_{current_batch}_parameters.csv"
+        for current_batch in batches
+    ]
+
     return expected
 
 def get_cell_line_total(wildcards):
@@ -152,24 +158,46 @@ checkpoint batch_tests:
             batch += 1
 
 
-
-rule fit_parameters:
+rule fit_parameters_abundance:
         params:
-            workers = 8
+            workers = config["MCMC_workers"],
+            batch_size = config["prey_n_MCMC_batch"] # for now
         input:
             bait = "work_folder/analysis/abundance_aware/batched_prey_tests/batch_{batch}.csv",
             abundance_cell_lines = "data/normalised_log_ra.csv"
         output:
-            bait_parameters = "work_folder/analysis/abundance_aware/batched_prey_tests/batch_{batch}_parameters.csv"
+            bait_parameters = "work_folder/analysis/abundance_aware/parameters_abundance/batch_{batch}_parameters.csv"
         shell:
             """
             python src/Analysis/AbundanceAwareDetection/fit_model_mp.py \
                 --prey_tested {input.bait} \
                 --abundance_cell_lines {input.abundance_cell_lines} \
+                --abundance 1 \
                 --bait_output {output.bait_parameters} \
-                --workers {params.workers}
+                --workers {params.workers} \
+                --batch_size {params.batch_size}
             """
 
+
+rule fit_parameters_pod:
+        params:
+            workers = config["MCMC_workers"],
+            batch_size = config["prey_n_MCMC_batch"]
+        input:
+            bait = "work_folder/analysis/abundance_aware/batched_prey_tests/batch_{batch}.csv",
+            abundance_cell_lines = "data/normalised_log_ra.csv"
+        output:
+            bait_parameters = "work_folder/analysis/abundance_aware/parameters_pod/batch_{batch}_parameters.csv"
+        shell:
+            """
+            python src/Analysis/AbundanceAwareDetection/fit_model_mp.py \
+                --prey_tested {input.bait} \
+                --abundance_cell_lines {input.abundance_cell_lines} \
+                --abundance 0 \
+                --bait_output {output.bait_parameters} \
+                --workers {params.workers} \
+                --batch_size {params.batch_size}
+            """
 
 
 rule aggregate:
@@ -177,7 +205,7 @@ rule aggregate:
         input:
             bait_parameters = get_bait_parameters
         output:
-            aggregate_parameters = "work_folder/analysis/abundance_aware/all_parameters.csv"
+            aggregate_parameters = "work_folder/analysis/abundance_aware/parameters_{model}/all_parameters.csv"
         run:
             with open(output.aggregate_parameters, "w") as w:
                 w.write("\t".join(
@@ -209,9 +237,9 @@ rule aggregate:
 rule get_bait_prey_pairs:
     input:
         baits_preys = get_cell_line_total,
-        models = "work_folder/analysis/abundance_aware/all_parameters.csv"
+        models = "work_folder/analysis/abundance_aware/all_parameters_{model}.csv"
     output:
-        all_bait_prey_models = "work_folder/analysis/abundance_aware/bait_prey_model.csv"
+        all_bait_prey_models = "work_folder/analysis/abundance_aware/bait_prey_{model}.csv"
     run:
         all_bait_dfs = [pd.read_csv(bp, sep="\t") for bp in input.baits_preys]
         all_bait_dfs = pd.concat(all_bait_dfs)

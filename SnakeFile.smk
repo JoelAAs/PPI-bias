@@ -13,7 +13,7 @@ include: "src/Analysis/Localisation/localisation.smk"
 include: "src/Analysis/ExperimentalNegatome/experimental_negatome.smk"
 include: "src/Analysis/Localisation/HCI_Negatome_test.smk"
 include: "src/Plotting/get_plots.smk"
-include: "src/Analysis/AbundanceAwareDetection/mcmc_pod.smk"
+include: "src/Analysis/AbundanceAwareDetection/MCMC_abundance.smk"
 
 wildcard_constraints:
     cell_line="_[_a-zA-Z]+"
@@ -31,7 +31,8 @@ expected_output = [
     # "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/threshold_negatome.csv",
     # "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/high_confidence.csv",
     # "work_folder/inferred_search_space/analysis/cell_line/bait_prior.csv",
-    "work_folder/analysis/abundance_aware/all_parameters.csv"
+    "work_folder/analysis/abundance_aware/all_parameters_abundance.csv",
+    "work_folder/analysis/abundance_aware/all_parameters_pod.csv"
 ]
 
 rule all:
