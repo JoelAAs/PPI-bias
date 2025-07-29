@@ -129,7 +129,7 @@ def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, prey
         y_lh = pm.Normal('y_lh', mu=mu_y, sigma=sigma_y, observed=bait_matrix[:, 0])
 
         trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=0.95, return_inferencedata=True,
-                          progressbar=True)
+                          progressbar=False)
 
     beta_detection_mu = trace.posterior["x_untargeted"].mean(("chain", "draw")).values
     beta_detection_sd = trace.posterior["x_untargeted"].std(("chain", "draw")).values
