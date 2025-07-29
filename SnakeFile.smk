@@ -31,8 +31,8 @@ expected_output = [
     # "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/threshold_negatome.csv",
     # "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/high_confidence.csv",
     # "work_folder/inferred_search_space/analysis/cell_line/bait_prior.csv",
-    "work_folder/analysis/abundance_aware/all_parameters_abundance.csv",
-    "work_folder/analysis/abundance_aware/all_parameters_pod.csv"
+    "work_folder/analysis/abundance_aware/bait_prey_abundance.csv",
+    "work_folder/analysis/abundance_aware/bait_prey_pod.csv"
 ]
 
 rule all:
