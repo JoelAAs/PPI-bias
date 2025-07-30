@@ -1,6 +1,7 @@
 import argparse
 from datetime import datetime
 import os
+import random
 os.environ["RAY_DEDUP_LOGS"] = "0"
 import numpy as np
 import pandas as pd
@@ -27,7 +28,6 @@ def get_prey_sd_mu(df, prey):
 @ray.remote(num_cpus=1)
 def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_matrix, samples=1000, tunings=500):
     import uuid
-    os.environ['PYTENSOR_FLAGS'] = f"compiledir=/tmp/compiledir_{uuid.uuid4()}" # to make sure pytensor doesnt compile to same directory at the same time
     import pymc as pm
     import logging
     logger = logging.getLogger("pymc")
@@ -184,12 +184,15 @@ def main():
         ray.init(num_cpus=args.workers)
 
         futures = []
-        for _, row in prey_interaction_df.iloc[i:(i + batch_size)].iterrows():
+        for j, row in prey_interaction_df.iloc[i:(i + batch_size)].iterrows():
             prey = row["gene_name_prey"]
+            ray_task_env = {"PYTENSOR_FLAGS": f"compiledir=/tmp/compiledir_{j}"}
 
             if args.abundance == 1:
                 prey_mu_sd = get_prey_sd_mu(cell_line_abundance[[prey, "cell_line"]].dropna(), prey)
-                futures.append(process_prey_abundance.remote(
+                futures.append(process_prey_abundance.options(
+                    runtime_env={"env_vars": ray_task_env}
+                ).remote(
                     interaction_row=row,
                     obs_c=observed_cols,
                     tested_c=tested_cols,
@@ -201,8 +204,9 @@ def main():
                    cl_categories,
                    cell_line_abundance[[prey, "cell_line"]].fillna(0)) #remove non-observations
 
-
-                futures.append(process_prey_pod.remote(
+                futures.append(process_prey_pod.options(
+                    runtime_env={"env_vars": ray_task_env}
+                ).remote(
                     interaction_row=row,
                     obs_c=observed_cols,
                     tested_c=tested_cols,
