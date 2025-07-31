@@ -1,4 +1,5 @@
 import argparse
+import time
 from datetime import datetime
 import os
 import random
@@ -6,7 +7,7 @@ os.environ["RAY_DEDUP_LOGS"] = "0"
 import numpy as np
 import pandas as pd
 import ray
-
+from filelock._error import Timeout
 
 def get_one_hot_untargeted(cl_categories, untargeted_protein_relactive_abundance):
     untargeted_matrix = np.zeros(shape=(len(untargeted_protein_relactive_abundance), len(cl_categories) + 2))
@@ -59,8 +60,14 @@ def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_
 
         y_obs = pm.Bernoulli('y_obs', p=p, observed=value_matrix[:, 0])
 
-        trace = pm.sample(samples, tune=tunings, chains=4, cores=1,
-                          target_accept=.9, return_inferencedata=True, progressbar=False)
+
+        try:
+            trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=0.95, return_inferencedata=True,
+                              progressbar=False)
+        except Timeout:
+            time.sleep(15) # If multiple jobs tries to compile. Doesn't solve it just makes it less likely
+            trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=0.95, return_inferencedata=True,
+                              progressbar=False)
 
     beta_detection_mu = trace.posterior["beta_detection"].mean(("chain", "draw")).values
     beta_detection_sd = trace.posterior["beta_detection"].std(("chain", "draw")).values
@@ -128,8 +135,13 @@ def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, prey
 
         y_lh = pm.Normal('y_lh', mu=mu_y, sigma=sigma_y, observed=bait_matrix[:, 0])
 
-        trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=0.95, return_inferencedata=True,
-                          progressbar=False)
+        try:
+            trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=0.95, return_inferencedata=True,
+                              progressbar=False)
+        except Timeout:
+            time.sleep(15) # If multiple jobs tries to compile. Doesn't solve it just makes it less likely
+            trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=0.95, return_inferencedata=True,
+                              progressbar=False)
 
     beta_detection_mu = trace.posterior["x_untargeted"].mean(("chain", "draw")).values
     beta_detection_sd = trace.posterior["x_untargeted"].std(("chain", "draw")).values
@@ -184,10 +196,9 @@ def main():
         ray.init(num_cpus=args.workers)
 
         futures = []
+        ray_task_env = {"PYTENSOR_FLAGS": f"compiledir=/tmp/compiledir_{i}"}
         for j, row in prey_interaction_df.iloc[i:(i + batch_size)].iterrows():
             prey = row["gene_name_prey"]
-            ray_task_env = {"PYTENSOR_FLAGS": f"compiledir=/tmp/compiledir_{j}"}
-
             if args.abundance == 1:
                 prey_mu_sd = get_prey_sd_mu(cell_line_abundance[[prey, "cell_line"]].dropna(), prey)
                 futures.append(process_prey_abundance.options(
