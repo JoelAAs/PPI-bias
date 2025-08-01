@@ -161,7 +161,7 @@ checkpoint batch_tests:
 rule fit_parameters_abundance:
         params:
             workers = config["MCMC_workers"],
-            batch_size = config["prey_n_MCMC_batch"] # for now
+            batch_size = config["batch_per_write"] # for now
         input:
             bait = "work_folder/analysis/abundance_aware/batched_prey_tests/batch_{batch}.csv",
             abundance_cell_lines = "data/normalised_log_ra.csv"
@@ -182,7 +182,7 @@ rule fit_parameters_abundance:
 rule fit_parameters_pod:
         params:
             workers = config["MCMC_workers"],
-            batch_size = config["prey_n_MCMC_batch"]
+            batch_size = config["batch_per_write"]
         input:
             bait = "work_folder/analysis/abundance_aware/batched_prey_tests/batch_{batch}.csv",
             abundance_cell_lines = "data/normalised_log_ra.csv"

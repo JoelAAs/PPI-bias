@@ -11,6 +11,7 @@ negatome_tested_threshold: 4
 id_pattern: "gene_name"
 prey_n_MCMC_batch: 2000
 MCMC_workers: 45
+batch_per_write: 1000
 
 localisation_file: "data/localisation/gene_to_location.csv"
 

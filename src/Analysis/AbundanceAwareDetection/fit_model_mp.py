@@ -64,7 +64,8 @@ def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_
         try:
             trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=0.95, return_inferencedata=True,
                               progressbar=False)
-        except Timeout:
+        except (TimeoutError, AssertionError):
+            print("failed, redoing")
             time.sleep(15) # If multiple jobs tries to compile. Doesn't solve it just makes it less likely
             trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=0.95, return_inferencedata=True,
                               progressbar=False)
@@ -138,7 +139,8 @@ def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, prey
         try:
             trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=0.95, return_inferencedata=True,
                               progressbar=False)
-        except Timeout:
+        except (TimeoutError, AssertionError):
+            print("failed, redoing")
             time.sleep(15) # If multiple jobs tries to compile. Doesn't solve it just makes it less likely
             trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=0.95, return_inferencedata=True,
                               progressbar=False)
