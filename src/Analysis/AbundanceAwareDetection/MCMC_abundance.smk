@@ -258,7 +258,10 @@ rule get_bait_prey_pairs:
         pivot_df = pivot_tested.join(pivot_observed)
         id_cols = pivot_df.columns.values.tolist()
         unique_tests = pivot_df.reset_index()
+        unique_tests[id_cols] = unique_tests[id_cols].astype(int)
 
         model_params = pd.read_csv(input.models, sep="\t")
         full = unique_tests.merge(model_params, on = ["gene_name_prey"] + id_cols)
+        full.to_csv(output.all_bait_prey_models, sep="\t", index=False)
+
 
