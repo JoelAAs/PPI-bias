@@ -96,7 +96,7 @@ def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, prey
     logger.setLevel(logging.ERROR)
 
     start = datetime.now()
-
+    target_accept = 0.9
     N_tests = interaction_row[tested_c].sum()
     bait_matrix = np.zeros((N_tests, len(cl_categories) + 2))
     bait_matrix[:, 1] = 1
@@ -139,19 +139,20 @@ def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, prey
             y_lh = pm.Normal('y_lh', mu=mu_y, sigma=sigma_y, observed=bait_matrix[:, 0])
 
             try:
-                trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=0.95, return_inferencedata=True,
-                                  progressbar=False)
+                trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=target_accept, return_inferencedata=True,
+                                  progressbar=True)
             except (TimeoutError, AssertionError):
                 print("failed, redoing")
                 time.sleep(15) # If multiple jobs tries to compile. Doesn't solve it just makes it less likely
-                trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=0.95, return_inferencedata=True,
-                                  progressbar=False)
+                trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=target_accept, return_inferencedata=True,
+                                  progressbar=True)
         n_diverging = sum(sum(trace.sample_stats.diverging.values))
         if n_diverging == 0:
             divergent = False
         else:
             tries += 1
             tunings += tuning_extra
+            target_accept += 0.0225
 
     beta_detection_mu = trace.posterior["x_untargeted"].mean(("chain", "draw")).values
     beta_detection_sd = trace.posterior["x_untargeted"].std(("chain", "draw")).values
@@ -165,7 +166,7 @@ def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, prey
 
     detection_parameters =  ordered_values + [beta_bait_mu, beta_bait_sd, n_diverging]
     end = datetime.now()
-    print(f"A job took {end-start} time")
+    print(f"A job took {end-start} time, with {tries+1} tries and target_accept {target_accept}")
     # Return a tab-separated string for writing later
     return "\t".join(map(str, interaction_row.values)) + "\t" + "\t".join(map(str, detection_parameters))
 
