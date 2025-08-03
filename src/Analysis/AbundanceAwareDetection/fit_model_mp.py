@@ -89,7 +89,7 @@ def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_
 
 
 @ray.remote(num_cpus=1)
-def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, prey_distribution, samples=1000, tunings=500):
+def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, prey_distribution, samples=1500, tunings=1000):
     import pymc as pm
     import logging
     logger = logging.getLogger("pymc")
@@ -119,31 +119,39 @@ def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, prey
         sd_untargeted[np.where(cl_categories == cl)[0]] = sd
 
 
+    divergent = True
+    tries = 0
+    tuning_extra = 500
+    while divergent and tries < 4:
+        with pm.Model() as multi_env_model:
+            b_bait = pm.Normal('b_bait', mu=0, sigma=10)
+            x_untargeted = pm.Normal(
+                'x_untargeted',
+                mu=mu_untargeted,
+                sigma=sd_untargeted,
+                shape=mu_untargeted.shape[0]
+            )
 
+            x_to_samples = x_untargeted[cl_idx]
+            mu_y = pm.Deterministic("mu_y", pm.math.sigmoid(b_bait*(2**x_to_samples))) # we estimate mean on log
+            sigma_y = 0.05
 
-    with pm.Model() as multi_env_model:
-        b_bait = pm.Normal('b_bait', mu=0, sigma=10)
-        x_untargeted = pm.Normal(
-            'x_untargeted',
-            mu=mu_untargeted,
-            sigma=sd_untargeted,
-            shape=mu_untargeted.shape[0]
-        )
+            y_lh = pm.Normal('y_lh', mu=mu_y, sigma=sigma_y, observed=bait_matrix[:, 0])
 
-        x_to_samples = x_untargeted[cl_idx]
-        mu_y = pm.Deterministic("mu_y", pm.math.sigmoid(b_bait*(2**x_to_samples))) # we estimate mean on log
-        sigma_y = 0.05
-
-        y_lh = pm.Normal('y_lh', mu=mu_y, sigma=sigma_y, observed=bait_matrix[:, 0])
-
-        try:
-            trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=0.95, return_inferencedata=True,
-                              progressbar=False)
-        except (TimeoutError, AssertionError):
-            print("failed, redoing")
-            time.sleep(15) # If multiple jobs tries to compile. Doesn't solve it just makes it less likely
-            trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=0.95, return_inferencedata=True,
-                              progressbar=False)
+            try:
+                trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=0.95, return_inferencedata=True,
+                                  progressbar=False)
+            except (TimeoutError, AssertionError):
+                print("failed, redoing")
+                time.sleep(15) # If multiple jobs tries to compile. Doesn't solve it just makes it less likely
+                trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=0.95, return_inferencedata=True,
+                                  progressbar=False)
+        n_diverging = sum(sum(trace.sample_stats.diverging.values))
+        if n_diverging == 0:
+            divergent = False
+        else:
+            tries += 1
+            tunings += tuning_extra
 
     beta_detection_mu = trace.posterior["x_untargeted"].mean(("chain", "draw")).values
     beta_detection_sd = trace.posterior["x_untargeted"].std(("chain", "draw")).values
