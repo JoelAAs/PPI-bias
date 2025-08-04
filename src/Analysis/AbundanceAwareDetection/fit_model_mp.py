@@ -88,7 +88,7 @@ def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_
 
 
 @ray.remote(num_cpus=1)
-def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, prey_distribution, samples=1500, tunings=1000):
+def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, untargeted_df, samples=1500, tunings=1000):
     import pymc as pm
     import logging
     logger = logging.getLogger("pymc")
@@ -110,26 +110,30 @@ def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, prey
         i += interaction_row[cl_test]
         cl_i += 1
 
-    ## lets do normal distribution so, therefore do log2
-    mu_untargeted = np.zeros(len(cl_categories))
-    sd_untargeted = np.zeros(len(cl_categories))
-    for cl, (mu, sd) in prey_distribution.iterrows():
-        mu_untargeted[np.where(cl_categories == cl)[0]] = mu
-        sd_untargeted[np.where(cl_categories == cl)[0]] = sd
+    category_to_index = {cat: idx for idx, cat in enumerate(cl_categories)}
+    untargeted_df['cell_line_idx'] = untargeted_df['cell_line'].map(category_to_index)
+    n_categories = len(cl_categories)
+    observed_x = untargeted_df.iloc[:,0].values
+    group_idx  = untargeted_df['cell_line_idx'].values
 
     target_accept_low = True
     non_div_run = False
     while not non_div_run:
         with pm.Model() as multi_env_model:
-            b_bait = pm.Normal('b_bait', mu=0, sigma=10)
+            mu_prior = 0; sd_prior = 1 # as we harmonised
+
+            mu = pm.Normal('mu', mu=mu_prior, sigma=sd_prior, shape=n_categories)
+            sigma = pm.HalfNormal('sigma', sigma=sd_prior, shape=n_categories)  # or another prior on std dev
+
             x_untargeted = pm.Normal(
                 'x_untargeted',
-                mu=mu_untargeted,
-                sigma=sd_untargeted,
-                shape=mu_untargeted.shape[0]
-            )
+                mu=mu[group_idx],
+                sigma=sigma[group_idx],
+                observed=observed_x)
 
             x_to_samples = x_untargeted[cl_idx]
+            b_bait = pm.Normal('b_bait', mu=0, sigma=10)
+
             p_y = pm.Deterministic("mu_y", pm.math.sigmoid(b_bait*(2**x_to_samples))) # we estimate mean on log
             y_lh = pm.Bernoulli('y_lh', p=p_y, observed=bait_matrix[:, 0])
 
@@ -151,8 +155,8 @@ def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, prey
             non_div_run = True
 
 
-    beta_detection_mu = trace.posterior["x_untargeted"].mean(("chain", "draw")).values
-    beta_detection_sd = trace.posterior["x_untargeted"].std(("chain", "draw")).values
+    beta_detection_mu = trace.posterior["mu"].mean(("chain", "draw")).values
+    beta_detection_sd = trace.posterior["sd"].std(("chain", "draw")).values
 
     ordered_values = [val for pair in zip(beta_detection_mu, beta_detection_sd) for val in pair]
 
@@ -209,6 +213,7 @@ def main():
             prey = row["gene_name_prey"]
             if args.abundance == 1:
                 prey_mu_sd = get_prey_sd_mu(cell_line_abundance[[prey, "cell_line"]].dropna(), prey)
+                prey_abundance_df = cell_line_abundance[[prey, "cell_line"]].dropna()
                 futures.append(process_prey_abundance.options(
                     runtime_env={"env_vars": ray_task_env}
                 ).remote(
@@ -216,7 +221,7 @@ def main():
                     obs_c=observed_cols,
                     tested_c=tested_cols,
                     cl_categories=cl_categories,
-                    prey_distribution=prey_mu_sd))
+                    untargeted_df=prey_abundance_df))
 
             elif args.abundance == 0:
                 detection_matrix = get_one_hot_untargeted(
