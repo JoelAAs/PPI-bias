@@ -212,8 +212,8 @@ def main():
 
             prey = row["gene_name_prey"]
             if args.abundance == 1:
-                prey_mu_sd = get_prey_sd_mu(cell_line_abundance[[prey, "cell_line"]].dropna(), prey)
-                prey_abundance_df = cell_line_abundance[[prey, "cell_line"]].dropna()
+                #prey_mu_sd = get_prey_sd_mu(cell_line_abundance[[prey, "cell_line"]].dropna(), prey)
+                prey_abundance_df = cell_line_abundance[[prey, "cell_line"]].dropna().copy()
                 futures.append(process_prey_abundance.options(
                     runtime_env={"env_vars": ray_task_env}
                 ).remote(
