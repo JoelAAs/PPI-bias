@@ -156,7 +156,7 @@ def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, unta
 
 
     beta_detection_mu = trace.posterior["mu"].mean(("chain", "draw")).values
-    beta_detection_sd = trace.posterior["sd"].std(("chain", "draw")).values
+    beta_detection_sd = trace.posterior["sigma"].std(("chain", "draw")).values
 
     ordered_values = [val for pair in zip(beta_detection_mu, beta_detection_sd) for val in pair]
 
