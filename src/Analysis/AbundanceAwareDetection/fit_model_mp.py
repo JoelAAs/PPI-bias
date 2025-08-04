@@ -149,7 +149,7 @@ def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, prey
             target_accept_low = False
         else:
             non_div_run = True
-            
+
 
     beta_detection_mu = trace.posterior["x_untargeted"].mean(("chain", "draw")).values
     beta_detection_sd = trace.posterior["x_untargeted"].std(("chain", "draw")).values
@@ -202,10 +202,10 @@ def main():
 
         start = datetime.now()
         ray.init(num_cpus=args.workers)
-
+        ray_task_env = {"PYTENSOR_FLAGS": f"compiledir=/tmp/compiledir_{i}"}
         futures = []
         for j, row in prey_interaction_df.iloc[i:(i + batch_size)].iterrows():
-            ray_task_env = {"PYTENSOR_FLAGS": f"compiledir=/tmp/compiledir_{j}"}
+
             prey = row["gene_name_prey"]
             if args.abundance == 1:
                 prey_mu_sd = get_prey_sd_mu(cell_line_abundance[[prey, "cell_line"]].dropna(), prey)
