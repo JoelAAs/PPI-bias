@@ -7,7 +7,6 @@ os.environ["RAY_DEDUP_LOGS"] = "0"
 import numpy as np
 import pandas as pd
 import ray
-from filelock._error import Timeout
 
 def get_one_hot_untargeted(cl_categories, untargeted_protein_relactive_abundance):
     untargeted_matrix = np.zeros(shape=(len(untargeted_protein_relactive_abundance), len(cl_categories) + 2))
@@ -96,7 +95,7 @@ def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, prey
     logger.setLevel(logging.ERROR)
 
     start = datetime.now()
-    target_accept = 0.99
+    target_accept = 0.8
     N_tests = interaction_row[tested_c].sum()
     bait_matrix = np.zeros((N_tests, len(cl_categories) + 2))
     bait_matrix[:, 1] = 1
@@ -118,31 +117,39 @@ def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, prey
         mu_untargeted[np.where(cl_categories == cl)[0]] = mu
         sd_untargeted[np.where(cl_categories == cl)[0]] = sd
 
+    target_accept_low = True
+    non_div_run = False
+    while not non_div_run:
+        with pm.Model() as multi_env_model:
+            b_bait = pm.Normal('b_bait', mu=0, sigma=10)
+            x_untargeted = pm.Normal(
+                'x_untargeted',
+                mu=mu_untargeted,
+                sigma=sd_untargeted,
+                shape=mu_untargeted.shape[0]
+            )
 
+            x_to_samples = x_untargeted[cl_idx]
+            p_y = pm.Deterministic("mu_y", pm.math.sigmoid(b_bait*(2**x_to_samples))) # we estimate mean on log
+            y_lh = pm.Bernoulli('y_lh', p=p_y, observed=bait_matrix[:, 0])
 
-    with pm.Model() as multi_env_model:
-        b_bait = pm.Normal('b_bait', mu=0, sigma=10)
-        x_untargeted = pm.Normal(
-            'x_untargeted',
-            mu=mu_untargeted,
-            sigma=sd_untargeted,
-            shape=mu_untargeted.shape[0]
-        )
-
-        x_to_samples = x_untargeted[cl_idx]
-        mu_y = pm.Deterministic("mu_y", pm.math.sigmoid(b_bait*(2**x_to_samples))) # we estimate mean on log
-        sigma_y = 0.05
-
-        y_lh = pm.Normal('y_lh', mu=mu_y, sigma=sigma_y, observed=bait_matrix[:, 0])
-
-        try:
-            trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=target_accept, return_inferencedata=True,
-                              progressbar=True)
-        except (TimeoutError, AssertionError):
-            print("failed, redoing")
-            time.sleep(15) # If multiple jobs tries to compile. Doesn't solve it just makes it less likely
-            trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=target_accept, return_inferencedata=True,
-                              progressbar=True)
+            try:
+                trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=target_accept, return_inferencedata=True,
+                                  progressbar=False)
+            except (TimeoutError, AssertionError):
+                print("failed, redoing")
+                time.sleep(15) # If multiple jobs tries to compile. Doesn't solve it just makes it less likely
+                trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=target_accept, return_inferencedata=True,
+                                  progressbar=False)
+        n_diverging = sum(sum(trace.sample_stats.diverging.values))
+        if not target_accept_low:
+            non_div_run = True
+        elif n_diverging > 0:
+            target_accept = .99
+            target_accept_low = False
+        else:
+            non_div_run = True
+            
 
     beta_detection_mu = trace.posterior["x_untargeted"].mean(("chain", "draw")).values
     beta_detection_sd = trace.posterior["x_untargeted"].std(("chain", "draw")).values
