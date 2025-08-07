@@ -122,7 +122,7 @@ def process_prey_abundance(interaction_row, in_obs_c, in_tested_c, cl_categories
         i += interaction_row[cl_test]
         cl_i += 1
 
-    untargeted_df = untargeted_df[untargeted_df["cell_line"].isin(fitted_cl_categories)]
+    untargeted_df = untargeted_df[untargeted_df["cell_line"].isin(fitted_cl_categories)].copy()
     category_to_index = {cat: idx for idx, cat in enumerate(fitted_cl_categories)}
     untargeted_df['cell_line_idx'] = untargeted_df['cell_line'].map(category_to_index)
     observed_x = untargeted_df.iloc[:,0].values
