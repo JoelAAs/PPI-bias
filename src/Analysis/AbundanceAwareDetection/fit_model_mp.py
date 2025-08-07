@@ -239,8 +239,8 @@ def main():
                     runtime_env={"env_vars": ray_task_env}
                 ).remote(
                     interaction_row=row,
-                    obs_c=observed_cols,
-                    tested_c=tested_cols,
+                    in_obs_c=observed_cols,
+                    in_tested_c=tested_cols,
                     cl_categories=cl_categories,
                     untargeted_df=prey_abundance_df))
 
