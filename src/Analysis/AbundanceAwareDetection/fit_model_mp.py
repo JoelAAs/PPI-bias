@@ -3,6 +3,9 @@ import time
 from datetime import datetime
 import os
 import random
+
+from src.test_model import n_categories
+
 os.environ["RAY_DEDUP_LOGS"] = "0"
 import numpy as np
 import pandas as pd
@@ -88,16 +91,27 @@ def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_
 
 
 @ray.remote(num_cpus=1)
-def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, untargeted_df, samples=1500, tunings=1000):
+def process_prey_abundance(interaction_row, in_obs_c, in_tested_c, cl_categories, untargeted_df, samples=1500, tunings=1000):
     import pymc as pm
     import logging
     logger = logging.getLogger("pymc")
     logger.setLevel(logging.ERROR)
 
+
+    mask = np.zeros(cl_categories.shape,dtype=bool)
+    for i, cl_tested in enumerate(in_tested_c):
+        if interaction_row[cl_tested] != 0:
+            mask[i] = True
+
+    fitted_cl_categories = cl_categories[mask]
+    n_categories = int(sum(mask))
+    tested_c     = in_tested_c[mask]
+    obs_c        = in_obs_c[mask]
+
     start = datetime.now()
     target_accept = 0.8
-    N_tests = interaction_row[tested_c].sum()
-    bait_matrix = np.zeros((N_tests, len(cl_categories) + 2))
+    n_tests = interaction_row[tested_c].sum()
+    bait_matrix = np.zeros((n_tests, n_categories + 2))
     bait_matrix[:, 1] = 1
     i = 0
     cl_i = 2
@@ -110,9 +124,9 @@ def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, unta
         i += interaction_row[cl_test]
         cl_i += 1
 
-    category_to_index = {cat: idx for idx, cat in enumerate(cl_categories)}
+    untargeted_df = untargeted_df[untargeted_df["cell_line"].isin(fitted_cl_categories)]
+    category_to_index = {cat: idx for idx, cat in enumerate(fitted_cl_categories)}
     untargeted_df['cell_line_idx'] = untargeted_df['cell_line'].map(category_to_index)
-    n_categories = len(cl_categories)
     observed_x = untargeted_df.iloc[:,0].values
     group_idx  = untargeted_df['cell_line_idx'].values
 
@@ -150,6 +164,7 @@ def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, unta
             non_div_run = True
         elif n_diverging > 0:
             target_accept = .99
+            tunings = 3000
             target_accept_low = False
         else:
             non_div_run = True
@@ -158,7 +173,15 @@ def process_prey_abundance(interaction_row, obs_c, tested_c, cl_categories, unta
     beta_detection_mu = trace.posterior["mu"].mean(("chain", "draw")).values
     beta_detection_sd = trace.posterior["sigma"].std(("chain", "draw")).values
 
-    ordered_values = [val for pair in zip(beta_detection_mu, beta_detection_sd) for val in pair]
+    ordered_values = []
+    current = 0
+    for included in mask:
+        if included:
+            ordered_values.append(beta_detection_mu[current])
+            ordered_values.append(beta_detection_sd[current])
+            current += 1
+        else:
+            ordered_values += [np.nan]*2
 
     beta_bait_mu = trace.posterior["b_bait"].mean(("chain", "draw")).item()
     beta_bait_sd = trace.posterior["b_bait"].std(("chain", "draw")).item()
