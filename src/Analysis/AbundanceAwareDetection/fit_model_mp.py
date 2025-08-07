@@ -4,8 +4,6 @@ from datetime import datetime
 import os
 import random
 
-from src.test_model import n_categories
-
 os.environ["RAY_DEDUP_LOGS"] = "0"
 import numpy as np
 import pandas as pd
@@ -38,8 +36,8 @@ def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_
 
     start = datetime.now()
 
-    N_tests = interaction_row[tested_c].sum()
-    bait_matrix = np.zeros((N_tests, len(cl_categories) + 2))
+    n_tests = interaction_row[tested_c].sum()
+    bait_matrix = np.zeros((n_tests, len(cl_categories) + 2))
     bait_matrix[:, 1] = 1
     i = 0
     cl_i = 2
