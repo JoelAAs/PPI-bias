@@ -2,7 +2,7 @@ import argparse
 import time
 from datetime import datetime
 import os
-import random
+import arviz as az
 
 os.environ["RAY_DEDUP_LOGS"] = "0"
 import numpy as np
@@ -77,10 +77,12 @@ def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_
 
     beta_bait_mu = trace.posterior["beta_bait"].mean(("chain", "draw")).item()
     beta_bait_sd = trace.posterior["beta_bait"].std(("chain", "draw")).item()
+    credible_interval = az.hdi(trace, var_names=["b_bait"], hdi_prob=0.95)
+    low_ci, hugh_ci = credible_interval["b_bait"].values
 
     n_diverging = sum(sum(trace.sample_stats.diverging.values))
 
-    detection_parameters =  ordered_values + [beta_bait_mu, beta_bait_sd, n_diverging]
+    detection_parameters =  ordered_values + [beta_bait_mu, beta_bait_sd, low_ci, hugh_ci, n_diverging]
     end = datetime.now()
     print(f"A job took {end-start} time")
     # Return a tab-separated string for writing later
@@ -184,9 +186,12 @@ def process_prey_abundance(interaction_row, in_obs_c, in_tested_c, cl_categories
     beta_bait_mu = trace.posterior["b_bait"].mean(("chain", "draw")).item()
     beta_bait_sd = trace.posterior["b_bait"].std(("chain", "draw")).item()
 
+    credible_interval = az.hdi(trace, var_names=["b_bait"], hdi_prob=0.95)
+    low_ci, hugh_ci = credible_interval["b_bait"].values
+
     n_diverging = sum(sum(trace.sample_stats.diverging.values))
 
-    detection_parameters =  ordered_values + [beta_bait_mu, beta_bait_sd, n_diverging]
+    detection_parameters =  ordered_values + [beta_bait_mu, beta_bait_sd, low_ci, hugh_ci, n_diverging]
     end = datetime.now()
     print(f"A job took {end-start} time at target_accept {target_accept}")
     # Return a tab-separated string for writing later

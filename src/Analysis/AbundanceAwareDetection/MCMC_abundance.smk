@@ -201,7 +201,7 @@ rule fit_parameters_pod:
 
 
 rule aggregate:
-    # TODO: fix header
+    # TODO: fix header,hardcoded cell lines, check agains fit_model_mp
         input:
             bait_parameters = get_bait_parameters
         output:
@@ -219,12 +219,14 @@ rule aggregate:
                         'n_observed_CVCL_0291',
                         "beta_prediction_0030_mean",
                         "beta_prediction_0030_sd",
-                        "beta_prediction_0291_mean",
-                        "beta_prediction_0291_sd",
                         "beta_prediction_0063_mean",
                         "beta_prediction_0063_sd",
+                        "beta_prediction_0291_mean",
+                        "beta_prediction_0291_sd",
                         "beta_bait_mean",
                         "beta_bait_sd",
+                        "beta_bait_low_ci",
+                        "beta_bait_high_ci",
                         "n_divergences"
                     ]
                 ) + "\n")
