@@ -177,7 +177,7 @@ rule fit_parameters_abundance:
                 --bait_output {output.bait_parameters} \
                 --workers {params.workers} \
                 --batch_size {params.batch_size} \
-                --samples {params.samples} \ 
+                --samples {params.samples} \
                 --burin_samples {params.burin_samples}
             """
 
@@ -202,7 +202,7 @@ rule fit_parameters_pod:
                 --bait_output {output.bait_parameters} \
                 --workers {params.workers} \
                 --batch_size {params.batch_size} \
-                --samples {params.samples} \ 
+                --samples {params.samples} \
                 --burin_samples {params.burin_samples}
             """
 
