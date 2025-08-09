@@ -28,7 +28,6 @@ def get_prey_sd_mu(df, prey):
 
 @ray.remote(num_cpus=1)
 def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_matrix, samples=1000, tunings=500):
-    import uuid
     import pymc as pm
     import logging
     logger = logging.getLogger("pymc")
@@ -164,7 +163,7 @@ def process_prey_abundance(interaction_row, in_obs_c, in_tested_c, cl_categories
             non_div_run = True
         elif n_diverging > 0:
             target_accept = .99
-            tunings = 3000
+            tunings += 3000
             target_accept_low = False
         else:
             non_div_run = True
@@ -204,6 +203,8 @@ def main():
     parser.add_argument("--abundance_cell_lines", required=True, help="Path to baseline pod TSV file")
     parser.add_argument("--bait_output", required=True, help="Path to output file for bait parameters")
     parser.add_argument("--abundance", type=int, help="Set to 1 for abundance, 0 for probability of detection")
+    parser.add_argument("--samples", type=int, help="Number of samples from posterior")
+    parser.add_argument("--burin_samples", type=int, help="Number of burnin samples for posterior")
     parser.add_argument("--workers", type=int, help="Number of worker processes for ray")
     parser.add_argument("--batch_size", type=int, help="Number of tests performed before writing to file")
     args = parser.parse_args()
@@ -238,7 +239,6 @@ def main():
             ray_task_env = {"PYTENSOR_FLAGS": f"compiledir=/tmp/compiledir_{j}"}
             prey = row["gene_name_prey"]
             if args.abundance == 1:
-                #prey_mu_sd = get_prey_sd_mu(cell_line_abundance[[prey, "cell_line"]].dropna(), prey)
                 prey_abundance_df = cell_line_abundance[[prey, "cell_line"]].dropna().copy()
                 futures.append(process_prey_abundance.options(
                     runtime_env={"env_vars": ray_task_env}
@@ -247,7 +247,10 @@ def main():
                     in_obs_c=observed_cols,
                     in_tested_c=tested_cols,
                     cl_categories=cl_categories,
-                    untargeted_df=prey_abundance_df))
+                    untargeted_df=prey_abundance_df,
+                    samples=args.samples,
+                    tunings=args.burin_samples
+                ))
 
             elif args.abundance == 0:
                 detection_matrix = get_one_hot_untargeted(
@@ -261,7 +264,10 @@ def main():
                     obs_c=observed_cols,
                     tested_c=tested_cols,
                     cl_categories=cl_categories,
-                    detection_matrix=detection_matrix))
+                    detection_matrix=detection_matrix,
+                    samples=args.samples,
+                    tunings=args.burin_samples
+                ))
 
             elif args.abundance:
                 raise ValueError(f"Unknown input value {args.abundance} for abundance")

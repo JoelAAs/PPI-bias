@@ -1,5 +1,4 @@
 import re
-
 import pandas as pd
 import glob
 import os
@@ -161,7 +160,9 @@ checkpoint batch_tests:
 rule fit_parameters_abundance:
         params:
             workers = config["MCMC_workers"],
-            batch_size = config["batch_per_write"] # for now
+            batch_size = config["batch_per_write"], # for now
+            samples = config["mcmc_samples"],
+            burin_samples = config["mcmc_burin"]
         input:
             bait = "work_folder/analysis/abundance_aware/batched_prey_tests/batch_{batch}.csv",
             abundance_cell_lines = "data/normalised_log_ra.csv"
@@ -175,14 +176,18 @@ rule fit_parameters_abundance:
                 --abundance 1 \
                 --bait_output {output.bait_parameters} \
                 --workers {params.workers} \
-                --batch_size {params.batch_size}
+                --batch_size {params.batch_size} \
+                --samples {params.samples} \ 
+                --burin_samples {params.burin_samples}
             """
 
 
 rule fit_parameters_pod:
         params:
             workers = config["MCMC_workers"],
-            batch_size = config["batch_per_write"]
+            batch_size = config["batch_per_write"],
+            samples = config["mcmc_samples"],
+            burin_samples = config["mcmc_burin"]
         input:
             bait = "work_folder/analysis/abundance_aware/batched_prey_tests/batch_{batch}.csv",
             abundance_cell_lines = "data/normalised_log_ra.csv"
@@ -196,7 +201,9 @@ rule fit_parameters_pod:
                 --abundance 0 \
                 --bait_output {output.bait_parameters} \
                 --workers {params.workers} \
-                --batch_size {params.batch_size}
+                --batch_size {params.batch_size} \
+                --samples {params.samples} \ 
+                --burin_samples {params.burin_samples}
             """
 
 
