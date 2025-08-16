@@ -1,5 +1,5 @@
 import math
-
+import numpy as np
 import pandas as pd
 
 from localisation_support import *
@@ -91,7 +91,8 @@ rule check_accumilation:
         df_localisation = pd.read_csv(params.localisation_csv,sep="\t")
         bait_model = pd.read_csv(input.all_bait_prey_models,sep="\t")
         proteins_tested = set(bait_model["gene_name_bait"].tolist() + bait_model["gene_name_prey"].tolist())
-        df_localisation = df_localisation[df_localisation["gene_name"].isin(proteins_tested)]
+        df_localisation = df_localisation[df_localisation["gene_name"].isin(proteins_tested)] # detectable
+        #df_localisation = df_localisation[~df_localisation["gene_name"].duplicated(keep=False)]
         n_possible = df_localisation.shape[0]
         random_match = pd.DataFrame([
             [loc, (df_localisation["localisation"] == loc).sum() / n_possible] for loc in
@@ -102,44 +103,47 @@ rule check_accumilation:
         bait_model = bait_model.merge(random_match,on="localisation_prey")
 
 
-        def get_probabilities(df, value_column, ascending=False):
+        def get_probabilities(df, value_column, greater=True, min_samples= 50):
             bins = df[value_column].unique()
             bins.sort()
 
             values = df[value_column].values
             idx_val = values.argsort()
-            if not ascending:
+            if greater:
                 idx_val = idx_val[::-1]
                 bins = bins[::-1]
             values = values[idx_val]
             probabilities = df["match_probability"].to_numpy()[idx_val]
             matches = df["localisation_match"].to_numpy()[idx_val]
 
-            if ascending:
+            if not greater:
                 bins = -bins
                 values = -values
+
             expected = 0
             observed = 0
             previous = 0
             i = 0
+            j = 0
             rows = [{}] * len(bins)
-            for j, threshold in enumerate(bins):
-                while i < len(values) and threshold <= values[i]:
+            for threshold in  bins:
+                while (i < len(values) and threshold <= values[i]) or i < min_samples :
                     i += 1
-                expected += probabilities[previous:i].sum()
-                observed += matches[previous:i].sum()
-                previous = i
+                if previous != i:
+                    expected += probabilities[previous:i].sum()
+                    observed += matches[previous:i].sum()
+                    previous = i
+                    rows[j] = {
+                        "limit" : value_column,
+                        "value": (threshold if greater else -threshold),
+                        "expected": expected,
+                        "observed": observed,
+                        "number_of_pairs": i
+                    }
+                    j += 1
+            return pd.DataFrame(rows).dropna()
 
-                rows[j] = {
-                    value_column: (threshold if not ascending else -threshold),
-                    "expected": expected,
-                    "observed": observed
-                }
-
-            return pd.DataFrame(rows)
-
-
-        df_localisation_hci = get_probabilities(bait_model,"lower_bound_pod",ascending=False)
+        df_localisation_hci = get_probabilities(bait_model,"lower_bound_pod", min_samples=100)
         df_localisation_hci.to_csv(output.localisation_hci, sep="\t", index=False)
-        df_localisation_neg = get_probabilities(bait_model,"upper_bound_pod",ascending=True)
+        df_localisation_neg = get_probabilities(bait_model,"upper_bound_pod", greater=False, min_samples=100)
         df_localisation_neg.to_csv(output.localisation_neg, sep="\t", index=False)

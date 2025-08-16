@@ -66,7 +66,7 @@ rule infer_bait_wise_tests_cell_line:
         # TODO: remove isoforms and bait-bait interactions
         ppi_df = ppi_df[
             ~ppi_df[["gene_name_bait", "gene_name_prey", "pubmed_id", "detection_method", "cl_id"]].duplicated()
-        ]
+        ].copy()
         ppi_df["study_id"] = ppi_df.apply(lambda row: str(row["pubmed_id"]) + row["detection_method"], axis=1)
 
         if params.remove_single_ppi_papers:

@@ -314,6 +314,7 @@ rule get_negatome_HCI:
         model_data["mixture_mean"] = model_data.apply(lambda x: mixture_mean(x,params.selected_cell_lines),axis=1)
         model_data["mixture_var"] = model_data.apply(lambda x: mixture_var(x,params.selected_cell_lines),axis=1)
 
+        model_data["expected_pod"]    = 2 ** model_data["mixture_mean"] * model_data["beta_bait_mean"]
         model_data["lower_bound_pod"] = 2 ** model_data["mixture_mean"] * model_data["beta_bait_low_ci"]
         model_data["upper_bound_pod"] = 2 ** model_data["mixture_mean"] * model_data["beta_bait_high_ci"]
 
