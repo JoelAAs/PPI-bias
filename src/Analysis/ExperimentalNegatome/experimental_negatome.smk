@@ -18,12 +18,13 @@ rule all_methods_filter_out:
     params:
         negatome_tested_threshold = config["negatome_tested_threshold"],
         pseudo_n = config["pseudo_n"],
-        HCL_fraction = config["HCL_frac"]
+        hci_fraction = config["hci_frac"]
     input:
         method_aggregate = "work_folder/inferred_search_space/aggregated/methods/ms_y2h_experimental_wise.csv"
     output:
         experimental_negatome = "work_folder/inferred_search_space/analysis/bias_reduced_ppis/threshold_negatome.csv",
-        hcl = "work_folder/inferred_search_space/analysis/bias_reduced_ppis/high_confidence.csv"
+        hci = "work_folder/inferred_search_space/analysis/bias_reduced_ppis/high_confidence.csv",
+        full_detection = "work_folder/inferred_search_space/analysis/bias_reduced_ppis/p_estimated_protein_pairs.csv"
     run:
         inferred_negative_df = pd.read_csv(
             input.method_aggregate,
@@ -43,8 +44,8 @@ rule all_methods_filter_out:
 
         inferred_negative_df["p"] = inferred_negative_df["alpha_post"]/(
                 inferred_negative_df["alpha_post"] + inferred_negative_df["beta_post"])
-        inferred_negative_df[inferred_negative_df["p"] > params.HCL_fraction].to_csv(
-            output.hcl,
+        inferred_negative_df[inferred_negative_df["p"] > params.hci_fraction].to_csv(
+            output.hci,
             sep="\t",
             index=False
         )
@@ -60,21 +61,21 @@ rule differential_detected_flat_negatome:
     input:
         differential_interactions_filtered = "work_folder/inferred_search_space/analysis/cell_line/bait_wise_prey_filtered.csv",
         experimental_negatome= "work_folder/inferred_search_space/analysis/bias_reduced_ppis/threshold_negatome.csv",
-        hcl= "work_folder/inferred_search_space/analysis/bias_reduced_ppis/high_confidence.csv"
+        hci= "work_folder/inferred_search_space/analysis/bias_reduced_ppis/high_confidence.csv"
     output:
         cl_negatome_cell = "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/threshold_negatome.csv",
-        cl_hcl = "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/high_confidence.csv"
+        cl_hci = "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/high_confidence.csv"
     run:
         df_diff = pd.read_csv(input.differential_interactions_filtered, sep="\t")
         df_nega = pd.read_csv(input.experimental_negatome, sep="\t")
-        df_hcl = pd.read_csv(input.hcl, sep="\t")
+        df_hci = pd.read_csv(input.hci, sep="\t")
 
 
         df_nega = df_nega.merge(
             df_diff,
             on="gene_name_prey"
         ).to_csv(output.cl_negatome_cell, sep="\t")
-        df_hcl = df_hcl.merge(
+        df_hci = df_hci.merge(
             df_diff,
             on="gene_name_prey"
-        ).to_csv(output.cl_hcl, sep="\t")
+        ).to_csv(output.cl_hci, sep="\t")

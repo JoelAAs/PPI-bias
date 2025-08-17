@@ -1,9 +1,4 @@
-import math
-import numpy as np
-import pandas as pd
-
 from localisation_support import *
-from src.test_model import abundance_cell_lines
 
 rule method_comparison:
     """
