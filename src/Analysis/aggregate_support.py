@@ -17,7 +17,6 @@ def aggregate_inferred_experiments(pids, output_file, cl=False):
     """
     ppi_dict = defaultdict(lambda: [0, 0])
     bait_idx = prey_idx = cl_idx = dict()
-    n_studies = len(pids)
     for i, study in enumerate(pids):
         with (open(study, "r") as f):
             next(f)  # header

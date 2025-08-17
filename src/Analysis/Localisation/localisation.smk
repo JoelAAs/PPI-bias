@@ -1,5 +1,46 @@
 from localisation_support import *
 
+
+def get_probabilities(df, value_column, greater=True, min_samples=50):
+    bins = df[value_column].unique()
+    bins.sort()
+
+    values = df[value_column].values
+    idx_val = values.argsort()
+    if greater:
+        idx_val = idx_val[::-1]
+        bins = bins[::-1]
+    values = values[idx_val]
+    probabilities = df["match_probability"].to_numpy()[idx_val]
+    matches = df["localisation_match"].to_numpy()[idx_val]
+
+    if not greater:
+        bins = -bins
+        values = -values
+
+    expected = 0
+    observed = 0
+    previous = 0
+    i = 0
+    j = 0
+    rows = [{}] * len(bins)
+    for threshold in bins:
+        while (i < len(values) and threshold <= values[i]) or i < min_samples:
+            i += 1
+        if previous != i:
+            expected += probabilities[previous:i].sum()
+            observed += matches[previous:i].sum()
+            previous = i
+            rows[j] = {
+                "limit": value_column,
+                "value": (threshold if greater else -threshold),
+                "expected": expected,
+                "observed": observed,
+                "number_of_pairs": i
+            }
+            j += 1
+    return pd.DataFrame(rows).dropna()
+
 rule method_comparison:
     """
     Compare localisation
@@ -74,7 +115,7 @@ rule method_comparison:
         diff_y2h.to_csv(output.y2h_diff_localisation,sep="\t",index=False)
 
 
-rule check_accumilation:
+rule check_accumulation_MCMC:
     params:
         localisation_csv=config["localisation_file"]
     input:
@@ -90,55 +131,44 @@ rule check_accumilation:
         #df_localisation = df_localisation[~df_localisation["gene_name"].duplicated(keep=False)]
         n_possible = df_localisation.shape[0]
         random_match = pd.DataFrame([
-            [loc, (df_localisation["localisation"] == loc).sum() / n_possible] for loc in
+            [loc, ((df_localisation["localisation"] == loc).sum() -1) / n_possible] for loc in
             df_localisation["localisation"].unique()
         ],columns=("localisation_prey", "match_probability"))
 
         bait_model = add_localisation(bait_model,df_localisation)
         bait_model = bait_model.merge(random_match,on="localisation_prey")
 
-
-        def get_probabilities(df, value_column, greater=True, min_samples= 50):
-            bins = df[value_column].unique()
-            bins.sort()
-
-            values = df[value_column].values
-            idx_val = values.argsort()
-            if greater:
-                idx_val = idx_val[::-1]
-                bins = bins[::-1]
-            values = values[idx_val]
-            probabilities = df["match_probability"].to_numpy()[idx_val]
-            matches = df["localisation_match"].to_numpy()[idx_val]
-
-            if not greater:
-                bins = -bins
-                values = -values
-
-            expected = 0
-            observed = 0
-            previous = 0
-            i = 0
-            j = 0
-            rows = [{}] * len(bins)
-            for threshold in  bins:
-                while (i < len(values) and threshold <= values[i]) or i < min_samples :
-                    i += 1
-                if previous != i:
-                    expected += probabilities[previous:i].sum()
-                    observed += matches[previous:i].sum()
-                    previous = i
-                    rows[j] = {
-                        "limit" : value_column,
-                        "value": (threshold if greater else -threshold),
-                        "expected": expected,
-                        "observed": observed,
-                        "number_of_pairs": i
-                    }
-                    j += 1
-            return pd.DataFrame(rows).dropna()
-
         df_localisation_hci = get_probabilities(bait_model,"lower_bound_pod", min_samples=100)
         df_localisation_hci.to_csv(output.localisation_hci, sep="\t", index=False)
         df_localisation_neg = get_probabilities(bait_model,"upper_bound_pod", greater=False, min_samples=100)
         df_localisation_neg.to_csv(output.localisation_neg, sep="\t", index=False)
+
+rule check_accumulation_flat:
+    params:
+        localisation_csv=config["localisation_file"]
+    input:
+        full_detection = "work_folder/inferred_search_space/analysis/bias_reduced_ppis/p_estimated_protein_pairs.csv"
+    output:
+        localisation_match_greater = "work_folder/inferred_search_space/analysis/bias_reduced_ppis/localisation_p_estimated_protein_pairs_greater.csv",
+        localisation_match_less= "work_folder/inferred_search_space/analysis/bias_reduced_ppis/localisation_p_estimated_protein_pairs_less.csv"
+    run:
+        df_localisation = pd.read_csv(params.localisation_csv,sep="\t")
+        bait_model = pd.read_csv(input.full_detection,sep="\t")
+        proteins_tested = set(bait_model["gene_name_bait"].tolist() + bait_model["gene_name_prey"].tolist())
+        df_localisation = df_localisation[df_localisation["gene_name"].isin(proteins_tested)] # detectable
+        #df_localisation = df_localisation[~df_localisation["gene_name"].duplicated(keep=False)]
+        n_possible = df_localisation.shape[0]
+        random_match = pd.DataFrame([
+            [loc, ((df_localisation["localisation"] == loc).sum() -1) / n_possible] for loc in
+            df_localisation["localisation"].unique() # -1 as we do not have bait-bait interactions
+        ],columns=("localisation_prey", "match_probability"))
+
+        bait_model = add_localisation(bait_model,df_localisation)
+        bait_model = bait_model.merge(random_match,on="localisation_prey")
+        logit = lambda x: -math.log(1/x -1)
+        bait_model["logit_p"] = bait_model["p"].apply(logit)
+        df_localisation_hci = get_probabilities(bait_model,"logit_p", min_samples=100)
+        df_localisation_hci.to_csv(output.localisation_match_greater, sep="\t", index=False)
+
+        df_localisation_neg = get_probabilities(bait_model,"logit_p", greater=False,min_samples=100)
+        df_localisation_neg.to_csv(output.localisation_match_less,sep="\t",index=False)

@@ -15,6 +15,9 @@ rule aggregate_pids:
 
 
 rule all_methods_filter_out:
+    """
+    TODO: OBS bait-bait still here
+    """
     params:
         negatome_tested_threshold = config["negatome_tested_threshold"],
         pseudo_n = config["pseudo_n"],
@@ -31,19 +34,25 @@ rule all_methods_filter_out:
             sep="\t"
         )
 
-        min_test_df = inferred_negative_df[
+        inferred_negative_df = inferred_negative_df[
             inferred_negative_df["n_tested"] > params.negatome_tested_threshold
         ]
-        min_test_df["ratio"] = min_test_df["n_observed"]/min_test_df["n_tested"]
-        mean_p = min_test_df["ratio"].mean()
+        inferred_negative_df["ratio"] = inferred_negative_df["n_observed"]/inferred_negative_df["n_tested"]
+        mean_p = inferred_negative_df["ratio"].mean()
         prior_alpha = params.pseudo_n*mean_p
         prior_beta  = params.pseudo_n - prior_alpha
 
         inferred_negative_df["alpha_post"] = prior_alpha + inferred_negative_df["n_observed"]
-        inferred_negative_df["beta_post"]  = prior_beta + min_test_df["n_tested"] - inferred_negative_df["n_observed"]
+        inferred_negative_df["beta_post"]  = prior_beta + inferred_negative_df["n_tested"] - inferred_negative_df["n_observed"]
 
         inferred_negative_df["p"] = inferred_negative_df["alpha_post"]/(
                 inferred_negative_df["alpha_post"] + inferred_negative_df["beta_post"])
+        inferred_negative_df.to_csv(
+            output.full_detection,
+            sep="\t",
+            index=False
+        )
+
         inferred_negative_df[inferred_negative_df["p"] > params.hci_fraction].to_csv(
             output.hci,
             sep="\t",
