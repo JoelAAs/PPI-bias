@@ -119,10 +119,10 @@ rule check_accumulation_MCMC:
     params:
         localisation_csv=config["localisation_file"]
     input:
-        all_bait_prey_models="work_folder/analysis/abundance_aware/bait_prey_{model}.csv"
+        all_bait_prey_models="work_folder/analysis/abundance_aware/POD_{model}.csv"
     output:
-        localisation_neg="work_folder/analysis/abundance_aware/localisation/probability_match_{model}_neg.csv",
-        localisation_hci="work_folder/analysis/abundance_aware/localisation/probability_match_{model}_hci.csv"
+        localisation_neg="work_folder/analysis/abundance_aware/localisation/probability_match_{model}_less.csv",
+        localisation_hci="work_folder/analysis/abundance_aware/localisation/probability_match_{model}_greater.csv"
     run:
         df_localisation = pd.read_csv(params.localisation_csv,sep="\t")
         bait_model = pd.read_csv(input.all_bait_prey_models,sep="\t")
@@ -166,9 +166,10 @@ rule check_accumulation_flat:
         bait_model = add_localisation(bait_model,df_localisation)
         bait_model = bait_model.merge(random_match,on="localisation_prey")
         logit = lambda x: -math.log(1/x -1)
-        bait_model["logit_p"] = bait_model["p"].apply(logit)
-        df_localisation_hci = get_probabilities(bait_model,"logit_p", min_samples=100)
+        bait_model["logit_p_lower"] = bait_model["p_lower_ci"].apply(logit)
+        bait_model["logit_p_upper"] = bait_model["p_upper_ci"].apply(logit)
+        df_localisation_hci = get_probabilities(bait_model,"logit_p_lower", min_samples=100)
         df_localisation_hci.to_csv(output.localisation_match_greater, sep="\t", index=False)
 
-        df_localisation_neg = get_probabilities(bait_model,"logit_p", greater=False,min_samples=100)
+        df_localisation_neg = get_probabilities(bait_model,"logit_p_upper", greater=False,min_samples=100)
         df_localisation_neg.to_csv(output.localisation_match_less,sep="\t",index=False)

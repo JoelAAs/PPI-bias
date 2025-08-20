@@ -10,7 +10,7 @@ mixture_mean <- function(x, samples, prefix="beta_prediction_", suffix="_mean"){
   mm = 0
   for (c in samples){
     value   = as.numeric(x[paste0(prefix, c, suffix)])
-    n_tests = as.numeric(x[paste0("n_tested_CVCL_", c)])
+    n_tests = as.numeric(x[paste0("n_tested_", c)])
     if (!is.na(value)) {
       mm = mm + value * n_tests/as.numeric(x["total_tested"])
     }
@@ -25,7 +25,7 @@ mixture_var <- function(x, samples){
   for (c in samples){
     mu   = as.numeric(x[paste0("beta_prediction_", c, "_mean")])
     sd   = as.numeric(x[paste0("beta_prediction_", c, "_sd")])
-    n_tests = as.numeric(x[paste0("n_tested_CVCL_", c)])
+    n_tests = as.numeric(x[paste0("n_tested_", c)])
     if (n_tests != 0) {
       mv = mv + (sd^2 + (mu - mix_mean)^2) * n_tests/total_tested
     }
@@ -55,8 +55,9 @@ cnames <- c(
   "n_divergences"
 )
 
-samples = c("0030", "0063", "0291")
-df = read.table("intermidiate_data/parameters_abundance_intermid.csv", sep="\t", header = F)
+samples = c("CVCL_0030", "CVCL_0063", "CVCL_0291")
+#df = read.table("intermidiate_data/parameters_abundance_intermid.csv", sep="\t", header = F)
+df = read.table("work_folder/analysis/abundance_aware/POD_abundance.csv", sep="\t", header = T)
 #df = read.table("intermidiate_data/batch_47_parameters.csv", sep="\t", header = F)
 colnames(df) <- cnames
 
@@ -77,16 +78,16 @@ prob <- function(x) {
   return(1/(1+exp(-x)))
 }
 
-df[, "max_bait_probability"] <- prob(df$upper_bound_bait)
-df[, "min_bait_probability"] <- prob(df$lower_bound_bait)
+df[, "max_bait_probability"] <- prob(df$beta_bait_high_ci)
+df[, "min_bait_probability"] <- prob(df$beta_bait_low_ci)
 
 df[, "min_mixture_RA"]       <- 2^(df$mixture_mean - 1.96*sqrt(df$mixture_var))
 df[, "mixture_RA"]           <- 2^(df$mixture_mean)
 df[, "max_mixture_RA"]       <- 2^(df$mixture_mean + 1.96*sqrt(df$mixture_var))
 df[, "logit_mean"]           <- df$mixture_RA*df$beta_bait_mean
 
-df[, "min_prob"] <- df[, "mixture_RA"]*df[, "lower_bound_bait"]
-df[, "max_prob"] <- df[, "mixture_RA"]*df[, "upper_bound_bait"]
+df[, "min_prob"] <- df[, "mixture_RA"]*df[, "beta_bait_low_ci"]
+df[, "max_prob"] <- df[, "mixture_RA"]*df[, "beta_bait_high_ci"]
 
 
 df_a <- read.table("data/normalised_log_ra.csv", sep="\t", header=T)
@@ -121,20 +122,20 @@ counts <- df %>%
 
 counts$label <-  sapply(counts$counts, function(x) paste("N:", x))
 
-y_max=max(df$mixture_mean)
-y_min=mmin(df$mixture_mean)
+y_max=max(df$mixture_RA)
+y_min=min(df$mixture_RA)
 
 ggplot(
   df,
   aes(
     x = as.factor(total_observed),
-    y = mixture_mean,
+    y = mixture_RA,
     fill = as.factor(total_observed)
   )) +
   geom_boxplot() +
   labs(
-    x="Mixture log2 relative abundance",
-    y = "Number of observed interactions") +
+    y="Weighted harmonised mixture abundance",
+    x = "Number of observed interactions") +
   geom_vline(xintercept = 0, linetype="dashed") +
   geom_signif(
     comparisons = list(c("0", "1")), test=wilcox.test,
@@ -145,15 +146,16 @@ ggplot(
   geom_signif(
     comparisons = list(c("0", "3")), test=wilcox.test,
     map_signif_level = TRUE, textsize = 4, y=y_max+1) +
-
+  geom_hline(yintercept = 1, linetype="dashed") +
   theme_bw() +
     geom_text(
       data = counts,
       aes(
-        y = min(df$mixture_mean) - 0.5,  # Adjust x position slightly right of max for visibility
-        x = total_observed + 0.9,
+        y = min(df$mixture_RA) - 0.4,  # Adjust x position slightly right of max for visibility
+        x = total_observed + 0.7,
         label = label
       ),
+      size=3.5,
       inherit.aes = FALSE,
       hjust = 0) +
     theme(legend.position = "none")
@@ -162,7 +164,7 @@ ggplot(
 # Negatome
 p = 0.05
 detection_lim =-log(1/p-1)
-ggplot(
+p_neg <- ggplot(
   df %>% filter(total_observed==0),
   aes(
     x=as.factor(total_tested),
@@ -175,16 +177,16 @@ ggplot(
   annotate("label", x = 1, y = detection_lim, label = paste("p:", p)) +
   labs(
     x = "Number of tests",
-    y = "Upper CI beta bait at expected abundance"
+    y = "Upper bound logit(P)"
        ) +
   theme_bw() +
   theme(legend.position = "none") 
 
 
 ### HCI
-p = 0.6
+p = 0.90
 detection_lim =-log(1/p-1)
-ggplot(
+p_hci  <- ggplot(
   df %>% filter(total_observed!=0),
   aes(
     x=as.factor(total_observed),
@@ -192,16 +194,28 @@ ggplot(
     fill=as.factor(total_observed)
   )) +
   geom_boxplot() +
-  ylim(-8, 1) +
+  #ylim(-8, 1) +
   geom_hline(yintercept = 0) +
-  geom_hline(yintercept = detection_lim, linetype="dashed") +
-  annotate("label", x = 1, y = detection_lim, label = paste("p:", p)) +
+  geom_hline(yintercept = p, linetype="dashed") +
+  annotate("label", x = 1, y = p, label = paste("p:", p)) +
   labs(
     x = "Number of observed",
-    y = "Lower CI beta bait at expected abundance"
+    y = "Lower bound P"
   ) +
   theme_bw() +
   theme(legend.position = "none") 
+
+add_label <- function(plot, label) {
+  arrangeGrob(plot, top = textGrob(label, x = unit(0.05, "npc"), y = unit(0.9, "npc"),
+                                   just = c("left", "top"),
+                                   gp = gpar(fontsize = 16, fontface = "bold")))
+}
+
+grid.arrange(
+  add_label(p_hci, "A"),
+  add_label(p_neg, "B"),
+  nrow=1)
+grid.arrange(p_neg, p_hci, nrow=1)
 
 
 ### Upper vs Lower abundance modification

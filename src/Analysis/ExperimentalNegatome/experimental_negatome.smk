@@ -1,3 +1,5 @@
+from scipy.stats import beta
+
 rule aggregate_pids:
     """
     Aggregate data form studies of the same method
@@ -37,6 +39,9 @@ rule all_methods_filter_out:
         inferred_negative_df = inferred_negative_df[
             inferred_negative_df["n_tested"] > params.negatome_tested_threshold
         ]
+        inferred_negative_df = inferred_negative_df[
+            inferred_negative_df["gene_name_bait"] != inferred_negative_df["gene_name_prey"]
+        ].copy()  # should be fixed later
         inferred_negative_df["ratio"] = inferred_negative_df["n_observed"]/inferred_negative_df["n_tested"]
         mean_p = inferred_negative_df["ratio"].mean()
         prior_alpha = params.pseudo_n*mean_p
@@ -47,6 +52,12 @@ rule all_methods_filter_out:
 
         inferred_negative_df["p"] = inferred_negative_df["alpha_post"]/(
                 inferred_negative_df["alpha_post"] + inferred_negative_df["beta_post"])
+
+        inferred_negative_df["p_lower_ci"] = beta.ppf(0.025,
+            inferred_negative_df["alpha_post"],inferred_negative_df["beta_post"])
+        inferred_negative_df["p_upper_ci"] = beta.ppf(0.975,
+            inferred_negative_df["alpha_post"],inferred_negative_df["beta_post"])
+
         inferred_negative_df.to_csv(
             output.full_detection,
             sep="\t",

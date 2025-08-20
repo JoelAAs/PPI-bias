@@ -277,7 +277,9 @@ rule get_negatome_HCI:
         all_bait_prey_models="work_folder/analysis/abundance_aware/bait_prey_{model}.csv"
     output:
         negatome="work_folder/analysis/abundance_aware/negatome_{model}.csv",
-        hci="work_folder/analysis/abundance_aware/HCI_{model}.csv"
+        hci="work_folder/analysis/abundance_aware/HCI_{model}.csv",
+        pod="work_folder/analysis/abundance_aware/POD_{model}.csv"
+
     run:
         model_data = pd.read_csv(input.all_bait_prey_models,sep="\t")
         model_data["total_tested"] = model_data[[f"n_tested_{c}" for c in params.selected_cell_lines]].sum(axis=1)
@@ -317,6 +319,8 @@ rule get_negatome_HCI:
         model_data["expected_pod"]    = 2 ** model_data["mixture_mean"] * model_data["beta_bait_mean"]
         model_data["lower_bound_pod"] = 2 ** model_data["mixture_mean"] * model_data["beta_bait_low_ci"]
         model_data["upper_bound_pod"] = 2 ** model_data["mixture_mean"] * model_data["beta_bait_high_ci"]
+
+        model_data.to_csv(output.pod, sep="\t", index=False)
 
         negatome = model_data[model_data["upper_bound_pod"] < -math.log(1/params.bot_limit - 1)]
         negatome.to_csv(output.negatome, sep="\t", index=False)

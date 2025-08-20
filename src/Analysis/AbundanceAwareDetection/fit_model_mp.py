@@ -35,7 +35,7 @@ def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_
     logger.setLevel(logging.ERROR)
 
     start = datetime.now()
-
+    target_accept = .8
     n_tests = interaction_row[tested_c].sum()
     bait_matrix = np.zeros((n_tests, len(cl_categories) + 2))
     bait_matrix[:, 1] = 1
@@ -50,25 +50,36 @@ def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_
 
     value_matrix = np.concat((detection_matrix, bait_matrix))
 
-    with pm.Model() as multi_env_model:
+    target_accept_low = True
+    non_div_run = False
+    while not non_div_run:
+        with pm.Model() as multi_env_model:
 
-        beta_detection = pm.Normal('beta_detection', mu=0, sigma=10, shape=value_matrix.shape[1] - 2)
-        beta_bait = pm.Normal('beta_bait', mu=0, sigma=10)
+            beta_detection = pm.Normal('beta_detection', mu=0, sigma=10, shape=value_matrix.shape[1] - 2)
+            beta_bait = pm.Normal('beta_bait', mu=0, sigma=10)
 
-        logit_p = pm.math.dot(value_matrix[:, 2:], beta_detection) + beta_bait * value_matrix[:, 1]
-        p = pm.Deterministic('p', pm.math.sigmoid(logit_p))
+            logit_p = pm.math.dot(value_matrix[:, 2:], beta_detection) + beta_bait * value_matrix[:, 1]
+            p = pm.Deterministic('p', pm.math.sigmoid(logit_p))
 
-        y_obs = pm.Bernoulli('y_obs', p=p, observed=value_matrix[:, 0])
+            y_obs = pm.Bernoulli('y_obs', p=p, observed=value_matrix[:, 0])
 
-        try:
-            trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=0.95, return_inferencedata=True,
-                              progressbar=False)
-        except (TimeoutError, AssertionError):
-            print("failed, redoing")
-            time.sleep(15)  # If multiple jobs tries to compile. Doesn't solve it just makes it less likely
-            trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=0.95, return_inferencedata=True,
-                              progressbar=False)
-
+            try:
+                trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=target_accept, return_inferencedata=True,
+                                  progressbar=False)
+            except (TimeoutError, AssertionError):
+                print("failed, redoing")
+                time.sleep(15)  # If multiple jobs tries to compile. Doesn't solve it just makes it less likely
+                trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=target_accept, return_inferencedata=True,
+                                  progressbar=False)
+        n_diverging = sum(sum(trace.sample_stats.diverging.values))
+        if not target_accept_low:
+            non_div_run = True
+        elif n_diverging > 0:
+            target_accept = .99
+            tunings += 3000
+            target_accept_low = False
+        else:
+            non_div_run = True
     beta_detection_mu = trace.posterior["beta_detection"].mean(("chain", "draw")).values
     beta_detection_sd = trace.posterior["beta_detection"].std(("chain", "draw")).values
 
