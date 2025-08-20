@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 import os
 import arviz as az
-
+import math
 os.environ["RAY_DEDUP_LOGS"] = "0"
 import numpy as np
 import pandas as pd
@@ -31,6 +31,8 @@ def get_prey_sd_mu(df, prey):
 def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_matrix, samples=1000, tunings=500):
     import pymc as pm
     import logging
+    from pymc.variational.callbacks import CheckParametersConvergence
+
     logger = logging.getLogger("pymc")
     logger.setLevel(logging.ERROR)
 
@@ -50,36 +52,24 @@ def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_
 
     value_matrix = np.concat((detection_matrix, bait_matrix))
 
-    target_accept_low = True
-    non_div_run = False
-    while not non_div_run:
-        with pm.Model() as multi_env_model:
+    loss_conv = False
+    f = 1
+    with pm.Model() as multi_env_model:
+        logit = lambda x: -math.log(1 / x - 1)
+        sd_prior = (logit(.95) - logit(.75)) / (1.96 * 2)  # due to filtering the lowest pod would be 75 %
+        mu_prior = logit(0.85)
+        beta_detection = pm.Normal('beta_detection', mu=mu_prior, sigma=sd_prior, shape=value_matrix.shape[1] - 2)
+        beta_bait = pm.Normal('beta_bait', mu=0, sigma=10)
 
-            beta_detection = pm.Normal('beta_detection', mu=0, sigma=10, shape=value_matrix.shape[1] - 2)
-            beta_bait = pm.Normal('beta_bait', mu=0, sigma=10)
+        logit_p = pm.math.dot(value_matrix[:, 2:], beta_detection) + beta_bait * value_matrix[:, 1]
+        p = pm.Deterministic('p', pm.math.sigmoid(logit_p))
 
-            logit_p = pm.math.dot(value_matrix[:, 2:], beta_detection) + beta_bait * value_matrix[:, 1]
-            p = pm.Deterministic('p', pm.math.sigmoid(logit_p))
+        y_obs = pm.Bernoulli('y_obs', p=p, observed=value_matrix[:, 0])
+        mean_field = pm.fit(method="advi",
+                            callbacks=[CheckParametersConvergence(diff="absolute")])
 
-            y_obs = pm.Bernoulli('y_obs', p=p, observed=value_matrix[:, 0])
-
-            try:
-                trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=target_accept, return_inferencedata=True,
-                                  progressbar=False)
-            except (TimeoutError, AssertionError):
-                print("failed, redoing")
-                time.sleep(15)  # If multiple jobs tries to compile. Doesn't solve it just makes it less likely
-                trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=target_accept, return_inferencedata=True,
-                                  progressbar=False)
-        n_diverging = sum(sum(trace.sample_stats.diverging.values))
-        if not target_accept_low:
-            non_div_run = True
-        elif n_diverging > 0:
-            target_accept = .99
-            tunings += 3000
-            target_accept_low = False
-        else:
-            non_div_run = True
+        trace = mean_field.sample(samples)
+        
     beta_detection_mu = trace.posterior["beta_detection"].mean(("chain", "draw")).values
     beta_detection_sd = trace.posterior["beta_detection"].std(("chain", "draw")).values
 
@@ -87,14 +77,14 @@ def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_
 
     beta_bait_mu = trace.posterior["beta_bait"].mean(("chain", "draw")).item()
     beta_bait_sd = trace.posterior["beta_bait"].std(("chain", "draw")).item()
-    credible_interval = az.hdi(trace, var_names=["b_bait"], hdi_prob=0.95)
-    low_ci, hugh_ci = credible_interval["b_bait"].values
+    credible_interval = az.hdi(trace, var_names=["beta_bait"], hdi_prob=0.95)
+    low_ci, hugh_ci = credible_interval["beta_bait"].values
 
     n_diverging = sum(sum(trace.sample_stats.diverging.values))
 
     detection_parameters = ordered_values + [beta_bait_mu, beta_bait_sd, low_ci, hugh_ci, n_diverging]
     end = datetime.now()
-    print(f"A job took {end - start} time")
+    print(f"A job took {end - start} time at target_accept {target_accept}")
     # Return a tab-separated string for writing later
     return "\t".join(map(str, interaction_row.values)) + "\t" + "\t".join(map(str, detection_parameters))
 
