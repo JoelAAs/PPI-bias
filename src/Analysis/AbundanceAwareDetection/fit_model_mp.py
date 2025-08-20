@@ -69,7 +69,7 @@ def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_
                             callbacks=[CheckParametersConvergence(diff="absolute")])
 
         trace = mean_field.sample(samples)
-        
+
     beta_detection_mu = trace.posterior["beta_detection"].mean(("chain", "draw")).values
     beta_detection_sd = trace.posterior["beta_detection"].std(("chain", "draw")).values
 
@@ -80,7 +80,7 @@ def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_
     credible_interval = az.hdi(trace, var_names=["beta_bait"], hdi_prob=0.95)
     low_ci, hugh_ci = credible_interval["beta_bait"].values
 
-    n_diverging = sum(sum(trace.sample_stats.diverging.values))
+    n_diverging = mean_field.hist[-1]
 
     detection_parameters = ordered_values + [beta_bait_mu, beta_bait_sd, low_ci, hugh_ci, n_diverging]
     end = datetime.now()
