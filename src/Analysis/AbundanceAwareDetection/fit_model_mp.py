@@ -51,24 +51,39 @@ def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_
         cl_i += 1
 
     value_matrix = np.concat((detection_matrix, bait_matrix))
-
-    loss_conv = False
-    f = 1
+    n_chains = 4
     with pm.Model() as multi_env_model:
         logit = lambda x: -math.log(1 / x - 1)
-        sd_prior = (logit(.95) - logit(.75)) / (1.96 * 2)  # due to filtering the lowest pod would be 75 %
-        mu_prior = logit(0.85)
+        sd_prior = (logit(.99) - logit(.25)) / (1.96 * 2)  # due to filtering the lowest pod would be 75 %
+        mu_prior = logit(0.62)
         beta_detection = pm.Normal('beta_detection', mu=mu_prior, sigma=sd_prior, shape=value_matrix.shape[1] - 2)
-        beta_bait = pm.Normal('beta_bait', mu=0, sigma=10)
+        beta_bait = pm.SkewNormal('beta_bait', mu=0, sigma=10, alpha=0)
 
         logit_p = pm.math.dot(value_matrix[:, 2:], beta_detection) + beta_bait * value_matrix[:, 1]
         p = pm.Deterministic('p', pm.math.sigmoid(logit_p))
 
         y_obs = pm.Bernoulli('y_obs', p=p, observed=value_matrix[:, 0])
-        mean_field = pm.fit(method="advi",
-                            callbacks=[CheckParametersConvergence(diff="absolute")])
+        vi_approx = pm.fit(
+            method="advi",
+            callbacks=[CheckParametersConvergence(diff="absolute")])
+        init_values = []
+        for _ in range(n_chains):
+            vi_samples = vi_approx.sample(1)
+            for var_name in vi_samples.posterior.data_vars:
+                init_values_chain = dict()
+                init_values_chain[var_name] = vi_samples.posterior[var_name].to_numpy()
+            init_values.append(init_values_chain)
 
-        trace = mean_field.sample(samples)
+        trace = pm.sample(
+            draws=samples,
+            tune=tunings,
+            chains=n_chains,
+            cores=1,
+            target_accept=target_accept,
+            initvals=init_values,
+            return_inferencedata=True,
+            progressbar=False
+        )
 
     beta_detection_mu = trace.posterior["beta_detection"].mean(("chain", "draw")).values
     beta_detection_sd = trace.posterior["beta_detection"].std(("chain", "draw")).values
@@ -80,7 +95,7 @@ def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_
     credible_interval = az.hdi(trace, var_names=["beta_bait"], hdi_prob=0.95)
     low_ci, hugh_ci = credible_interval["beta_bait"].values
 
-    n_diverging = mean_field.hist[-1]
+    n_diverging = sum(sum(trace.sample_stats.diverging.values))
 
     detection_parameters = ordered_values + [beta_bait_mu, beta_bait_sd, low_ci, hugh_ci, n_diverging]
     end = datetime.now()
@@ -96,6 +111,8 @@ def process_prey_abundance(interaction_row, in_obs_c, in_tested_c, cl_categories
     import logging
     logger = logging.getLogger("pymc")
     logger.setLevel(logging.ERROR)
+    from pymc.variational.callbacks import CheckParametersConvergence
+
 
     mask = np.zeros(cl_categories.shape, dtype=bool)
     for i, cl_tested in enumerate(in_tested_c):
@@ -131,6 +148,8 @@ def process_prey_abundance(interaction_row, in_obs_c, in_tested_c, cl_categories
 
     target_accept_low = True
     non_div_run = False
+    n_chains = 4
+
     while not non_div_run:
         with pm.Model() as multi_env_model:
             mu_prior = 0
@@ -151,22 +170,33 @@ def process_prey_abundance(interaction_row, in_obs_c, in_tested_c, cl_categories
             p_y = pm.Deterministic("mu_y", pm.math.sigmoid(b_bait * (2 ** x_to_samples)))  # we estimate mean on log
             y_lh = pm.Bernoulli('y_lh', p=p_y, observed=bait_matrix[:, 0])
 
-            try:
-                trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=target_accept,
-                                  return_inferencedata=True,
-                                  progressbar=False)
-            except (TimeoutError, AssertionError):
-                print("failed, redoing")
-                time.sleep(15)  # If multiple jobs tries to compile. Doesn't solve it just makes it less likely
-                trace = pm.sample(samples, tune=tunings, chains=4, cores=1, target_accept=target_accept,
-                                  return_inferencedata=True,
-                                  progressbar=False)
+            vi_approx = pm.fit(
+                method="advi",
+                callbacks=[CheckParametersConvergence(diff="absolute")])
+            init_values = []
+            for _ in range(n_chains):
+                vi_samples = vi_approx.sample(1)
+                for var_name in vi_samples.posterior.data_vars:
+                    init_values_chain = dict()
+                    init_values_chain[var_name] = vi_samples.posterior[var_name].to_numpy()
+                init_values.append(init_values_chain)
+
+            trace = pm.sample(
+                draws=samples,
+                tune=tunings,
+                chains=n_chains,
+                cores=1,
+                target_accept=target_accept,
+                initvals=init_values,
+                return_inferencedata=True,
+                progressbar=False
+            )
         n_diverging = sum(sum(trace.sample_stats.diverging.values))
         if not target_accept_low:
             non_div_run = True
         elif n_diverging > 0:
             target_accept = .99
-            tunings += 3000
+            tunings += 500
             target_accept_low = False
         else:
             non_div_run = True
