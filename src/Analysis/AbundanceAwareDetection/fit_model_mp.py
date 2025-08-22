@@ -165,7 +165,7 @@ def process_prey_abundance(interaction_row, in_obs_c, in_tested_c, cl_categories
                 observed=observed_x)
 
             x_to_samples = x_untargeted[cl_idx]
-            b_bait = pm.Normal('b_bait', mu=0, sigma=10)
+            b_bait = pm.SkewNormal('b_bait', mu=0, sigma=10)
 
             p_y = pm.Deterministic("mu_y", pm.math.sigmoid(b_bait * (2 ** x_to_samples)))  # we estimate mean on log
             y_lh = pm.Bernoulli('y_lh', p=p_y, observed=bait_matrix[:, 0])
