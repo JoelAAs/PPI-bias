@@ -28,7 +28,7 @@ def get_prey_sd_mu(df, prey):
 
 
 @ray.remote(num_cpus=1)
-def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_matrix, samples=1000, tunings=500):
+def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_matrix, j, samples=1000, tunings=500):
     import pymc as pm
     import logging
     from pymc.variational.callbacks import CheckParametersConvergence
@@ -51,39 +51,52 @@ def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_
         cl_i += 1
 
     value_matrix = np.concat((detection_matrix, bait_matrix))
+    target_accept_low = True
+    non_div_run = False
     n_chains = 4
-    with pm.Model() as multi_env_model:
-        logit = lambda x: -math.log(1 / x - 1)
-        sd_prior = (logit(.99) - logit(.25)) / (1.96 * 2)  # due to filtering the lowest pod would be 75 %
-        mu_prior = logit(0.62)
-        beta_detection = pm.Normal('beta_detection', mu=mu_prior, sigma=sd_prior, shape=value_matrix.shape[1] - 2)
-        beta_bait = pm.SkewNormal('beta_bait', mu=0, sigma=10, alpha=0)
 
-        logit_p = pm.math.dot(value_matrix[:, 2:], beta_detection) + beta_bait * value_matrix[:, 1]
-        p = pm.Deterministic('p', pm.math.sigmoid(logit_p))
+    while not non_div_run:
+        with pm.Model() as multi_env_model:
+            logit = lambda x: -math.log(1 / x - 1)
+            sd_prior = (logit(.99) - logit(.25)) / (1.96 * 2)  # due to filtering the lowest pod would be 75 %
+            mu_prior = logit(0.62)
+            beta_detection = pm.Normal('beta_detection', mu=mu_prior, sigma=sd_prior, shape=value_matrix.shape[1] - 2)
+            beta_bait = pm.SkewNormal('beta_bait', mu=0, sigma=10, alpha=0)
 
-        y_obs = pm.Bernoulli('y_obs', p=p, observed=value_matrix[:, 0])
-        vi_approx = pm.fit(
-            method="advi",
-            callbacks=[CheckParametersConvergence(diff="absolute")])
-        init_values = []
-        for _ in range(n_chains):
-            vi_samples = vi_approx.sample(1)
-            for var_name in vi_samples.posterior.data_vars:
-                init_values_chain = dict()
-                init_values_chain[var_name] = vi_samples.posterior[var_name].to_numpy()
-            init_values.append(init_values_chain)
+            logit_p = pm.math.dot(value_matrix[:, 2:], beta_detection) + beta_bait * value_matrix[:, 1]
+            p = pm.Deterministic('p', pm.math.sigmoid(logit_p))
 
-        trace = pm.sample(
-            draws=samples,
-            tune=tunings,
-            chains=n_chains,
-            cores=1,
-            target_accept=target_accept,
-            initvals=init_values,
-            return_inferencedata=True,
-            progressbar=False
-        )
+            y_obs = pm.Bernoulli('y_obs', p=p, observed=value_matrix[:, 0])
+            vi_approx = pm.fit(
+                method="advi",
+                callbacks=[CheckParametersConvergence(diff="absolute")])
+            init_values = []
+            for _ in range(n_chains):
+                vi_samples = vi_approx.sample(1)
+                for var_name in vi_samples.posterior.data_vars:
+                    init_values_chain = dict()
+                    init_values_chain[var_name] = vi_samples.posterior[var_name].to_numpy()
+                init_values.append(init_values_chain)
+
+            trace = pm.sample(
+                draws=samples,
+                tune=tunings,
+                chains=n_chains,
+                cores=1,
+                target_accept=target_accept,
+                initvals=init_values,
+                return_inferencedata=True,
+                progressbar=False
+            )
+        n_diverging = sum(sum(trace.sample_stats.diverging.values))
+        if not target_accept_low:
+            non_div_run = True
+        elif n_diverging > 0:
+            target_accept = .99
+            tunings += 500
+            target_accept_low = False
+        else:
+            non_div_run = True
 
     beta_detection_mu = trace.posterior["beta_detection"].mean(("chain", "draw")).values
     beta_detection_sd = trace.posterior["beta_detection"].std(("chain", "draw")).values
@@ -99,13 +112,13 @@ def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_
 
     detection_parameters = ordered_values + [beta_bait_mu, beta_bait_sd, low_ci, hugh_ci, n_diverging]
     end = datetime.now()
-    print(f"A job took {end - start} time at target_accept {target_accept}")
+    print(f"A job took {end - start} time at target_accept {target_accept} of job{j}")
     # Return a tab-separated string for writing later
     return "\t".join(map(str, interaction_row.values)) + "\t" + "\t".join(map(str, detection_parameters))
 
 
 @ray.remote(num_cpus=1)
-def process_prey_abundance(interaction_row, in_obs_c, in_tested_c, cl_categories, untargeted_df, samples=1500,
+def process_prey_abundance(interaction_row, in_obs_c, in_tested_c, cl_categories, untargeted_df, j, samples=1500,
                            tunings=1000):
     import pymc as pm
     import logging
@@ -125,7 +138,7 @@ def process_prey_abundance(interaction_row, in_obs_c, in_tested_c, cl_categories
     obs_c = in_obs_c[mask]
 
     start = datetime.now()
-    target_accept = 0.8
+    target_accept = 0.9
     n_tests = interaction_row[tested_c].sum()
     bait_matrix = np.zeros((n_tests, n_categories + 2))
     bait_matrix[:, 1] = 1
@@ -224,7 +237,7 @@ def process_prey_abundance(interaction_row, in_obs_c, in_tested_c, cl_categories
 
     detection_parameters = ordered_values + [beta_bait_mu, beta_bait_sd, low_ci, hugh_ci, n_diverging]
     end = datetime.now()
-    print(f"A job took {end - start} time at target_accept {target_accept}")
+    print(f"A job took {end - start} time at target_accept {target_accept} of job{j}")
     # Return a tab-separated string for writing later
     return "\t".join(map(str, interaction_row.values)) + "\t" + "\t".join(map(str, detection_parameters))
 
@@ -280,6 +293,7 @@ def main():
                     in_tested_c=tested_cols,
                     cl_categories=cl_categories,
                     untargeted_df=prey_abundance_df,
+                    j=j,
                     samples=args.samples,
                     tunings=args.burin_samples
                 ))
@@ -297,6 +311,7 @@ def main():
                     tested_c=tested_cols,
                     cl_categories=cl_categories,
                     detection_matrix=detection_matrix,
+                    j=j,
                     samples=args.samples,
                     tunings=args.burin_samples
                 ))
