@@ -64,9 +64,9 @@ def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_
             beta_bait = pm.SkewNormal('beta_bait', mu=0, sigma=10, alpha=0)
 
             logit_p = pm.math.dot(value_matrix[:, 2:], beta_detection) + beta_bait * value_matrix[:, 1]
-            p = pm.Deterministic('p', pm.math.sigmoid(logit_p))
 
-            y_obs = pm.Bernoulli('y_obs', p=p, observed=value_matrix[:, 0])
+            lp = pm.Deterministic('p', logit_p)
+            y_obs = pm.Bernoulli('y_obs', logit_p=lp, observed=value_matrix[:, 0])
             vi_approx = pm.fit(
                 method="advi",
                 callbacks=[CheckParametersConvergence(diff="absolute")])
