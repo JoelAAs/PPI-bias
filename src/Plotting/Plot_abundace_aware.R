@@ -4,7 +4,8 @@ library(tidyverse)
 library(magrittr)
 library(reshape2)
 library(ggsignif)
-
+library(grid)
+library(gridExtra)
 
 mixture_mean <- function(x, samples, prefix="beta_prediction_", suffix="_mean"){
   mm = 0
@@ -42,22 +43,22 @@ cnames <- c(
   'n_observed_CVCL_0030',
   'n_observed_CVCL_0063',
   'n_observed_CVCL_0291',
-  "beta_prediction_0030_mean",
-  "beta_prediction_0030_sd",
-  "beta_prediction_0063_mean",
-  "beta_prediction_0063_sd",
-  "beta_prediction_0291_mean",
-  "beta_prediction_0291_sd",
+  "beta_prediction_CVCL_0030_mean",
+  "beta_prediction_CVCL_0030_sd",
+  "beta_prediction_CVCL_0063_mean",
+  "beta_prediction_CVCL_0063_sd",
+  "beta_prediction_CVCL_0291_mean",
+  "beta_prediction_CVCL_0291_sd",
   "beta_bait_mean",
   "beta_bait_sd",
-  "lower_bound_bait",
-  "upper_bound_bait",
+  "beta_bait_low_ci",
+  "beta_bait_high_ci",
   "n_divergences"
 )
 
 samples = c("CVCL_0030", "CVCL_0063", "CVCL_0291")
-#df = read.table("intermidiate_data/parameters_abundance_intermid.csv", sep="\t", header = F)
-df = read.table("work_folder/analysis/abundance_aware/POD_abundance.csv", sep="\t", header = T)
+df = read.table("intermidiate_data/parameters_abundance_intermid.csv", sep="\t", header = F)
+#df = read.table("work_folder/analysis/abundance_aware/bait_prey_abundance.csv", sep="\t", header = T)
 #df = read.table("intermidiate_data/batch_47_parameters.csv", sep="\t", header = F)
 colnames(df) <- cnames
 
@@ -81,36 +82,34 @@ prob <- function(x) {
 df[, "max_bait_probability"] <- prob(df$beta_bait_high_ci)
 df[, "min_bait_probability"] <- prob(df$beta_bait_low_ci)
 
-df[, "min_mixture_RA"]       <- 2^(df$mixture_mean - 1.96*sqrt(df$mixture_var))
-df[, "mixture_RA"]           <- 2^(df$mixture_mean)
-df[, "max_mixture_RA"]       <- 2^(df$mixture_mean + 1.96*sqrt(df$mixture_var))
-df[, "logit_mean"]           <- df$mixture_RA*df$beta_bait_mean
+df[, "mixture_RA"] <- 2^df$mixture_mean
+df[, "mixture_min_RA"] <- 2^(df$mixture_mean-1.96*df$mixture_var)
 
 df[, "min_prob"] <- df[, "mixture_RA"]*df[, "beta_bait_low_ci"]
 df[, "max_prob"] <- df[, "mixture_RA"]*df[, "beta_bait_high_ci"]
 
 
-df_a <- read.table("data/normalised_log_ra.csv", sep="\t", header=T)
-df_a <- melt(df, id.vars = "cell_line")
-df$value <- as.numeric(df_a$value)
-df_a %>%
-  group_by(cell_line, variable) %>%
-  summarise(
-    means = mean(value, na.rm=T)
-  ) -> df_abundance
+#df_a <- read.table("data/normalised_log_ra.csv", sep="\t", header=T)
+#df_a <- melt(df, id.vars = "cell_line")
+#df$value <- as.numeric(df_a$value)
+#df_a %>%
+#  group_by(cell_line, variable) %>%
+#  summarise(
+#    means = mean(value, na.rm=T)
+#  ) -> df_abundance
 
 
-df_wide <- df_abundance %>%
-  pivot_wider(
-    names_from = cell_line,
-    values_from = means
-  )
+#df_wide <- df_abundance %>%
+#  pivot_wider(
+#    names_from = cell_line,
+#    values_from = means
+#  )
 
-df_wide$gene_name_prey <- df_wide$variable
-df_wide$variable <- NULL
+#df_wide$gene_name_prey <- df_wide$variable
+#df_wide$variable <- NULL
 
-df <- merge(df, df_wide, by="gene_name_prey")
-df[, "mixture_mean_flat"] <- apply(df, 1, function(x) mixture_mean(x, samples,"CVCL_", ""))
+#df <- merge(df, df_wide, by="gene_name_prey")
+#df[, "mixture_mean_flat"] <- apply(df, 1, function(x) mixture_mean(x, samples,"CVCL_", ""))
 
 
 ### Observed vs Abundance
@@ -229,4 +228,44 @@ ggplot(
   geom_point() +
   scale_color_continuous(high="orange" ,low="darkgreen") +
   theme_bw()
+
+
+### Upper vs Lower abundance modification
+p_dist_pos <- ggplot(
+  df %>% filter(total_observed != 0),
+  aes(
+    x=prob(min_prob),
+    y=mixture_min_RA,
+    colour = rate_of_detection
+  )) +
+  geom_point() +
+  scale_color_continuous(high="orange" ,low="darkgreen") +
+  theme_bw() +
+  theme(legend.position = "top") +
+  labs(
+    x="Lower bound POD",
+    y="Harmonized abundance"
+  )
+
+
+p_dist_neg <- ggplot(
+  df,
+  aes(
+    x=max_prob,
+    y=mixture_mean,
+    colour = total_tested
+  )) +
+  geom_point() +
+  scale_color_continuous(high="orange" ,low="darkgreen") +
+  theme_bw() +
+  theme(legend.position = "top") +
+  labs(
+    x="Upper bound logit(POD)",
+    y="Harmonized abundance"
+    )
+
+grid.arrange(
+  add_label(p_dist_pos, "A"),
+  add_label(p_dist_neg, "B"),
+  nrow=1)
 

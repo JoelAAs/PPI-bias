@@ -37,9 +37,6 @@ rule all_methods_filter_out:
         )
 
         inferred_negative_df = inferred_negative_df[
-            inferred_negative_df["n_tested"] > params.negatome_tested_threshold
-        ]
-        inferred_negative_df = inferred_negative_df[
             inferred_negative_df["gene_name_bait"] != inferred_negative_df["gene_name_prey"]
         ].copy()  # should be fixed later
         inferred_negative_df["ratio"] = inferred_negative_df["n_observed"]/inferred_negative_df["n_tested"]
@@ -88,7 +85,7 @@ rule differential_detected_flat_negatome:
     run:
         df_diff = pd.read_csv(input.differential_interactions_filtered, sep="\t")
         df_nega = pd.read_csv(input.experimental_negatome, sep="\t")
-        df_hci = pd.read_csv(input.hci, sep="\t")
+        df_hci  = pd.read_csv(input.hci, sep="\t")
 
 
         df_nega = df_nega.merge(
