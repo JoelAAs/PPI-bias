@@ -1,3 +1,4 @@
+library(HDO.db)
 library(clusterProfiler)
 library(tidyverse)
 library(org.Hs.eg.db)
@@ -121,9 +122,14 @@ df_t2 = read.table(threshold_2, sep ="\t", header=T) %>%
 normalise <- function(x) x/max(x) 
 
 df_hp$norm_degree <- normalise(df_hp$degree)
-df_sp$norm_degree <- normalise(df_sp$mean_prey_degree + df_sp$mean_bait_degree)
-df_t1$norm_degree <- normalise(df_t1$degree_prey + df_t1$degree_bait)
-df_t2$norm_degree <- normalise(df_t2$degree_prey + df_t2$degree_bait)
+df_sp$norm_degree <- normalise(df_sp$mean_bait_degree)
+df_t1$norm_degree <- normalise(df_t1$degree_bait)
+df_t2$norm_degree <- normalise(df_t2$degree_bait)
+
+df_hp$dataset <- "HIPPIE"
+df_sp$dataset <- "SP"
+df_t1$dataset <- "T0.1"
+df_t2$dataset <- "T0.2"
 
 
 a = 0.4
@@ -195,7 +201,7 @@ do_t1@result$dataset <- "T0.1"
 df_t2 %>% get_enrich_do(n_genes) -> do_t2
 do_t2@result$dataset <- "T0.2"
 
-n_id = 5
+n_id = 10
 do_hp@result %>% get_top_id(n_id) -> do_selected_hp
 do_sp@result %>% get_top_id(n_id) -> do_selected_sp
 do_t1@result %>% get_top_id(n_id) -> do_selected_t1
@@ -275,15 +281,19 @@ ggsave("work_folder/plots/degree/DO_delta_enrichment.png",
        dpi=300)
 
 
-do_delta_t1 %>% get_gene_doid_overlap(do_t1@gene) -> n_doid_gene_t1
-do_delta_sp %>% get_gene_doid_overlap(do_sp@gene) -> n_doid_gene_sp
-do_delta_t2 %>% get_gene_doid_overlap(do_t2@gene) -> n_doid_gene_t2
+n_doid_gene_sp <- data.frame(entrez_id = do_delta_sp@gene)
+n_doid_gene_t1 <- data.frame(entrez_id = do_delta_t1@gene)
+n_doid_gene_t2 <- data.frame(entrez_id = do_delta_t2@gene)
 
 n_doid_gene_sp$dataset <- "SP"
 n_doid_gene_t1$dataset <- "T0.1"
 n_doid_gene_t2$dataset <- "T0.2"
 
-df_top_delta <- do.call(
+n_doid_gene_sp$top_50  <- n_doid_gene_sp$entrez_id %in% do_sp@gene  
+n_doid_gene_t1$top_50  <- n_doid_gene_t1$entrez_id %in% do_t1@gene  
+n_doid_gene_t2$top_50  <- n_doid_gene_t2$entrez_id %in% do_t2@gene  
+
+df_top_delta_doid <- do.call(
   rbind,
   list(
     n_doid_gene_sp,
@@ -291,26 +301,154 @@ df_top_delta <- do.call(
     n_doid_gene_t2)
   )
 
-df_top_delta <- merge(df_top_delta, df_hp, on="entrez_id", all.x=T)
+res <- select(
+    x = HDO.db,
+    keys = unique(df_top_delta_doid$entrez_id), keytype = "gene",
+    columns = c("doid"))
 
-df_top_delta$gene_name <- mapIds(org.Hs.eg.db, keys=df_top_delta$gene_id, column="SYMBOL", keytype="ENTREZID", multiVals="first")
-df_top_delta <- df_top_delta %>%
-  mutate(gene_name = fct_reorder(gene_name, -norm_degree))
+res %>% group_by(gene) %>%
+    summarise(n_doid=length(unique(doid))) %>%
+    ungroup() -> n_doids
+
+n_doids$entrez_id <- n_doids$gene
+n_doids$gene <- NULL  
+
+df_top_delta_doid <- merge(df_top_delta_doid, n_doids, on="entrez_id", all.x=T, )
+df_top_delta_doid[is.na(df_top_delta_doid$n_doid), "n_doid"] <- 0
+df_top_delta_doid <- merge(df_top_delta_doid, df_hp, on="entrez_id", all.x=T)
+
+df_top_delta_doid$gene_name <- mapIds(org.Hs.eg.db, keys=df_top_delta_doid$entrez_id, column="SYMBOL", keytype="ENTREZID", multiVals="first")
+df_top_delta_doid <- df_top_delta_doid %>%
+  mutate(gene_name = fct_reorder(gene_name, -n_doid))
 
 
-delta_gene_plot <- ggplot(df_top_delta, aes(y = gene_name, x = dataset, fill = n_doid)) +
-  geom_tile(color="black") +
-  scale_fill_gradient(low = "blue", high = "red") +
+delta_gene_plot <- ggplot(
+  df_top_delta_doid, 
+  aes(
+    x = gene_name,
+    color = dataset,
+    y = log10(n_doid+1),
+    shape = top_50)) +
+  geom_point() +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.position = "none") +
   labs(x = "Gene Name", y = "Dataset", fill = "n_doid") + 
   labs(
-    x="Dataset",
-    y="Gene name",
-    fill="N doids"
-  ) 
+    y="Log10(N DO-terms +1)",
+    x="Gene name"
+  ) + facet_wrap(dataset ~., nrow=3) +
+  geom_vline(xintercept = 56-5.5) ## lazy but im tired
 
 ggsave("work_folder/plots/degree/genes_top_delta.png", 
        delta_gene_plot,
-       height=6,
-       dpi = 300)  
+       width=7,
+       height = 4,
+       dpi = 300)
+
+### Get disease-degree
+selected_cols <- c("gene_name", "entrez_id",  "norm_degree")
+
+df_all_degree_long <- bind_rows(
+    df_hp[, selected_cols],
+    df_sp[, selected_cols],
+    df_t1[, selected_cols],
+    df_t2[, selected_cols]
+) %>% filter(!is.na(entrez_id))
+
+df_all_degree_wide_1 <- merge(
+  df_hp[, selected_cols],
+  df_sp[, selected_cols],
+  by = c("gene_name", "entrez_id"),
+  suffixes=c("_hippe", "_sp"),
+  all=T)
+
+
+df_all_degree_wide_2 <- merge(
+  df_t1[, selected_cols],
+  df_t2[, selected_cols],
+  by = c("gene_name", "entrez_id"),
+  suffixes=c("_t1", "_t2"),
+  all=T)
+
+df_all_degree_wide <- merge(
+  df_all_degree_wide_1,
+  df_all_degree_wide_2,
+  by = c("gene_name", "entrez_id"),
+  suffixes=c("_t1", "_t2"),
+  all=T)
+
+df_all_degree_wide$norm_degree_t1[is.na(df_all_degree_wide$norm_degree_t1)] <- 0
+df_all_degree_wide$norm_degree_t2[is.na(df_all_degree_wide$norm_degree_t2)] <- 0
+
+
+full_do <- select(
+  x = HDO.db,
+  keys = unique(df_all_degree$entrez_id), keytype = "gene",
+  columns = c("doid"))
+
+full_do %>% group_by(gene) %>%
+  summarise(n_doid=length(unique(doid))) %>%
+  ungroup() -> n_doids
+
+n_doids$entrez_id <- n_doids$gene
+n_doids$gene <- NULL  
+
+df_all_degree <- merge(df_all_degree, n_doids, on="entrez_id", all.x=T)
+df_all_degree[is.na(df_all_degree$n_doid), "n_doid"] <- 0
+
+df_all_degree_wide <- merge(df_all_degree_wide, n_doids, on="entrez_id", all.x=T)
+df_all_degree_wide[is.na(df_all_degree_wide$n_doid), "n_doid"] <- 0
+
+df_all_degree_long <- melt(
+  df_all_degree_wide,
+  id.vars = c("entrez_id", "gene_name", "n_doid"),
+  variable.name = "dataset",
+  value.name = "norm_degree")
+
+df_all_degree_long <- df_all_degree_long %>%
+  group_by(dataset) %>%
+  mutate(
+    rank_norm_degree = rank(norm_degree),
+    rank_n_doid = rank(n_doid)
+  ) %>%
+  ungroup()
+
+df_all_degree_long %>%  
+  group_by(dataset) %>% 
+  summarise(
+    r = cor(norm_degree, n_doid, method="spearman", use = "complete.obs")
+  ) %>% 
+  ungroup() -> do_ro
+
+deg_vs_doid_plot <- ggplot(
+  df_all_degree_long,
+  aes(
+    x=norm_degree,
+    y=log10(n_doid+1),
+    color=dataset
+    )) +
+  geom_point() +
+  facet_wrap(dataset ~.,
+             labeller = labeller(
+               dataset =
+                 c("norm_degree_hippe" = "HIPPIE",
+                   "norm_degree_sp" = "SP",
+                   "norm_degree_t1" = "T0.1",
+                   "norm_degree_t2" = "T0.2"))) +
+  geom_text(data=do_ro, aes(x=0.89, y=2.5, label=paste("rho:", round(r,3))), color="black") + 
+  theme_bw() +
+  labs(
+    x="Normalised Degree",
+    y="Log10(N doid + 1)"
+  ) +
+  theme(legend.position = "none")
+
+
+ggsave("work_folder/plots/degree/doid_vs_deg.png", 
+       deg_vs_doid_plot,
+       width=6,
+       height = 6,
+       dpi = 300)
+
+

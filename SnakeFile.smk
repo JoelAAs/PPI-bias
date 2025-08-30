@@ -14,7 +14,8 @@ include: "src/Analysis/ExperimentalNegatome/experimental_negatome.smk"
 include: "src/Analysis/Localisation/HCI_Negatome_test.smk"
 include: "src/Plotting/get_plots.smk"
 include: "src/Analysis/AbundanceAwareDetection/MCMC_abundance.smk"
-
+include: "src/Analysis/Enrichment/GetDegree.smk"
+include: "src/Analysis/Enrichment/EnrichmentGODO.smk"
 wildcard_constraints:
     cell_line="_[_a-zA-Z]+"
 
@@ -24,17 +25,16 @@ wildcard_constraints:
 # ]
 
 expected_output = [
-    # "work_folder/plots/localisation_OR_y2h_ms.png",
-    # "work_folder/inferred_search_space/analysis/bias_reduced_ppis/threshold_negatome.csv",
-    # "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/high_confidence.csv",
-    # "work_folder/plots/cell_line_prey.png",
-    # "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/threshold_negatome.csv",
-    # "work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/high_confidence.csv",
-    # "work_folder/inferred_search_space/analysis/cell_line/bait_prior.csv",
+    "work_folder/plots/localisation_OR_y2h_ms.png",
     "work_folder/analysis/abundance_aware/bait_prey_abundance.csv",
-    "work_folder/analysis/abundance_aware/bait_prey_pod.csv"
+    "work_folder/analysis/abundance_aware/localisation/probability_match_abundance_less.csv",
+    "work_folder/inferred_search_space/analysis/bias_reduced_ppis/localisation_p_estimated_protein_pairs_less.csv"
+    "work_folder/plots/degree/doid_vs_deg.png"
+
 ]
 
 rule all:
     input:
         expected_output
+
+
