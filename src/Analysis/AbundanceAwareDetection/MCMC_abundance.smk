@@ -211,7 +211,7 @@ rule aggregate:
     params:
         selected_cell_lines=config["selected_cell_lines"]
     input:
-        bait_parameters=get_bait_parameters
+        bait_parameters=lambda wd : get_bait_parameters(wc)
     output:
         aggregate_parameters="work_folder/analysis/abundance_aware/parameters_{model}/all_parameters.csv"
     run:
@@ -231,8 +231,8 @@ rule aggregate:
                     "n_divergences"
                 ]
             ) + "\n")
-            for bait_parameters in input.bait_parameters:
-                with open(bait_parameters,"r") as f:
+            for batched_run in input.bait_parameters:
+                with open(batched_run,"r") as f:
                     for line in f:
                         w.write(line)
 
