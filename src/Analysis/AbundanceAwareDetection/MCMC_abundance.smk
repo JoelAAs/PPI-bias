@@ -211,7 +211,7 @@ rule aggregate:
     params:
         selected_cell_lines=config["selected_cell_lines"]
     input:
-        bait_parameters=lambda wd : get_bait_parameters(wc)
+        bait_parameters=lambda wc : get_bait_parameters(wc)
     output:
         aggregate_parameters="work_folder/analysis/abundance_aware/parameters_{model}/all_parameters.csv"
     run:
