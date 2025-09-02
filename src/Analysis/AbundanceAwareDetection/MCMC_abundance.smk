@@ -305,8 +305,7 @@ rule get_negatome_HCI:
             for c in samples:
                 mu = row.get(f"beta_prediction_{c}_mean",np.nan)
                 sd = row.get(f"beta_prediction_{c}_sd",np.nan)
-                n_tests = row.get(f"n_tested_CVCL_{c}",0)
-
+                n_tests = row.get(f"n_tested_{c}",0)
                 if pd.notna(mu) and pd.notna(sd) and n_tests != 0:
                     mv += (sd ** 2 + (mu - c_mixture_mean) ** 2) * n_tests / total_tested
 

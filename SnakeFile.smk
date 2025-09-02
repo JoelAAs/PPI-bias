@@ -16,6 +16,8 @@ include: "src/Plotting/get_plots.smk"
 include: "src/Analysis/AbundanceAwareDetection/MCMC_abundance.smk"
 include: "src/Analysis/Enrichment/GetDegree.smk"
 include: "src/Analysis/Enrichment/EnrichmentGODO.smk"
+include: "src/Analysis/PairFunctionality/GetSharedFunctionality.smk"
+
 wildcard_constraints:
     cell_line="_[_a-zA-Z]+"
 
