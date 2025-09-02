@@ -337,8 +337,7 @@ delta_gene_plot <- ggplot(
   labs(
     y="Log10(N DO-terms +1)",
     x="Gene name"
-  ) + facet_wrap(dataset ~., nrow=3) +
-  geom_vline(xintercept = 56-5.5) ## lazy but im tired
+  ) + facet_wrap(dataset ~., nrow=3) 
 
 ggsave("work_folder/plots/degree/genes_top_delta.png", 
        delta_gene_plot,
@@ -384,7 +383,7 @@ df_all_degree_wide$norm_degree_t2[is.na(df_all_degree_wide$norm_degree_t2)] <- 0
 
 full_do <- select(
   x = HDO.db,
-  keys = unique(df_all_degree$entrez_id), keytype = "gene",
+  keys = unique(df_all_degree_wide$entrez_id), keytype = "gene",
   columns = c("doid"))
 
 full_do %>% group_by(gene) %>%
@@ -393,9 +392,6 @@ full_do %>% group_by(gene) %>%
 
 n_doids$entrez_id <- n_doids$gene
 n_doids$gene <- NULL  
-
-df_all_degree <- merge(df_all_degree, n_doids, on="entrez_id", all.x=T)
-df_all_degree[is.na(df_all_degree$n_doid), "n_doid"] <- 0
 
 df_all_degree_wide <- merge(df_all_degree_wide, n_doids, on="entrez_id", all.x=T)
 df_all_degree_wide[is.na(df_all_degree_wide$n_doid), "n_doid"] <- 0

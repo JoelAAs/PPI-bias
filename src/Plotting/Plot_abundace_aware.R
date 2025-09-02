@@ -57,10 +57,10 @@ cnames <- c(
 )
 
 samples = c("CVCL_0030", "CVCL_0063", "CVCL_0291")
-df = read.table("intermidiate_data/parameters_abundance_intermid.csv", sep="\t", header = F)
-#df = read.table("work_folder/analysis/abundance_aware/bait_prey_abundance.csv", sep="\t", header = T)
+#df = read.table("intermidiate_data/parameters_abundance_intermid.csv", sep="\t", header = F)
+df = read.table("work_folder/analysis/abundance_aware/bait_prey_abundance.csv", sep="\t", header = T)
 #df = read.table("intermidiate_data/batch_47_parameters.csv", sep="\t", header = F)
-colnames(df) <- cnames
+#colnames(df) <- cnames
 
 df <- df %>% filter(n_divergences < 1)
 df[,"total_observed"] <- df[,'n_observed_CVCL_0030'] + df[,'n_observed_CVCL_0063'] + df[,'n_observed_CVCL_0291']
@@ -83,6 +83,7 @@ df[, "max_bait_probability"] <- prob(df$beta_bait_high_ci)
 df[, "min_bait_probability"] <- prob(df$beta_bait_low_ci)
 
 df[, "mixture_RA"] <- 2^df$mixture_mean
+df[, "mixture_min_RA"] <- 2^(df$mixture_mean-1.96*df$mixture_var)
 df[, "mixture_min_RA"] <- 2^(df$mixture_mean-1.96*df$mixture_var)
 
 df[, "min_prob"] <- df[, "mixture_RA"]*df[, "beta_bait_low_ci"]
@@ -124,7 +125,7 @@ counts$label <-  sapply(counts$counts, function(x) paste("N:", x))
 y_max=max(df$mixture_RA)
 y_min=min(df$mixture_RA)
 
-ggplot(
+mixmean_obs <- ggplot(
   df,
   aes(
     x = as.factor(total_observed),
@@ -158,7 +159,12 @@ ggplot(
       inherit.aes = FALSE,
       hjust = 0) +
     theme(legend.position = "none")
-  
+
+ggsave("work_folder/plots/abundance/preyabundance_detection.png",
+       mixmean_obs,
+       dpi=300,
+       height=4,
+       width = 6)
 
 # Negatome
 p = 0.05
@@ -210,11 +216,17 @@ add_label <- function(plot, label) {
                                    gp = gpar(fontsize = 16, fontface = "bold")))
 }
 
-grid.arrange(
+hci_neg <- grid.arrange(
   add_label(p_hci, "A"),
   add_label(p_neg, "B"),
   nrow=1)
-grid.arrange(p_neg, p_hci, nrow=1)
+
+ggsave("work_folder/plots/abundance/pos_neg.png",
+       hci_neg,
+       dpi=300,
+       height=4,
+       width = 8)
+
 
 
 ### Upper vs Lower abundance modification
@@ -264,8 +276,14 @@ p_dist_neg <- ggplot(
     y="Harmonized abundance"
     )
 
-grid.arrange(
+max_min <- grid.arrange(
   add_label(p_dist_pos, "A"),
   add_label(p_dist_neg, "B"),
   nrow=1)
 
+
+ggsave("work_folder/plots/abundance/max_min.png",
+       max_min,
+       dpi=300,
+       height=4,
+       width = 8)

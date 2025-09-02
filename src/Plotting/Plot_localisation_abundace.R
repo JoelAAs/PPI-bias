@@ -41,7 +41,7 @@ df_expected_observed$prob <- sapply(df_expected_observed$value, prob)
 
 
 
-ggplot(
+prob_localisation <- ggplot(
   df_expected_observed,
   aes(
     x=prob,
@@ -63,8 +63,15 @@ ggplot(
     title = "Expected localisation matches divegrence"
   ) +
   theme_bw() +
-  theme(legend.position = "right",
+  theme(legend.position = "bottom",
         strip.text = element_text(size = 10, face = "bold"))
+
+ggsave("work_folder/plots/localisation/POD_vs_localisation_match.png",
+       prob_localisation,
+       dpi=300,
+       height=4,
+       width=7
+       )
 
 ggplot(
   df_expected_observed,

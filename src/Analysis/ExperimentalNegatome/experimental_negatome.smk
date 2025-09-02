@@ -39,9 +39,8 @@ rule all_methods_filter_out:
         inferred_negative_df = inferred_negative_df[
             inferred_negative_df["gene_name_bait"] != inferred_negative_df["gene_name_prey"]
         ].copy()  # should be fixed later
-        inferred_negative_df["ratio"] = inferred_negative_df["n_observed"]/inferred_negative_df["n_tested"]
-        mean_p = inferred_negative_df["ratio"].mean()
-        prior_alpha = params.pseudo_n*mean_p
+        global_pod = inferred_negative_df["n_observed"].sum()/inferred_negative_df["n_tested"].sum() # if a test is made, probability of interaction
+        prior_alpha = params.pseudo_n*global_pod
         prior_beta  = params.pseudo_n - prior_alpha
 
         inferred_negative_df["alpha_post"] = prior_alpha + inferred_negative_df["n_observed"]
