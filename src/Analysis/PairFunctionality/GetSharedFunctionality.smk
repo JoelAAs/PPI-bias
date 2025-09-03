@@ -134,7 +134,6 @@ def get_sliding_avg_enrichment(df, value_column, greater=True, min_samples=50):
         bp_intersect_sum += bp_intersect[previous:i].sum()
         mf_intersect_sum += mf_intersect[previous:i].sum()
 
-        previous = i
         rows[j] = {
             "limit": value_column,
             "value": (threshold if greater else -threshold),
@@ -146,8 +145,11 @@ def get_sliding_avg_enrichment(df, value_column, greater=True, min_samples=50):
             "mf_intersect_avg": mf_intersect_sum / i,
             "number_of_pairs": i
         }
-        j += 1
-    return pd.DataFrame(rows)
+        if previous != i:
+            j += 1
+        previous = i
+
+    return pd.DataFrame([r for r in rows if r])
 
 def get_pair_jaccard(gene1, gene2, gene_idx_dicts):
     term_suffix = ["bp", "cc", "mf"]
@@ -221,7 +223,7 @@ rule get_go_accumulation:
         )
         get_sliding_avg_enrichment(
             abundance_df,
-            "lower_bound_pod",
+            "upper_bound_pod",
             greater=False).to_csv(
             output.abundance_jaccard_lesser,
             sep="\t", index=False
@@ -232,13 +234,13 @@ rule get_go_accumulation:
         )
         get_sliding_avg_enrichment(
             flat_df,
-            "lower_bound_pod").to_csv(
+            "p_lower_ci").to_csv(
             output.flat_jaccard_greater,
             sep="\t",index=False
         )
         get_sliding_avg_enrichment(
             flat_df,
-            "lower_bound_pod",
+            "p_upper_ci",
             greater=False).to_csv(
             output.flat_jaccard_lesser,
             sep="\t", index=False
