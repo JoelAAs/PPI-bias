@@ -265,6 +265,7 @@ rule get_bait_prey_pairs:
 
         model_params = pd.read_csv(input.models,sep="\t")
         full = unique_tests.merge(model_params,on=["gene_name_prey"] + id_cols)
+        full = full[full["gene_name_prey"] != full["gene_name_prey"]]
         full.to_csv(output.all_bait_prey_models,sep="\t",index=False)
 
 

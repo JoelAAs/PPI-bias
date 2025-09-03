@@ -33,6 +33,7 @@ expected_output = [
     "work_folder/analysis/GO/flat_jaccard.csv",
     "work_folder/analysis/GO/abundance_jaccard.csv",
     "work_folder/analysis/GO/abundance_jaccard_lesser.csv",
+    "work_folder/plots/GO/jaccard_GO_vs_POD.png",
 
 ]
 

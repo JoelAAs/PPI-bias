@@ -245,3 +245,18 @@ rule get_go_accumulation:
             output.flat_jaccard_lesser,
             sep="\t", index=False
         )
+
+
+rule plot_go_accumilation:
+    input:
+        flat_jaccard_greater = "work_folder/analysis/GO/flat_jaccard_greater.csv",
+        abundance_jaccard_greater = "work_folder/analysis/GO/abundance_jaccard_greater.csv",
+        flat_jaccard_lesser = "work_folder/analysis/GO/flat_jaccard_lesser.csv",
+        abundance_jaccard_lesser = "work_folder/analysis/GO/abundance_jaccard_lesser.csv"
+    output:
+        go_jaccard = "work_folder/plots/GO/intersect_GO_vs_POD.png",
+        go_intersect = "work_folder/plots/GO/jaccard_GO_vs_POD.png"
+    shell:
+        """
+        Rscript src/Plotting/plot_go_accumulation.R
+        """
