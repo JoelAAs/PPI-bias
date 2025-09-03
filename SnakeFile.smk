@@ -29,10 +29,10 @@ wildcard_constraints:
 expected_output = [
     "work_folder/analysis/abundance_aware/bait_prey_abundance.csv",
     "work_folder/analysis/abundance_aware/localisation/probability_match_abundance_less.csv",
-    "work_folder/inferred_search_space/analysis/bias_reduced_ppis/localisation_p_estimated_protein_pairs_less.csv"
-    "work_folder/plots/degree/doid_vs_deg.png",
+    "work_folder/inferred_search_space/analysis/bias_reduced_ppis/localisation_p_estimated_protein_pairs_less.csv",
     "work_folder/analysis/GO/flat_jaccard.csv",
-    "work_folder/analysis/GO/abundance_jaccard.csv"
+    "work_folder/analysis/GO/abundance_jaccard.csv",
+    "work_folder/analysis/GO/abundance_jaccard_lesser.csv",
 
 ]
 
