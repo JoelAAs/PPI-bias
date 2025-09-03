@@ -247,7 +247,7 @@ rule get_go_accumulation:
         )
 
 
-rule plot_go_accumilation:
+rule plot_go_accumulation:
     input:
         flat_jaccard_greater = "work_folder/analysis/GO/flat_jaccard_greater.csv",
         abundance_jaccard_greater = "work_folder/analysis/GO/abundance_jaccard_greater.csv",
