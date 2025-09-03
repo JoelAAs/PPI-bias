@@ -32,7 +32,7 @@ greater_flat$model <- "flat"
 df_expected_observed = bind_rows(
   df_a_lesser,
   df_a_greater,
-  df_flat_less,
+  less_flat,
   df_flat_greater
 )
 
