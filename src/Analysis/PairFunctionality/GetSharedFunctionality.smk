@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from mygene import MyGeneInfo
+from openpyxl.styles.builtins import output
 
 
 def get_go_genes(genes):
@@ -260,3 +261,63 @@ rule plot_go_accumulation:
         """
         Rscript src/Plotting/plot_go_accumulation.R
         """
+
+rule abundance_go_plot:
+    input:
+        norm_log = "data/normalised_log_ra.csv"
+    output:
+        goterms_abundance = "work_folder/analysis/GO/ra_pod_vs_go_terms.csv"
+    run:
+        abundance_df = pd.read_csv(input.norm_log, sep="\t")
+        del abundance_df["samples"]
+        del abundance_df["cell_line"]
+
+        abundance_mean = abundance_df.mean(axis=0, skipna=True).reset_index()
+        abundance_mean.columns= ["gene_name", "relative_abundance"]
+        abundance_mean["pod"] = (~abundance_df.isna()).mean(axis=0).values
+        go_dict = get_go_genes(abundance_mean["gene_name"])
+
+        def get_n_go(gene, go_dict):
+            return [
+                len(go_dict[gene]["BP"]),
+                len(go_dict[gene]["MF"]),
+                len(go_dict[gene]["CC"])
+            ]
+
+        abundance_mean[[
+            "n_bp",
+            "n_mf",
+            "n_cc"
+        ]] = abundance_mean.apply(
+            lambda x: get_n_go(x["gene_name"], go_dict), axis=1, result_type='expand')
+
+        abundance_mean.to_csv(output.goterms_abundance, sep="\t", index=False)
+
+
+rule bait_usage:
+    input:
+        bait_prey = "work_folder/formated/bait_prey_publications.csv"
+    output:
+        goterms_studies = "work_folder/analysis/GO/n_studies_go_terms.csv"
+    run:
+        df = pd.read_csv(input.bait_prey, sep="\t")
+        df_bait = df[
+            ~df[["pubmed_id", "detection_method", "gene_name_bait"]].duplicated()
+        ].groupby("gene_name_bait", as_index=False).size()
+        df_bait.columns = ["gene_name", "n_studies"]
+        go_dict = get_go_genes(df_bait["gene_name"])
+
+        def get_n_go(gene, go_dict):
+            return [
+                len(go_dict[gene]["BP"]),
+                len(go_dict[gene]["MF"]),
+                len(go_dict[gene]["CC"])
+            ]
+
+        df_bait[[
+            "n_bp",
+            "n_mf",
+            "n_cc"
+        ]] = df_bait.apply(
+            lambda x: get_n_go(x["gene_name"], go_dict), axis=1, result_type='expand')
+        df_bait.to_csv(output.goterms_studies, sep="\t", index=False)
