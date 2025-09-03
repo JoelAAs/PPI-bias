@@ -16,7 +16,7 @@ df_a_greater = read.table(
 )
 df_a_greater$model <- "abundance_aware"
 
-df_flat_less= "work_folder/analysis/GO/flat_jaccard_less.csv"
+df_flat_less= "work_folder/analysis/GO/flat_jaccard_lesser.csv"
 df_flat_less %>%  read.table(sep="\t", header=T) -> less_flat
 less_flat$limit <- "upper_bound_pod"
 less_flat$model <- "flat"
