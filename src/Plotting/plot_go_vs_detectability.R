@@ -2,8 +2,9 @@ library(ggplot2)
 library(reshape2)
 library(grid)
 library(gridExtra)
-
-
+library(magrittr)
+library(tidyverse)
+library(ggcorrplot)
 
 ### Abundance
 ra_pod_go_df = read.table("work_folder/analysis/GO/ra_pod_vs_go_terms.csv", sep="\t", header=T)
@@ -25,12 +26,13 @@ ra_pod_go_df_long %>%
 go_ra <- ggplot(
   ra_pod_go_df_long,
   aes(
-    x=relative_abundance,
+    x=2^relative_abundance,
     y=log10(go_count),
     color=GO_category
   )
 ) + 
   geom_point() + 
+  geom_density_2d(color="black") +
   facet_wrap(. ~ GO_category, ncol=1,
              labeller = labeller(
                GO_category =
@@ -49,12 +51,13 @@ go_ra <- ggplot(
 go_pod <- ggplot(
   ra_pod_go_df_long,
   aes(
-    x=pod,
+    x=logit(pod),
     y=log10(go_count),
     color=GO_category
   )
 ) + 
-  geom_point() + 
+  geom_point() +
+  geom_density_2d(color="black") +
   facet_wrap(. ~ GO_category, ncol=1,
              labeller = labeller(
                GO_category =
@@ -119,6 +122,7 @@ go_ns <- ggplot(
   )
 ) + 
   geom_point() + 
+  geom_density_2d(color="black") +
   facet_wrap(. ~ GO_category, ncol=3,
              labeller = labeller(
                GO_category =
@@ -141,5 +145,71 @@ ggsave("work_folder/plots/GO/n_studies_n_go.png",
        dpi=300,
        height=2,
        width=6
+)
+
+### mix
+mixed_df = merge(ra_pod_go_df, ns_go_df, on="gene_name", suffixes=c("", "_other"), all.x = T)
+mixed_df[is.na(mixed_df$n_studies), "n_studies"]  <- 0
+mixed_c_order <- c("gene_name","relative_abundance", "pod", "n_studies", "n_bp", "n_mf", "n_cc")
+mixed_df <- mixed_df[, mixed_c_order]
+
+spearman_corr_matrix_mixed <- cor(mixed_df[,2:ncol(mixed_df)], method = "spearman")
+spearman_corr_matrix_ns <- cor(ns_go_df[,2:ncol(ns_go_df)], method = "spearman")
+
+all_cor_ns <- ggcorrplot(
+  spearman_corr_matrix_ns,
+  method = "square",
+  type = "full",     
+  lab = TRUE,         
+  hc.order = TRUE,
+  colors = c("white", "darkgreen", "orange"))
+
+ns_labels = c("Bait usage", "N GO:BP", "N GO:MF", "N GO:CC")
+ns_p <- all_cor_ns + 
+  theme(legend.position = "none") + 
+  ggtitle(paste("Correlation, N",nrow(ns_go_df), "baits")) +
+  scale_x_discrete(
+    breaks = colnames(ns_go_df)[-1],
+    labels = ns_labels
+    ) +
+  scale_y_discrete(
+    breaks = colnames(ns_go_df)[-1],
+    labels = ns_labels
+  )
+
+
+
+all_cor_mixed <- ggcorrplot(
+  spearman_corr_matrix_mixed,
+  method = "square",
+  type = "full",     
+  lab = TRUE,     
+  colors = c("white", "darkgreen", "orange"))
+
+mixed_labels = c("RA","POD","Bait usage", "N GO:BP", "N GO:MF", "N GO:CC")
+
+mixed_p <- all_cor_mixed + 
+  theme(legend.position = "none") + 
+  ggtitle(paste("Correlation, N:",nrow(mixed_df), "proteins")) +
+  scale_x_discrete(
+    breaks = mixed_c_order[-1],
+    labels = mixed_labels
+  ) +
+  scale_y_discrete(
+    breaks = mixed_c_order[-1],
+    labels = mixed_labels
+  )
+
+cor_plot <- grid.arrange(
+  ns_p,
+  mixed_p,
+  nrow=1
+)
+
+ggsave("work_folder/plots/GO/correlation_GO.png",
+       cor_plot,
+       dpi=300,
+       height=4,
+       width=8
 )
 

@@ -247,21 +247,6 @@ rule get_go_accumulation:
             sep="\t", index=False
         )
 
-
-rule plot_go_accumulation:
-    input:
-        flat_jaccard_greater = "work_folder/analysis/GO/flat_jaccard_greater.csv",
-        abundance_jaccard_greater = "work_folder/analysis/GO/abundance_jaccard_greater.csv",
-        flat_jaccard_lesser = "work_folder/analysis/GO/flat_jaccard_lesser.csv",
-        abundance_jaccard_lesser = "work_folder/analysis/GO/abundance_jaccard_lesser.csv"
-    output:
-        go_jaccard = "work_folder/plots/GO/intersect_GO_vs_POD.png",
-        go_intersect = "work_folder/plots/GO/jaccard_GO_vs_POD.png"
-    shell:
-        """
-        Rscript src/Plotting/plot_go_accumulation.R
-        """
-
 rule abundance_go_plot:
     input:
         norm_log = "data/normalised_log_ra.csv"
@@ -321,3 +306,22 @@ rule bait_usage:
         ]] = df_bait.apply(
             lambda x: get_n_go(x["gene_name"], go_dict), axis=1, result_type='expand')
         df_bait.to_csv(output.goterms_studies, sep="\t", index=False)
+        
+
+rule plot_go_accumulation:
+    input:
+        flat_jaccard_greater = "work_folder/analysis/GO/flat_jaccard_greater.csv",
+        abundance_jaccard_greater = "work_folder/analysis/GO/abundance_jaccard_greater.csv",
+        flat_jaccard_lesser = "work_folder/analysis/GO/flat_jaccard_lesser.csv",
+        abundance_jaccard_lesser = "work_folder/analysis/GO/abundance_jaccard_lesser.csv",
+        goterms_abundance= "work_folder/analysis/GO/ra_pod_vs_go_terms.csv",
+        goterms_studies= "work_folder/analysis/GO/n_studies_go_terms.csv"
+    output:
+        go_jaccard = "work_folder/plots/GO/intersect_GO_vs_POD.png",
+        go_intersect = "work_folder/plots/GO/jaccard_GO_vs_POD.png",
+        correlation = "work_folder/plots/GO/correlation_GO.png"
+    shell:
+        """
+        Rscript src/Plotting/plot_go_accumulation.R
+        """
+

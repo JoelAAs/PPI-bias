@@ -17,6 +17,7 @@ include: "src/Analysis/AbundanceAwareDetection/MCMC_abundance.smk"
 include: "src/Analysis/Enrichment/GetDegree.smk"
 include: "src/Analysis/Enrichment/EnrichmentGODO.smk"
 include: "src/Analysis/PairFunctionality/GetSharedFunctionality.smk"
+include: "src/Analysis/HydroPhobicitySimilarity/HydrophobicitySimilarity.smk"
 
 wildcard_constraints:
     cell_line="_[_a-zA-Z]+"
@@ -34,6 +35,7 @@ expected_output = [
     "work_folder/analysis/GO/abundance_jaccard.csv",
     "work_folder/analysis/GO/abundance_jaccard_lesser.csv",
     "work_folder/plots/GO/jaccard_GO_vs_POD.png",
+    "work_folder/analysis/hydrophobicity/abundance_netsurfp_lesser.csv"
 
 ]
 
