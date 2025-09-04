@@ -59,7 +59,7 @@ rule get_hyrdophobicity_delta:
         abundance_file="work_folder/analysis/abundance_aware/POD_abundance.csv"
     output:
         abundance_out="work_folder/analysis/hydrophobicity/abunadce_netsurfp2.0.csv",
-        flat_out="work_folder/analysis/hydrophobicity/abunadce_netsurfp2.0.csv"
+        flat_out="work_folder/analysis/hydrophobicity/flat_netsurfp2.0.csv"
     run:
         ## NetSurfP2.0
         uniprot_2_gene = pd.read_csv(input.uniprot_gene,sep="\t")
@@ -101,7 +101,7 @@ rule get_hyrdophobicity_delta:
 rule get_go_accumulation:
     input:
         abundance_in="work_folder/analysis/hydrophobicity/abunadce_netsurfp2.0.csv",
-        flat_in="work_folder/analysis/hydrophobicity/abunadce_netsurfp2.0.csv"
+        flat_in="work_folder/analysis/hydrophobicity/flat_netsurfp2.0.csv"
     output:
         flat_netsurfp_greater="work_folder/analysis/hydrophobicity/flat_netsurfp_greater.csv",
         abundance_netsurfp_greater="work_folder/analysis/hydrophobicity/abundance_netsurfp_greater.csv",
