@@ -12,9 +12,9 @@ def get_sliding_avg_enrichment_hydro(df, value_column, greater=True, min_samples
         bins = bins[::-1]
     values = values[idx_val]
 
-    thsa = df["thsa_netsurfp2"].to_numpy()[idx_val]
-    tasa = df["tasa_netsurfp2"].to_numpy()[idx_val]
-    rhsa = df["rhsa_netsurfp2"].to_numpy()[idx_val]
+    thsa = df["thsa_netsurfp2_delta"].to_numpy()[idx_val]
+    tasa = df["tasa_netsurfp2_delta"].to_numpy()[idx_val]
+    rhsa = df["rhsa_netsurfp2_delta"].to_numpy()[idx_val]
 
     if not greater:
         bins = -bins
@@ -40,9 +40,9 @@ def get_sliding_avg_enrichment_hydro(df, value_column, greater=True, min_samples
         rows[j] = {
             "limit": value_column,
             "value": (threshold if greater else -threshold),
-            "thsa_avg": thsa_sum / i,
-            "tasa_avg": tasa_sum / i,
-            "rhsa_avg": rhsa_sum / i,
+            "thsa_delta_avg": thsa_sum / i,
+            "tasa_delta_avg": tasa_sum / i,
+            "rhsa_delta_avg": rhsa_sum / i,
             "number_of_pairs": i
         }
         if previous != i:

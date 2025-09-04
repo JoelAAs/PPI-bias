@@ -31,10 +31,10 @@ expected_output = [
     "work_folder/analysis/abundance_aware/bait_prey_abundance.csv",
     "work_folder/analysis/abundance_aware/localisation/probability_match_abundance_less.csv",
     "work_folder/inferred_search_space/analysis/bias_reduced_ppis/localisation_p_estimated_protein_pairs_less.csv",
-    "work_folder/analysis/GO/flat_jaccard.csv",
-    "work_folder/analysis/GO/abundance_jaccard.csv",
+    "work_folder/analysis/GO/flat_jaccard_lesser.csv",
     "work_folder/analysis/GO/abundance_jaccard_lesser.csv",
     "work_folder/plots/GO/jaccard_GO_vs_POD.png",
+    "work_folder/analysis/hydrophobicity/flat_netsurfp_lesser.csv",
     "work_folder/analysis/hydrophobicity/abundance_netsurfp_lesser.csv"
 
 ]
