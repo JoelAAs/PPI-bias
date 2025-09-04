@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from mygene import MyGeneInfo
-from openpyxl.styles.builtins import output
 
 
 def get_go_genes(genes):
@@ -306,7 +305,7 @@ rule bait_usage:
         ]] = df_bait.apply(
             lambda x: get_n_go(x["gene_name"], go_dict), axis=1, result_type='expand')
         df_bait.to_csv(output.goterms_studies, sep="\t", index=False)
-        
+
 
 rule plot_go_accumulation:
     input:
