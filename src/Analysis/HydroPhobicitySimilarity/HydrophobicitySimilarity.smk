@@ -98,7 +98,7 @@ rule get_hyrdophobicity_delta:
 
         flat_df.to_csv(output.flat_out,sep="\t",index=False)
 
-rule get_go_accumulation:
+rule get_hydro_accumulation:
     input:
         abundance_in="work_folder/analysis/hydrophobicity/abunadce_netsurfp2.0.csv",
         flat_in="work_folder/analysis/hydrophobicity/flat_netsurfp2.0.csv"
