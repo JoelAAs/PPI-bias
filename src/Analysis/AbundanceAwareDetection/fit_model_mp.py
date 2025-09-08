@@ -255,7 +255,7 @@ def main():
     parser.add_argument("--burin_samples", type=int, help="Number of burnin samples for posterior")
     parser.add_argument("--workers", type=int, help="Number of worker processes for ray")
     parser.add_argument("--batch_size", type=int, help="Number of tests performed before writing to file")
-    parser.add_argument("--stepsize", type="store_true", help="sets minimal stepsize")
+    parser.add_argument("--stepsize", type=argparse.BooleanOptionalAction, help="sets minimal stepsize")
     args = parser.parse_args()
     smallstep = args.stepsize
 
