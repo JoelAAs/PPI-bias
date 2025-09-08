@@ -227,7 +227,7 @@ rule rerun_divergent:
         samples=config["mcmc_samples"],
         burin_samples=config["mcmc_burin"] + 4000
     input:
-        divergent = "work_folder/analysis/abundance_aware/parameters_{model}/divergent.csv"
+        divergent = "work_folder/analysis/abundance_aware/parameters_{model}/divergent.csv",
         abundance_cell_lines="data/normalised_log_ra.csv"
     output:
         div_parameters="work_folder/analysis/abundance_aware/parameters_abundance/divergent_rerun_{model}.csv"
@@ -242,6 +242,7 @@ rule rerun_divergent:
             --batch_size {params.batch_size} \
             --samples {params.samples} \
             --burin_samples {params.burin_samples}
+            --stepsize
         """
 
 
