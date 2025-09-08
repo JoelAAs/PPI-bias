@@ -217,7 +217,7 @@ rule get_divergent:
     run:
         param_df = pd.read_csv(input.aggregate_parameters, sep = "\t")
         div_df = param_df[param_df["n_divergences"] > 0]
-        div_df.to_csv(output.divergent, sep="t", index=False)
+        div_df.to_csv(output.divergent, sep="\t", index=False)
 
 
 rule rerun_divergent:
