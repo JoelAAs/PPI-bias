@@ -216,7 +216,7 @@ rule get_divergent:
         divergent = "work_folder/analysis/abundance_aware/parameters_{model}/divergent.csv"
     run:
         param_df = pd.read_csv(input.aggregate_parameters, sep = "\t")
-        div_df = param_df[param_df["n_divergences"] > 0]
+        div_df = param_df[param_df["n_divergences"] > 0][div_df.columns[:7]]
         div_df.to_csv(output.divergent, sep="\t", index=False)
 
 
