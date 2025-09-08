@@ -119,7 +119,7 @@ def process_prey_pod(interaction_row, obs_c, tested_c, cl_categories, detection_
 
 @ray.remote(num_cpus=1)
 def process_prey_abundance(interaction_row, in_obs_c, in_tested_c, cl_categories, untargeted_df, j, samples=1500,
-                           tunings=1000):
+                           tunings=1000, smallstep=False):
     import pymc as pm
     import logging
     logger = logging.getLogger("pymc")
@@ -138,7 +138,10 @@ def process_prey_abundance(interaction_row, in_obs_c, in_tested_c, cl_categories
     obs_c = in_obs_c[mask]
 
     start = datetime.now()
-    target_accept = 0.9
+    if smallstep:
+        target_accept = 0.99
+    else:
+        target_accept = 0.9
     n_tests = interaction_row[tested_c].sum()
     bait_matrix = np.zeros((n_tests, n_categories + 2))
     bait_matrix[:, 1] = 1
@@ -252,7 +255,10 @@ def main():
     parser.add_argument("--burin_samples", type=int, help="Number of burnin samples for posterior")
     parser.add_argument("--workers", type=int, help="Number of worker processes for ray")
     parser.add_argument("--batch_size", type=int, help="Number of tests performed before writing to file")
+    parser.add_argument("--stepsize", type="store_true", help="sets minimal stepsize")
     args = parser.parse_args()
+    smallstep = args.stepsize
+
     prey_interaction_df = pd.read_csv(args.prey_tested, sep="\t")
     numeric_cols = prey_interaction_df.columns[1:]
     prey_interaction_df[numeric_cols] = prey_interaction_df[numeric_cols].astype(int)
@@ -295,7 +301,8 @@ def main():
                     untargeted_df=prey_abundance_df,
                     j=j,
                     samples=args.samples,
-                    tunings=args.burin_samples
+                    tunings=args.burin_samples,
+                    smallstep=smallstep
                 ))
 
             elif args.abundance == 0:

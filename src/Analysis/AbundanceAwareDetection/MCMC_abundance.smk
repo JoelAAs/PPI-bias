@@ -207,6 +207,44 @@ rule fit_parameters_pod:
         """
 
 
+rule get_divergent:
+    params:
+        selected_cell_lines=config["selected_cell_lines"]
+    input:
+        aggregate_parameters="work_folder/analysis/abundance_aware/parameters_{model}/all_parameters.csv"
+    output:
+        divergent = "work_folder/analysis/abundance_aware/parameters_{model}/divergent.csv"
+    run:
+        param_df = pd.read_csv(input.aggregate_parameters, sep = "\t")
+        div_df = param_df[param_df["n_divergences"] > 0]
+        div_df.to_csv(output.divergent, sep="t", index=False)
+
+
+rule rerun_divergent:
+    params:
+        workers=config["MCMC_workers"],
+        batch_size=config["batch_per_write"],
+        samples=config["mcmc_samples"],
+        burin_samples=config["mcmc_burin"] + 4000
+    input:
+        divergent = "work_folder/analysis/abundance_aware/parameters_{model}/divergent.csv"
+        abundance_cell_lines="data/normalised_log_ra.csv"
+    output:
+        div_parameters="work_folder/analysis/abundance_aware/parameters_abundance/divergent_rerun_{model}.csv"
+    shell:
+        """
+        python src/Analysis/AbundanceAwareDetection/fit_model_mp.py \
+            --prey_tested {input.divergent} \
+            --abundance_cell_lines {input.abundance_cell_lines} \
+            --abundance 1 \
+            --bait_output {output.div_parameters} \
+            --workers {params.workers} \
+            --batch_size {params.batch_size} \
+            --samples {params.samples} \
+            --burin_samples {params.burin_samples}
+        """
+
+
 rule aggregate:
     params:
         selected_cell_lines=config["selected_cell_lines"]
@@ -236,11 +274,25 @@ rule aggregate:
                     for line in f:
                         w.write(line)
 
+rule join_divergent:
+    input:
+        aggregate_parameters="work_folder/analysis/abundance_aware/parameters_{model}/all_parameters.csv",
+        div_parameters="work_folder/analysis/abundance_aware/parameters_abundance/divergent_rerun_{model}.csv"
+    output:
+        models="work_folder/analysis/abundance_aware/parameters_{model}/all_rerun_parameters.csv"
+    run:
+        df_param = pd.read_csv(input.aggregate_parameters, sep="\t")
+        df_div = pd.read_csv(input.div_parameters, sep="\t")
+        df_param = df_param[df_param["n_divergences"] == 0]
+
+        df_div.columns = df_param.columns
+        full = pd.concat([df_param, df_div], axis=0, ignore_index=True)
+        full.to_csv(output.div_parameters, sep = "\t", index=False)
 
 rule get_bait_prey_pairs:
     input:
         baits_preys=get_cell_line_total,
-        models="work_folder/analysis/abundance_aware/parameters_{model}/all_parameters.csv"
+        models="work_folder/analysis/abundance_aware/parameters_{model}/all_rerun_parameters.csv"
     output:
         all_bait_prey_models="work_folder/analysis/abundance_aware/bait_prey_{model}.csv"
     run:
@@ -264,6 +316,7 @@ rule get_bait_prey_pairs:
         unique_tests[id_cols] = unique_tests[id_cols].astype(int)
 
         model_params = pd.read_csv(input.models,sep="\t")
+        model_params = model_params[model_params["n_divergences"] < 10]
         full = unique_tests.merge(model_params,on=["gene_name_prey"] + id_cols)
         full = full[full["gene_name_prey"] != full["gene_name_prey"]]
         full.to_csv(output.all_bait_prey_models,sep="\t",index=False)
