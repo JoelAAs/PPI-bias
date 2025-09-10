@@ -58,7 +58,7 @@ df_expected_observed = bind_rows(
 go_jaccard_a <- ggplot(
   abundance_df,
   aes(
-    x=value
+    x=prob(value)
   )
 ) +
   geom_point(aes(y = cc_ji_avg, color = "CC Jaccard")) +
@@ -71,7 +71,7 @@ go_jaccard_a <- ggplot(
                    "upper_bound_pod" = "mean(Pmax < POD)")
              ), scales = "free_x") +
   labs(
-    x = "logit(Probability of detection)",
+    x = "Probability of detection",
     y = "Average Jaccard index",
     title = "GO jaccard index vs abundance POD",
     color="GO category"
@@ -84,7 +84,7 @@ go_jaccard_a <- ggplot(
 prob_intersect_a <- ggplot(
   abundance_df,
   aes(
-    x=value
+    x=prob(value)
   )
 ) +
   geom_point(aes(y = cc_intersect_avg, color = "CC intersect")) +
@@ -97,7 +97,7 @@ prob_intersect_a <- ggplot(
                    "upper_bound_pod" = "Pmax < POD")
              ), scales = "free_x") +
 labs(
-  x = "logit(Probability of detection)",
+  x = "Probability of detection",
   y = "Avergage length intersection",
   title = "GO Intersection index vs abundance POD",
   color="GO category"
