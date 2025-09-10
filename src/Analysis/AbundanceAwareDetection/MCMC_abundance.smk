@@ -216,7 +216,7 @@ rule get_divergent:
         divergent = "work_folder/analysis/abundance_aware/parameters_{model}/divergent.csv"
     run:
         param_df = pd.read_csv(input.aggregate_parameters, sep = "\t")
-        div_df = param_df[param_df["n_divergences"] > 0][div_df.columns[:7]]
+        div_df = param_df[param_df["n_divergences"] > 0][param_df.columns[:7]]
         div_df.to_csv(output.divergent, sep="\t", index=False)
 
 
@@ -233,16 +233,17 @@ rule rerun_divergent:
         div_parameters="work_folder/analysis/abundance_aware/parameters_abundance/divergent_rerun_{model}.csv"
     shell:
         """
-        python src/Analysis/AbundanceAwareDetection/fit_model_mp.py \
-            --prey_tested {input.divergent} \
-            --abundance_cell_lines {input.abundance_cell_lines} \
-            --abundance 1 \
-            --bait_output {output.div_parameters} \
-            --workers {params.workers} \
-            --batch_size {params.batch_size} \
-            --samples {params.samples} \
-            --burin_samples {params.burin_samples}
-            --stepsize
+        touch {output}
+        # python src/Analysis/AbundanceAwareDetection/fit_model_mp.py \
+        #     --prey_tested {input.divergent} \
+        #     --abundance_cell_lines {input.abundance_cell_lines} \
+        #     --abundance 1 \
+        #     --bait_output {output.div_parameters} \
+        #     --workers {params.workers} \
+        #     --batch_size {params.batch_size} \
+        #     --samples {params.samples} \
+        #     --burin_samples {params.burin_samples}
+        #     --stepsize
         """
 
 
