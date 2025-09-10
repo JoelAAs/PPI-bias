@@ -284,12 +284,12 @@ rule join_divergent:
         models="work_folder/analysis/abundance_aware/parameters_{model}/all_rerun_parameters.csv"
     run:
         df_param = pd.read_csv(input.aggregate_parameters, sep="\t")
-        df_div = pd.read_csv(input.div_parameters, sep="\t")
+        #df_div = pd.read_csv(input.div_parameters, sep="\t")
         df_param = df_param[df_param["n_divergences"] == 0]
-
-        df_div.columns = df_param.columns
-        full = pd.concat([df_param, df_div], axis=0, ignore_index=True)
-        full.to_csv(output.div_parameters, sep = "\t", index=False)
+        full = df_param
+        #df_div.columns = df_param.columns
+        #full = pd.concat([df_param, df_div], axis=0, ignore_index=True)
+        full.to_csv(output.models, sep = "\t", index=False)
 
 rule get_bait_prey_pairs:
     input:
@@ -320,7 +320,7 @@ rule get_bait_prey_pairs:
         model_params = pd.read_csv(input.models,sep="\t")
         model_params = model_params[model_params["n_divergences"] < 10]
         full = unique_tests.merge(model_params,on=["gene_name_prey"] + id_cols)
-        full = full[full["gene_name_prey"] != full["gene_name_prey"]]
+        full = full[full["gene_name_prey"] != full["gene_name_bait"]]
         full.to_csv(output.all_bait_prey_models,sep="\t",index=False)
 
 
