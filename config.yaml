@@ -38,3 +38,7 @@ y2h:
   - "MI:1356" # (validated two hybrid) ... often the entire search space ...
   - "MI:2215" # (barcode fusion genetics two hybrid) all against all
   - "MI:1113" # (two hybrid bait and prey pooling approach)
+
+flat:
+  - "ms"
+  - "y2h"

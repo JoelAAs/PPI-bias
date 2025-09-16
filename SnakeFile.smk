@@ -22,7 +22,7 @@ wildcard_constraints:
     cell_line="_[_a-zA-Z]+"
 
 datasets = [
-    "ms_y2h",
+    "flat",
     "ms",
     "y2h",
     "abundance",

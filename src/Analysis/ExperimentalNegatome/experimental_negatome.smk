@@ -1,20 +1,5 @@
 from scipy.stats import beta
 
-rule aggregate_pids:
-    """
-    Aggregate data form studies of the same method
-    """
-    input:
-        method=expand(
-            "work_folder/inferred_search_space/aggregated/methods/{multi_method}_experimental_wise.csv",
-            multi_method=["ms", "y2h"]
-        )
-    output:
-        method_aggregate="work_folder/inferred_search_space/aggregated/methods/ms_y2h_experimental_wise.csv"
-    run:
-        aggregate_inferred_experiments(input.method,output.method_aggregate)
-
-
 rule all_methods_filter_out:
     """
     TODO: OBS bait-bait still here

@@ -21,25 +21,14 @@ def multi_method_aggregation(methods):
         single_method=methods
     )
 
-rule aggregate_single_method:
+rule aggregate_pids:
     """
     Aggregate data form studies of the same method
     """
     input:
         input_ppi = config["formated_ppi"],
-        method = lambda wc: get_input_files(wc.single_method, config["id_pattern"], config["formated_ppi"])
+        subsets = lambda wc: multi_method_aggregation(config[wc.subset]) if wc.subset in config else get_input_files(wc.subset, config["id_pattern"], config["formated_ppi"])
     output:
-        method_aggregate = "work_folder/inferred_search_space/aggregated/methods/{single_method}_experimental_wise.csv"
+        method_aggregate = "work_folder/inferred_search_space/aggregated/methods/{subset}_experimental_wise.csv"
     run:
-        aggregate_inferred_experiments(input.method, output.method_aggregate)
-
-rule aggregate_methods:
-    """
-    Aggregate from groups of methods
-    """
-    input:
-        single_aggregate = lambda wc: multi_method_aggregation(config[wc.multi_method])
-    output:
-        multi_method = "work_folder/inferred_search_space/aggregated/methods/{multi_method}_experimental_wise.csv"
-    run:
-        aggregate_inferred_experiments(input.single_aggregate,output.multi_method)
+        aggregate_inferred_experiments(input.subsets, output.method_aggregate)

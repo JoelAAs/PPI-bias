@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from .mean_distance_support import get_cumulative_sum
+from mean_distance_support import get_cumulative_sum
 from mygene import MyGeneInfo
 
 
