@@ -10,6 +10,8 @@ rule all_methods_filter_out:
         method_aggregate="work_folder/inferred_search_space/aggregated/methods/{data}_experimental_wise.csv"
     output:
         full_detection="work_folder/analysis/POD/POD_{data}.csv"
+    wildcard_constraints:
+        data="^(?!abundance$).+"
     run:
         inferred_negative_df = pd.read_csv(
             input.method_aggregate,
