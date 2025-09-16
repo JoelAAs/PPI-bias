@@ -51,7 +51,7 @@ go_ra <- ggplot(
 go_pod <- ggplot(
   ra_pod_go_df_long,
   aes(
-    x=logit(pod),
+    x=pod,
     y=log10(go_count),
     color=GO_category
   )

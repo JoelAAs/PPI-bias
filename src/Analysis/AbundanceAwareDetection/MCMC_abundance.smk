@@ -326,15 +326,11 @@ rule get_bait_prey_pairs:
 
 rule get_negatome_HCI:
     params:
-        top_limit=0.5,
-        bot_limit=0.05,
         selected_cell_lines=config["selected_cell_lines"]
     input:
         all_bait_prey_models="work_folder/analysis/abundance_aware/bait_prey_{model}.csv"
     output:
-        negatome="work_folder/analysis/abundance_aware/negatome_{model}.csv",
-        hci="work_folder/analysis/abundance_aware/HCI_{model}.csv",
-        pod="work_folder/analysis/abundance_aware/POD_{model}.csv"
+        pod="work_folder/analysis/POD/POD_{model}.csv"
 
     run:
         model_data = pd.read_csv(input.all_bait_prey_models,sep="\t")

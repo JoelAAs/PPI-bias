@@ -40,6 +40,6 @@ rule aggregate_methods:
     input:
         single_aggregate = lambda wc: multi_method_aggregation(config[wc.multi_method])
     output:
-        multi_method = "work_folder/inferred_search_space/aggregated/multi_methods/{multi_method}_experimental_wise.csv"
+        multi_method = "work_folder/inferred_search_space/aggregated/methods/{multi_method}_experimental_wise.csv"
     run:
         aggregate_inferred_experiments(input.single_aggregate,output.multi_method)
