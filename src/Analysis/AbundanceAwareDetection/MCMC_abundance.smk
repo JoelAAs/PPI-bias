@@ -3,7 +3,7 @@ import pandas as pd
 import glob
 import os
 import numpy as np
-import math
+
 
 def get_bait_parameters(wildcards):
     BAIT_FOLDER = checkpoints.batch_tests.get().output[0]
@@ -213,11 +213,11 @@ rule get_divergent:
     input:
         aggregate_parameters="work_folder/analysis/abundance_aware/parameters_{model}/all_parameters.csv"
     output:
-        divergent = "work_folder/analysis/abundance_aware/parameters_{model}/divergent.csv"
+        divergent="work_folder/analysis/abundance_aware/parameters_{model}/divergent.csv"
     run:
-        param_df = pd.read_csv(input.aggregate_parameters, sep = "\t")
+        param_df = pd.read_csv(input.aggregate_parameters,sep="\t")
         div_df = param_df[param_df["n_divergences"] > 0][param_df.columns[:7]]
-        div_df.to_csv(output.divergent, sep="\t", index=False)
+        div_df.to_csv(output.divergent,sep="\t",index=False)
 
 
 rule rerun_divergent:
@@ -227,7 +227,7 @@ rule rerun_divergent:
         samples=config["mcmc_samples"],
         burin_samples=config["mcmc_burin"] + 4000
     input:
-        divergent = "work_folder/analysis/abundance_aware/parameters_{model}/divergent.csv",
+        divergent="work_folder/analysis/abundance_aware/parameters_{model}/divergent.csv",
         abundance_cell_lines="data/normalised_log_ra.csv"
     output:
         div_parameters="work_folder/analysis/abundance_aware/parameters_abundance/divergent_rerun_{model}.csv"
@@ -251,7 +251,7 @@ rule aggregate:
     params:
         selected_cell_lines=config["selected_cell_lines"]
     input:
-        bait_parameters=lambda wc : get_bait_parameters(wc)
+        bait_parameters=lambda wc: get_bait_parameters(wc)
     output:
         aggregate_parameters="work_folder/analysis/abundance_aware/parameters_{model}/all_parameters.csv"
     run:
@@ -283,13 +283,13 @@ rule join_divergent:
     output:
         models="work_folder/analysis/abundance_aware/parameters_{model}/all_rerun_parameters.csv"
     run:
-        df_param = pd.read_csv(input.aggregate_parameters, sep="\t")
+        df_param = pd.read_csv(input.aggregate_parameters,sep="\t")
         #df_div = pd.read_csv(input.div_parameters, sep="\t")
         df_param = df_param[df_param["n_divergences"] == 0]
         full = df_param
         #df_div.columns = df_param.columns
         #full = pd.concat([df_param, df_div], axis=0, ignore_index=True)
-        full.to_csv(output.models, sep = "\t", index=False)
+        full.to_csv(output.models,sep="\t",index=False)
 
 rule get_bait_prey_pairs:
     input:
@@ -367,14 +367,8 @@ rule get_negatome_HCI:
         model_data["mixture_mean"] = model_data.apply(lambda x: mixture_mean(x,params.selected_cell_lines),axis=1)
         model_data["mixture_var"] = model_data.apply(lambda x: mixture_var(x,params.selected_cell_lines),axis=1)
 
-        model_data["expected_pod"]    = (2 ** model_data["mixture_mean"]) * model_data["beta_bait_mean"]
+        model_data["expected_pod"] = (2 ** model_data["mixture_mean"]) * model_data["beta_bait_mean"]
         model_data["lower_bound_pod"] = (2 ** model_data["mixture_mean"]) * model_data["beta_bait_low_ci"]
         model_data["upper_bound_pod"] = (2 ** model_data["mixture_mean"]) * model_data["beta_bait_high_ci"]
 
-        model_data.to_csv(output.pod, sep="\t", index=False)
-
-        negatome = model_data[model_data["upper_bound_pod"] < -math.log(1/params.bot_limit - 1)]
-        negatome.to_csv(output.negatome, sep="\t", index=False)
-
-        hci = model_data[model_data["lower_bound_pod"] > -math.log(1/params.top_limit - 1)]
-        hci.to_csv(output.hci, sep="\t", index=False)
+        model_data.to_csv(output.pod,sep="\t",index=False)
