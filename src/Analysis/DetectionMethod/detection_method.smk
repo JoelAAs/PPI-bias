@@ -6,7 +6,7 @@ def get_input_files(method, id_pattern, filename, remove_single=True):
     ppi_df = ppi_df[
         ppi_df[f"{id_pattern}_bait"] != ppi_df[f"{id_pattern}_prey"]
     ]
-    if ppi_df.empty():
+    if ppi_df.empty:
         raise ValueError(f"No studies for method: {method}")
     ppi_df = ppi_df[~ppi_df[[f"{id_pattern}_bait", f"{id_pattern}_prey", "pubmed_id"]].duplicated(keep="first")] # Remove isoforms
     if remove_single:
@@ -23,13 +23,18 @@ def multi_method_aggregation(methods):
         subset=methods
     )
 
+def get_subsets(wc):
+    if wc.subset in config:
+        return multi_method_aggregation(config[wc.subset])
+    return get_input_files(wc.subset,config["id_pattern"],config["formated_ppi"])
+
 rule aggregate_pids:
     """
     Aggregate data form studies of the same method
     """
     input:
         input_ppi = config["formated_ppi"],
-        subsets = lambda wc: multi_method_aggregation(config[wc.subset]) if wc.subset in config else get_input_files(wc.subset, config["id_pattern"], config["formated_ppi"])
+        subsets = lambda wc: get_subsets(wc)
     output:
         method_aggregate = "work_folder/inferred_search_space/aggregated/methods/{subset}_experimental_wise.csv"
     run:
