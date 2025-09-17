@@ -20,7 +20,7 @@ include: "src/Analysis/Annotation/HydrophobicitySimilarity.smk"
 
 wildcard_constraints:
     cell_line="_[_a-zA-Z]+",
-    data="[a-zA-Z0-9-]+",
+    subset="[a-zA-Z0-9-]+",
     model="[_a-zA-Z0-9-]+",
 
 
@@ -35,7 +35,22 @@ pods = [
     f"work_folder/analysis/POD/POD_{data}.csv" for data in datasets
 ]
 
-expected_output = pods
+### annotations
+colocalisation = [
+    f"work_folder/analysis/localisation/cumulative/POD_{data}_localisation_lesser.csv"
+    for data in datasets
+]
+go_jaccards = [
+    f"work_folder/analysis/GO/cumulative/POD_{data}_jaccard_lesser.csv"
+    for data in datasets
+]
+
+hydro_delta = [
+    f"work_folder/analysis/hydrophobicity/cumulative/POD_{data}_netsurfp2_lesser.csv"
+    for data in datasets
+]
+
+expected_output = pods + colocalisation + go_jaccards + hydro_delta
 
 rule all:
     input:

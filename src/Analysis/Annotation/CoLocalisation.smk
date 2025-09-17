@@ -1,4 +1,5 @@
 from localisation_support import *
+from mean_distance_support import get_cumulative_sum
 
 
 def get_probabilities(df, value_column, greater=True, min_samples=50):
@@ -40,6 +41,7 @@ def get_probabilities(df, value_column, greater=True, min_samples=50):
             }
             j += 1
     return pd.DataFrame(rows).dropna()
+
 
 rule method_comparison:
     """
@@ -115,61 +117,40 @@ rule method_comparison:
         diff_y2h.to_csv(output.y2h_diff_localisation,sep="\t",index=False)
 
 
-rule check_accumulation_MCMC:
+rule accumulation_colocalisation:
     params:
         localisation_csv=config["localisation_file"]
     input:
-        all_bait_prey_models="work_folder/analysis/abundance_aware/POD_{model}.csv"
+        pod_data="work_folder/analysis/POD/POD_{data}.csv"
     output:
-        localisation_neg="work_folder/analysis/abundance_aware/localisation/probability_match_{model}_less.csv",
-        localisation_hci="work_folder/analysis/abundance_aware/localisation/probability_match_{model}_greater.csv"
+        localisation_annotated="work_folder/analysis/localisation/POD_{data}_localisation.csv",
+        localisation_lesser="work_folder/analysis/localisation/cumulative/POD_{data}_localisation_lesser.csv",
+        localisation_greater="work_folder/analysis/localisation/cumulative/POD_{data}_localisation_greater.csv"
     run:
         df_localisation = pd.read_csv(params.localisation_csv,sep="\t")
-        bait_model = pd.read_csv(input.all_bait_prey_models,sep="\t")
+        bait_model = pd.read_csv(input.pod_data,sep="\t")
         proteins_tested = set(bait_model["gene_name_bait"].tolist() + bait_model["gene_name_prey"].tolist())
-        df_localisation = df_localisation[df_localisation["gene_name"].isin(proteins_tested)] # detectable
-        #df_localisation = df_localisation[~df_localisation["gene_name"].duplicated(keep=False)]
+        df_localisation = df_localisation[df_localisation["gene_name"].isin(proteins_tested)]  # detectable
         n_possible = df_localisation.shape[0]
         random_match = pd.DataFrame([
-            [loc, ((df_localisation["localisation"] == loc).sum() -1) / n_possible] for loc in
+            [loc, ((df_localisation["localisation"] == loc).sum() - 1) / n_possible] for loc in
             df_localisation["localisation"].unique()
         ],columns=("localisation_prey", "match_probability"))
 
         bait_model = add_localisation(bait_model,df_localisation)
         bait_model = bait_model.merge(random_match,on="localisation_prey")
+        bait_model.to_csv(
+            output.localisation_annotated,sep="\t",index=False)
 
-        df_localisation_hci = get_probabilities(bait_model,"lower_bound_pod", min_samples=100)
-        df_localisation_hci.to_csv(output.localisation_hci, sep="\t", index=False)
-        df_localisation_neg = get_probabilities(bait_model,"upper_bound_pod", greater=False, min_samples=100)
-        df_localisation_neg.to_csv(output.localisation_neg, sep="\t", index=False)
-
-rule check_accumulation_flat:
-    params:
-        localisation_csv=config["localisation_file"]
-    input:
-        full_detection = "work_folder/inferred_search_space/analysis/bias_reduced_ppis/p_estimated_protein_pairs.csv"
-    output:
-        localisation_match_greater = "work_folder/inferred_search_space/analysis/bias_reduced_ppis/localisation_p_estimated_protein_pairs_greater.csv",
-        localisation_match_less= "work_folder/inferred_search_space/analysis/bias_reduced_ppis/localisation_p_estimated_protein_pairs_less.csv"
-    run:
-        df_localisation = pd.read_csv(params.localisation_csv,sep="\t")
-        bait_model = pd.read_csv(input.full_detection,sep="\t")
-        proteins_tested = set(bait_model["gene_name_bait"].tolist() + bait_model["gene_name_prey"].tolist())
-        df_localisation = df_localisation[df_localisation["gene_name"].isin(proteins_tested)] # detectable
-        #df_localisation = df_localisation[~df_localisation["gene_name"].duplicated(keep=False)]
-        n_possible = df_localisation.shape[0]
-        random_match = pd.DataFrame([
-            [loc, ((df_localisation["localisation"] == loc).sum() -1) / n_possible] for loc in
-            df_localisation["localisation"].unique() # -1 as we do not have bait-bait interactions
-        ],columns=("localisation_prey", "match_probability"))
-
-        bait_model = add_localisation(bait_model,df_localisation)
-        bait_model = bait_model.merge(random_match,on="localisation_prey")
-        logit = lambda x: -math.log(1/x -1)
-        bait_model["logit_p_lower"] = bait_model["p_lower_ci"].apply(logit)
-        bait_model["logit_p_upper"] = bait_model["p_upper_ci"].apply(logit)
-        df_localisation_hci = get_probabilities(bait_model,"logit_p_lower", min_samples=100)
-        df_localisation_hci.to_csv(output.localisation_match_greater, sep="\t", index=False)
-
-        df_localisation_neg = get_probabilities(bait_model,"logit_p_upper", greater=False,min_samples=100)
-        df_localisation_neg.to_csv(output.localisation_match_less,sep="\t",index=False)
+        measurement_columns = ["match_probability", "localisation_match"]
+        get_cumulative_sum(
+            bait_model,
+            value_column="lower_bound_pod",
+            cumulative_columns=measurement_columns).to_csv(
+            output.localisation_greater,sep="\t",index=False)
+        get_cumulative_sum(
+            bait_model,
+            value_column="lower_bound_pod",
+            cumulative_columns=measurement_columns,
+            greater=False).to_csv(
+            output.localisation_lesser,sep="\t",index=False)

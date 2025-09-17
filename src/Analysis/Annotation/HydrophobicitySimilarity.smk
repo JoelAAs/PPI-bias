@@ -1,4 +1,5 @@
 import pandas as pd
+from mean_distance_support import get_cumulative_sum
 
 #TODO: generalise this for all similarity
 
@@ -32,7 +33,6 @@ def get_sliding_avg_enrichment_hydro(df, value_column, greater=True, min_samples
         while (i < len(values) and threshold <= values[i]) or i < min_samples:
             i += 1
 
-
         thsa_sum += thsa[previous:i].sum()
         tasa_sum += tasa[previous:i].sum()
         rhsa_sum += rhsa[previous:i].sum()
@@ -51,15 +51,14 @@ def get_sliding_avg_enrichment_hydro(df, value_column, greater=True, min_samples
 
     return pd.DataFrame([r for r in rows if r])
 
+
 rule get_hyrdophobicity_delta:
     input:
         uniprot_gene="work_folder/intact/uniprot_to_gene_name.csv",
         rhsa_pdb="data/hydrophobicity/NSP2_complete.tab",
-        flat_file="work_folder/inferred_search_space/analysis/bias_reduced_ppis/p_estimated_protein_pairs.csv",
-        abundance_file="work_folder/analysis/abundance_aware/POD_abundance.csv"
+        pod_data="work_folder/analysis/POD/POD_{data}.csv"
     output:
-        abundance_out="work_folder/analysis/hydrophobicity/abunadce_netsurfp2.0.csv",
-        flat_out="work_folder/analysis/hydrophobicity/flat_netsurfp2.0.csv"
+        hydro_annotated="work_folder/analysis/hydrophobicity/POD_{data}_netsurfp2.csv"
     run:
         ## NetSurfP2.0
         uniprot_2_gene = pd.read_csv(input.uniprot_gene,sep="\t")
@@ -72,8 +71,7 @@ rule get_hyrdophobicity_delta:
         hydro_cols = ["thsa_netsurfp2", "tasa_netsurfp2", "rhsa_netsurfp2"]
         full = full[["gn"] + hydro_cols]
 
-        ## Abundance
-        abundance_df = pd.read_csv(input.abundance_file,sep="\t")
+        abundance_df = pd.read_csv(input.pod_data,sep="\t")
         abundance_df = abundance_df.merge(
             full,left_on="gene_name_bait",right_on="gn"
         ).merge(
@@ -83,61 +81,41 @@ rule get_hyrdophobicity_delta:
         for c in hydro_cols:
             abundance_df[f"{c}_delta"] = abs(abundance_df[f"{c}_bait"] - abundance_df[f"{c}_prey"])
 
-        abundance_df.to_csv(output.abundance_out,sep="\t",index=False)
+        abundance_df.to_csv(output.hydro_annotated,sep="\t",index=False)
 
-        ## Flat
-        flat_df = pd.read_csv(input.flat_file,sep="\t")
-        flat_df = flat_df.merge(
-            full,left_on="gene_name_bait",right_on="gn"
-        ).merge(
-            full,left_on="gene_name_prey",right_on="gn",suffixes=["_bait", "_prey"]
-        )
-        flat_df = flat_df.drop(["gn_bait", "gn_prey"],axis=1)
-        for c in hydro_cols:
-            flat_df[f"{c}_delta"] = abs(flat_df[f"{c}_bait"] - flat_df[f"{c}_prey"])
-
-        flat_df.to_csv(output.flat_out,sep="\t",index=False)
 
 rule get_hydro_accumulation:
     input:
-        abundance_in="work_folder/analysis/hydrophobicity/abunadce_netsurfp2.0.csv",
-        flat_in="work_folder/analysis/hydrophobicity/flat_netsurfp2.0.csv"
+        hydro_pod_data="work_folder/analysis/hydrophobicity/POD_{data}_netsurfp2.csv"
     output:
-        flat_netsurfp_greater="work_folder/analysis/hydrophobicity/flat_netsurfp_greater.csv",
-        abundance_netsurfp_greater="work_folder/analysis/hydrophobicity/abundance_netsurfp_greater.csv",
-        flat_netsurfp_lesser="work_folder/analysis/hydrophobicity/flat_netsurfp_lesser.csv",
-        abundance_netsurfp_lesser="work_folder/analysis/hydrophobicity/abundance_netsurfp_lesser.csv"
+        hydro_lesser="work_folder/analysis/hydrophobicity/cumulative/POD_{data}_netsurfp2_lesser.csv",
+        hydro_greater="work_folder/analysis/hydrophobicity/cumulative/POD_{data}_netsurfp2_greater.csv"
     run:
-        abundance_df = pd.read_csv(
-            input.abundance_in, sep="\t"
-        )
-        get_sliding_avg_enrichment_hydro(
-            abundance_df,
-            "lower_bound_pod").to_csv(
-            output.abundance_netsurfp_greater,
-            sep="\t",index=False
-        )
-        get_sliding_avg_enrichment_hydro(
-            abundance_df,
-            "upper_bound_pod",
-            greater=False).to_csv(
-            output.abundance_netsurfp_lesser,
-            sep="\t", index=False
+        measurement_columns = [
+            "thsa_netsurfp2_delta",
+            "tasa_netsurfp2_delta",
+            "rhsa_netsurfp2_delta"
+        ]
+
+        hydro_pod_df = pd.read_csv(
+            input.hydro_pod_data,sep="\t"
         )
 
-        flat_df = pd.read_csv(
-            input.flat_in, sep="\t"
-        )
-        get_sliding_avg_enrichment_hydro(
-            flat_df,
-            "p_lower_ci").to_csv(
-            output.flat_netsurfp_greater,
+        get_cumulative_sum(
+            hydro_pod_df,
+            value_column="lower_bound_pod",
+            cumulative_columns=measurement_columns
+        ).to_csv(
+            output.hydro_greater,
             sep="\t",index=False
         )
-        get_sliding_avg_enrichment_hydro(
-            flat_df,
-            "p_upper_ci",
-            greater=False).to_csv(
-            output.flat_netsurfp_lesser,
-            sep="\t", index=False
+
+        get_cumulative_sum(
+            hydro_pod_df,
+            value_column="upper_bound_pod",
+            cumulative_columns=measurement_columns,
+            greater=False
+        ).to_csv(
+            output.hydro_lesser,
+            sep="\t",index=False
         )

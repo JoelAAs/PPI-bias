@@ -31,9 +31,9 @@ rule all_methods_filter_out:
         inferred_negative_df["p"] = inferred_negative_df["alpha_post"] / (
                 inferred_negative_df["alpha_post"] + inferred_negative_df["beta_post"])
 
-        inferred_negative_df["p_lower_ci"] = beta.ppf(0.025,
+        inferred_negative_df["lower_bound_pod"] = beta.ppf(0.025,
             inferred_negative_df["alpha_post"],inferred_negative_df["beta_post"])
-        inferred_negative_df["p_upper_ci"] = beta.ppf(0.975,
+        inferred_negative_df["upper_bound_pod"] = beta.ppf(0.975,
             inferred_negative_df["alpha_post"],inferred_negative_df["beta_post"])
 
         inferred_negative_df.to_csv(
