@@ -324,15 +324,13 @@ rule get_bait_prey_pairs:
         full.to_csv(output.all_bait_prey_models,sep="\t",index=False)
 
 
-rule get_negatome_HCI:
+rule get_pod_bounds:
     params:
         selected_cell_lines=config["selected_cell_lines"]
     input:
         all_bait_prey_models="work_folder/analysis/abundance_aware/bait_prey_{model}.csv"
     output:
-        pod="work_folder/analysis/POD/POD_{model}.csv"
-    wildcard_constraints:
-        model="^(abundance|pod)$"
+        pod="work_folder/analysis/POD/POD_{model}_mcmc.csv"
     run:
         model_data = pd.read_csv(input.all_bait_prey_models,sep="\t")
         model_data["total_tested"] = model_data[[f"n_tested_{c}" for c in params.selected_cell_lines]].sum(axis=1)

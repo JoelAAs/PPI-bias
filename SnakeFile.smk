@@ -19,13 +19,16 @@ include: "src/Analysis/Annotation/OverlapGO.smk"
 include: "src/Analysis/Annotation/HydrophobicitySimilarity.smk"
 
 wildcard_constraints:
-    cell_line="_[_a-zA-Z]+"
+    cell_line="_[_a-zA-Z]+",
+    data="[a-zA-Z0-9-]+",
+    model="[_a-zA-Z0-9-]+",
+
 
 datasets = [
     "flat",
     "ms",
     "y2h",
-    "abundance",
+    "abundance_mcmc",
     "MI-1314"
 ]
 pods = [

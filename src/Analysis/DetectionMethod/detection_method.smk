@@ -6,6 +6,8 @@ def get_input_files(method, id_pattern, filename, remove_single=True):
     ppi_df = ppi_df[
         ppi_df[f"{id_pattern}_bait"] != ppi_df[f"{id_pattern}_prey"]
     ]
+    if ppi_df.empty():
+        raise ValueError(f"No studies for method: {method}")
     ppi_df = ppi_df[~ppi_df[[f"{id_pattern}_bait", f"{id_pattern}_prey", "pubmed_id"]].duplicated(keep="first")] # Remove isoforms
     if remove_single:
         ppi_df = ppi_df.groupby(["pubmed_id"], as_index=False).size()
@@ -17,8 +19,8 @@ def get_input_files(method, id_pattern, filename, remove_single=True):
 
 def multi_method_aggregation(methods):
     return expand(
-        rules.aggregate_single_method.output.method_aggregate,
-        single_method=methods
+        rules.aggregate_pids.output.method_aggregate,
+        subset=methods
     )
 
 rule aggregate_pids:
