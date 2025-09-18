@@ -17,10 +17,20 @@ output                  <- args[4]
 prob  <- function(x) 1/(1+exp(-x))
 logit <- function(x) -log(1/x-1)
 
+df_greater = read.table(
+  greater_go_accumulation,
+  sep="\t",
+  header=T
+)
+df_lesser = read.table(
+  lesser_go_accumulation,
+  sep="\t",
+  header=T
+)
 
 go_df = bind_rows(
-  greater_go_accumulation,
-  lesser_go_accumulation
+  df_greater,
+  df_lesser
 )
 
 go_df$ji_bp <- go_df$sum_ji_bp/go_df$non_na_pairs_ji_bp
