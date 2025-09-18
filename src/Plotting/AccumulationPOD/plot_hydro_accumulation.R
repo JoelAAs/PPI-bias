@@ -35,18 +35,9 @@ hydro_df$thsa_netsurfp2_delta <- hydro_df$sum_thsa_netsurfp2_delta/hydro_df$non_
 hydro_df$tasa_netsurfp2_delta <- hydro_df$sum_tasa_netsurfp2_delta/hydro_df$non_na_pairs_tasa_netsurfp2_delta
 hydro_df$rhsa_netsurfp2_delta <- hydro_df$sum_rhsa_netsurfp2_delta/hydro_df$non_na_pairs_rhsa_netsurfp2_delta
 
-#abundance_df$thsa_delta_avg <- abundance_df$thsa_delta_avg/max(abundance_df$thsa_delta_avg)
-#abundance_df$tasa_delta_avg <- abundance_df$tasa_delta_avg/max(abundance_df$tasa_delta_avg)
-#abundance_df$rhsa_delta_avg <- abundance_df$rhsa_delta_avg/max(abundance_df$rhsa_delta_avg)
-
-flat_df = bind_rows(
-  less_flat,
-  greater_flat
-)
-
 ### plot
 plot_rhsa <- ggplot(
-  abundance_df,
+  hydro_df,
   aes(
     x=value
   )
