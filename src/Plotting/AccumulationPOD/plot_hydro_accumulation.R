@@ -27,8 +27,8 @@ df_lesser = read.table(
 )
 
 hydro_df = bind_rows(
-  df_a_lesser,
-  df_a_greater
+  df_greater,
+  df_lesser
 )
 
 hydro_df$thsa_netsurfp2_delta <- hydro_df$sum_thsa_netsurfp2_delta/hydro_df$non_na_pairs_thsa_netsurfp2_delta

@@ -102,7 +102,7 @@ add_label <- function(plot, label) {
 }
 
 abundance_GO <- grid.arrange(
-  add_label(go_jaccard, "A"),
+  add_label(plot_jaccard, "A"),
   add_label(prob_intersect, "B"),
   nrow=2)
 
