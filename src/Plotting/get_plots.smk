@@ -32,3 +32,45 @@ rule get_localisation_y2h_ms_plot:
         """
 
 
+rule plot_go:
+    params:
+        script_location = "src/Plotting/AccumulationPOD/plot_go_accumulation.R"
+    input:
+        greater_go="work_folder/analysis/GO/cumulative/POD_{data}_jaccard_greater.csv",
+        lesser_go="work_folder/analysis/GO/cumulative/POD_{data}_jaccard_lesser.csv"
+    output:
+        plot = "work_folder/plots/AccumulationPOD/go_{data}.png"
+    shell:
+        """
+        Rscript {params.script_location} {input.greater_go} {input.lesser_go} {wildcards.data} {output.plot}
+        """
+
+
+rule plot_colocalisation:
+    params:
+        script_location = "src/Plotting/AccumulationPOD/plot_colocalisation_accumulation.R"
+    input:
+        greater_colocalisation="work_folder/analysis/localisation/cumulative/POD_{data}_localisation_greater.csv",
+        lesser_colocalisation="work_folder/analysis/localisation/cumulative/POD_{data}_localisation_lesser.csv",
+    output:
+        plot = "work_folder/plots/AccumulationPOD/colocalisation_{data}.png"
+    shell:
+        """
+        Rscript {params.script_location} {input.greater_colocalisation} {input.lesser_colocalisation} {wildcards.data} {output.plot}
+        """
+
+
+rule plot_hydrophobicity:
+    params:
+        script_location = "src/Plotting/AccumulationPOD/plot_hydro_accumulation.R"
+    input:
+        greater_hydro="work_folder/analysis/hydrophobicity/cumulative/POD_{data}_netsurfp2_greater.csv",
+        lesser_hydro="work_folder/analysis/hydrophobicity/cumulative/POD_{data}_netsurfp2_lesser.csv",
+    output:
+        plot = "work_folder/plots/AccumulationPOD/hydrophobicity_{data}.png"
+    shell:
+        """
+        Rscript {params.script_location} {input.greater_hydro} {input.lesser_hydro} {wildcards.data} {output.plot}
+        """
+
+

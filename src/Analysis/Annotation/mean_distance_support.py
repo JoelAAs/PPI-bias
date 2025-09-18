@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from pyarrow import float64
 
 
 def get_cumulative_sum(df, value_column, cumulative_columns, greater=True, min_samples=200):
