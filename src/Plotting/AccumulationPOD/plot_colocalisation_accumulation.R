@@ -29,7 +29,7 @@ colocalisation_df = bind_rows(
 prob  <- function(x) 1/(1+exp(-x))
 logit <- function(x) -log(1/x-1)
 if (name=="abundance_mcmc") {
-    colocalisation_df$value <- prob(go_df$value)
+    colocalisation_df$value <- prob(colocalisation_df$value)
 }
 
 
