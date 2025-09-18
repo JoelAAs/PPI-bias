@@ -61,7 +61,7 @@ plot_jaccard <- ggplot(
   labs(
     x = "Probability of detection",
     y = "Average Jaccard index",
-    title = "GO jaccard index vs abundance POD",
+    title = paste("GO jaccard index vs POD:", name),
     color="GO category"
   ) +
   theme_bw() +
@@ -87,7 +87,7 @@ prob_intersect <- ggplot(
 labs(
   x = "Probability of detection",
   y = "Average length intersection",
-  title = "GO Intersection index vs abundance POD",
+  title = paste("GO Intersection index vs POD:" name),
   color="GO category"
 ) +
   theme_bw() +

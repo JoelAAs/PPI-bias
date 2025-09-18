@@ -150,7 +150,7 @@ rule accumulation_colocalisation:
             output.localisation_greater,sep="\t",index=False)
         get_cumulative_sum(
             bait_model,
-            value_column="lower_bound_pod",
+            value_column="upper_bound_pod",
             cumulative_columns=measurement_columns,
             greater=False).to_csv(
             output.localisation_lesser,sep="\t",index=False)

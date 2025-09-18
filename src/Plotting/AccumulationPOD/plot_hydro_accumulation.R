@@ -32,8 +32,14 @@ hydro_df = bind_rows(
 )
 
 hydro_df$thsa_delta_avg <- hydro_df$sum_thsa_netsurfp2_delta/hydro_df$non_na_pairs_thsa_netsurfp2_delta
+hydro_df$thsa_delta_normalised <- (hydro_df$thsa_delta_avg - mean(hydro_df$thsa_delta_avg))/sd(hydro_df$thsa_delta_avg)
+
 hydro_df$tasa_delta_avg <- hydro_df$sum_tasa_netsurfp2_delta/hydro_df$non_na_pairs_tasa_netsurfp2_delta
+hydro_df$tasa_delta_normalised <- (hydro_df$tasa_delta_avg - mean(hydro_df$tasa_delta_avg))/sd(hydro_df$tasa_delta_avg)
+
 hydro_df$rhsa_delta_avg <- hydro_df$sum_rhsa_netsurfp2_delta/hydro_df$non_na_pairs_rhsa_netsurfp2_delta
+hydro_df$rhsa_delta_normalised <- (hydro_df$rhsa_delta_avg - mean(hydro_df$rhsa_delta_avg))/sd(hydro_df$rhsa_delta_avg)
+
 
 ### plot
 plot_rhsa <- ggplot(
@@ -42,12 +48,12 @@ plot_rhsa <- ggplot(
     x=value
   )
 ) +
-  geom_point(aes(y = thsa_delta_avg, color = "THSA")) +
-  geom_point(aes(y = tasa_delta_avg, color = "TASA")) +
-  geom_point(aes(y = rhsa_delta_avg, color = "RHSA")) +
-  geom_line(aes(y = thsa_delta_avg, color = "THSA")) +
-  geom_line(aes(y = tasa_delta_avg, color = "TASA")) +
-  geom_line(aes(y = rhsa_delta_avg, color = "RHSA")) +
+  geom_point(aes(y = thsa_delta_normalised, color = "THSA")) +
+  geom_point(aes(y = tasa_delta_normalised, color = "TASA")) +
+  geom_point(aes(y = rhsa_delta_normalised, color = "RHSA")) +
+  geom_line(aes(y = thsa_delta_normalised, color = "THSA")) +
+  geom_line(aes(y = tasa_delta_normalised, color = "TASA")) +
+  geom_line(aes(y = rhsa_delta_normalised, color = "RHSA")) +
   scale_color_discrete(labels = c(
     expression(Delta ~ THSA),
     expression(Delta ~ TASA),
@@ -58,7 +64,7 @@ plot_rhsa <- ggplot(
                limit =
                  c("lower_bound_pod" = "mean(Pmin > POD)",
                    "upper_bound_pod" = "mean(Pmax < POD)")
-             ), scales = "free_x") +
+             ),nrow=2, scales = "free_x") +
   labs(
     x = "Probability of detection",
     y = "Normalised difference",
