@@ -30,6 +30,11 @@ hydro_df = bind_rows(
   df_greater,
   df_lesser
 )
+prob  <- function(x) 1/(1+exp(-x))
+logit <- function(x) -log(1/x-1)
+if (name=="abundance_mcmc") {
+    hydro_df$value <- prob(go_df$value)
+}
 
 hydro_df$thsa_delta_avg <- hydro_df$sum_thsa_netsurfp2_delta/hydro_df$non_na_pairs_thsa_netsurfp2_delta
 hydro_df$thsa_delta_normalised <- (hydro_df$thsa_delta_avg - mean(hydro_df$thsa_delta_avg))/sd(hydro_df$thsa_delta_avg)

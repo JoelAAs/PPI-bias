@@ -26,6 +26,13 @@ colocalisation_df = bind_rows(
   df_lesser,
   df_greater
 )
+prob  <- function(x) 1/(1+exp(-x))
+logit <- function(x) -log(1/x-1)
+if (name=="abundance_mcmc") {
+    colocalisation_df$value <- prob(go_df$value)
+}
+
+
 
 colocalisation_df$percent_change <- (colocalisation_df$sum_localisation_match - colocalisation_df$sum_match_probability)/colocalisation_df$sum_match_probability
 
@@ -43,7 +50,7 @@ prob_localisation <- ggplot(
                limit =
                  c("lower_bound_pod" = "P(m| Pmin > POD)",
                    "upper_bound_pod" = "P(m| Pmax < POD)")
-  )) +
+  ), scales="free_x") +
   labs(
     x = "Probability of detection",
     y = "% different in expected localisation match",

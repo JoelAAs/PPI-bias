@@ -33,6 +33,13 @@ go_df = bind_rows(
   df_lesser
 )
 
+prob  <- function(x) 1/(1+exp(-x))
+logit <- function(x) -log(1/x-1)
+if (name=="abundance_mcmc") {
+    go_df$value <- prob(go_df$value)
+}
+
+
 go_df$ji_bp <- go_df$sum_ji_bp/go_df$non_na_pairs_ji_bp
 go_df$ji_cc <- go_df$sum_ji_cc/go_df$non_na_pairs_ji_cc
 go_df$ji_mf <- go_df$sum_ji_mf/go_df$non_na_pairs_ji_mf
