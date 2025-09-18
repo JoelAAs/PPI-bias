@@ -94,7 +94,7 @@ prob_intersect <- ggplot(
 labs(
   x = "Probability of detection",
   y = "Average length intersection",
-  title = paste("GO Intersection index vs POD:" name),
+  title = paste("GO Intersection index vs POD:", name),
   color="GO category"
 ) +
   theme_bw() +
