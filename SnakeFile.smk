@@ -49,8 +49,23 @@ hydro_delta = [
     f"work_folder/analysis/hydrophobicity/cumulative/POD_{data}_netsurfp2_lesser.csv"
     for data in datasets
 ]
+### Plotting
+colocalisation_plot = [
+    f"work_folder/plots/AccumulationPOD/colocalisation_{data}.png"
+    for data in datasets
+]
+go_jaccards_plot = [
+    f"work_folder/plots/AccumulationPOD/go_{data}.png"
+    for data in datasets
+]
+
+hydro_delta_plot = [
+    f"work_folder/plots/AccumulationPOD/hydrophobicity_{data}.png"
+    for data in datasets
+]
 
 expected_output = pods + colocalisation + go_jaccards + hydro_delta
+expected_output += colocalisation_plot + go_jaccards_plot + hydro_delta_plot
 
 rule all:
     input:
