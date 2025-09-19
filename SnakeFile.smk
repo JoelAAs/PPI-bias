@@ -17,6 +17,7 @@ include: "src/Analysis/Enrichment/GetDegree.smk"
 include: "src/Analysis/Enrichment/EnrichmentGODO.smk"
 include: "src/Analysis/Annotation/OverlapGO.smk"
 include: "src/Analysis/Annotation/HydrophobicitySimilarity.smk"
+include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
 
 wildcard_constraints:
     cell_line="_[_a-zA-Z]+",
