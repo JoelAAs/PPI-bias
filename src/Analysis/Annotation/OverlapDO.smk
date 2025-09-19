@@ -97,20 +97,33 @@ def get_pair_jaccard(gene1, gene2, gene_idx_dicts):
 
     return [*ji_index, *intersects, *n_go_prey, *n_go_bait]
 
+get_gene_pod
 
-rule get_jaccard_go_bait_prey:
+rule get_gene_do_terms:
+    params:
+        script="src/Analysis/Annotation/get_DO.R"
     input:
+        pod_df="work_folder/analysis/POD/POD_{data}.csv"
+    output:
+        do_terms="work_folder/analysis/DO/gene_do_{data}.txt"
+    shell:
+        """
+        Rscript {params.script} {input.pod_df} {output.do_terms}
+        """
+
+rule get_jaccard_do_bait_prey:
+    input:
+        do_gene_df="work_folder/analysis/DO/gene_do_{data}.txt",
         pod_df="work_folder/analysis/POD/POD_{data}.csv",
     output:
-        go_jaccard="work_folder/analysis/GO/POD_{data}_jaccard.csv"
+        go_jaccard="work_folder/analysis/DO/POD_{data}_jaccard.csv"
     run:
-        go_terms = ["bp", "cc", "mf"]
-        go_cols = (
-                [f"ji_{go}" for go in go_terms] +
-                [f"intersect_{go}" for go in go_terms] +
-                [f"n_go_bait_{go}" for go in go_terms] +
-                [f"n_go_prey_{go}" for go in go_terms]
-        )
+        go_cols = [
+            "ji_do",
+            "intersect_DO",
+            "n_do_bait",
+            "n_do_prey"
+        ]
 
         df = pd.read_csv(input.pod_df,sep="\t")
         all_genes = set(df["gene_name_bait"].unique()) | set(df["gene_name_prey"].unique())
@@ -140,7 +153,6 @@ rule get_go_accumulation:
                 [f"n_go_bait_{go}" for go in go_terms] +
                 [f"n_go_prey_{go}" for go in go_terms]
         )
-
 
         get_cumulative_sum(
             go_df,
@@ -224,5 +236,3 @@ rule bait_usage:
         ]] = df_bait.apply(
             lambda x: get_n_go(x["gene_name"],go_dict),axis=1,result_type='expand')
         df_bait.to_csv(output.goterms_studies,sep="\t",index=False)
-
-
