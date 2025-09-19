@@ -64,8 +64,14 @@ hydro_delta_plot = [
     for data in datasets
 ]
 
+### Negatome compare
+negatome_compare = [
+    f"work_folder/analysis/neg2compare/{data}.txt"
+    for data in datasets
+]
+
 expected_output = pods + colocalisation + go_jaccards + hydro_delta
-expected_output += colocalisation_plot + go_jaccards_plot + hydro_delta_plot
+expected_output += colocalisation_plot + go_jaccards_plot + hydro_delta_plot + negatome_compare
 
 rule all:
     input:
