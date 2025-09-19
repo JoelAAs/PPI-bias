@@ -31,7 +31,7 @@ rule negatome_comparison:
         pod_neg = pod_df.merge(neg2_genes,on=["gene_name_bait", "gene_name_prey"],how="outer").copy()
         pod_neg.loc[pod_neg["in_neg2"].isna(), "in_neg2"] = False
         pod_neg = pod_neg.loc[~pod_neg["upper_bound_pod"].isna()]
-        if wildcards.data == "abundance":
+        if wildcards.data == "abundance_mcmc":
             pod_neg["n_tested"] = pod_neg[[c for c in pod_neg.columns if "n_tested_" in c]].sum(axis=1)
             pod_neg["n_observed"] = pod_neg[[c for c in pod_neg.columns if "n_observed_" in c]].sum(axis=1)
         c_table = pod_neg.groupby("in_neg2")[["n_tested", "n_observed"]].sum()
