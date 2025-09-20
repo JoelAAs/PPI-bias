@@ -39,11 +39,28 @@ rule plot_go:
         greater_go="work_folder/analysis/GO/cumulative/POD_{data}_jaccard_greater.csv",
         lesser_go="work_folder/analysis/GO/cumulative/POD_{data}_jaccard_lesser.csv"
     output:
-        plot = "work_folder/plots/AccumulationPOD/go_{data}.png"
+        plot_jaccard = "work_folder/plots/AccumulationPOD/go_{data}_jaccard.png",
+        plot_accumulation= "work_folder/plots/AccumulationPOD/go_{data}_accumulation.png"
     shell:
         """
-        Rscript {params.script_location} {input.greater_go} {input.lesser_go} {wildcards.data} {output.plot}
+        Rscript {params.script_location} {input.greater_go} {input.lesser_go} {wildcards.data} {output.plot_jaccard} {output.plot_accumulation}
         """
+
+
+rule plot_do:
+    params:
+        script_location = "src/Plotting/AccumulationPOD/plot_do_accumulation.R"
+    input:
+        greater_go="work_folder/analysis/DO/cumulative/POD_{data}_jaccard_greater.csv",
+        lesser_go="work_folder/analysis/DO/cumulative/POD_{data}_jaccard_lesser.csv"
+    output:
+        plot_jaccard="work_folder/plots/AccumulationPOD/do_{data}_jaccard.png",
+        plot_accumulation="work_folder/plots/AccumulationPOD/do_{data}_accumulation.png"
+    shell:
+        """
+        Rscript {params.script_location} {input.greater_go} {input.lesser_go} {wildcards.data} {output.plot_jaccard} {output.plot_accumulation}
+        """
+
 
 
 rule plot_colocalisation:

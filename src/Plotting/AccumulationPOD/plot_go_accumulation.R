@@ -12,7 +12,8 @@ args <- commandArgs(trailingOnly = TRUE)
 greater_go_accumulation <- args[1]
 lesser_go_accumulation  <- args[2]
 name                    <- args[3]
-output                  <- args[4]
+output_jacccard         <- args[4]
+output_accumulation     <- args[5]
 
 prob  <- function(x) 1/(1+exp(-x))
 logit <- function(x) -log(1/x-1)
@@ -33,8 +34,6 @@ go_df = bind_rows(
   df_lesser
 )
 
-prob  <- function(x) 1/(1+exp(-x))
-logit <- function(x) -log(1/x-1)
 if (name=="abundance_mcmc") {
     go_df$value <- prob(go_df$value)
 }
@@ -49,6 +48,14 @@ go_df$intersect_cc <- go_df$sum_intersect_cc/go_df$non_na_pairs_intersect_cc
 go_df$intersect_mf <- go_df$sum_intersect_mf/go_df$non_na_pairs_intersect_mf
 
 
+go_df$n_go_bait_bp <- go_df$sum_n_go_bait_bp/go_df$non_na_pairs_n_go_bait
+go_df$n_go_bait_cc <- go_df$sum_n_go_bait_cc/go_df$non_na_pairs_n_go_bait
+go_df$n_go_bait_mf <- go_df$sum_n_go_bait_mf/go_df$non_na_pairs_n_go_bait
+
+go_df$n_go_prey_bp <- go_df$sum_n_go_prey_bp/go_df$non_na_pairs_n_go_prey
+go_df$n_go_prey_cc <- go_df$sum_n_go_prey_cc/go_df$non_na_pairs_n_go_prey
+go_df$n_go_prey_mf <- go_df$sum_n_go_prey_mf/go_df$non_na_pairs_n_go_prey
+
 ### GO
 plot_jaccard <- ggplot(
   go_df,
@@ -59,6 +66,9 @@ plot_jaccard <- ggplot(
   geom_point(aes(y = ji_cc, color = "CC Jaccard")) +
   geom_point(aes(y = ji_bp, color = "BP Jaccard")) +
   geom_point(aes(y = ji_mf, color = "MF Jaccard")) +
+  geom_line(aes(y = ji_cc, color = "CC Jaccard")) +
+  geom_line(aes(y = ji_bp, color = "BP Jaccard")) +
+  geom_line(aes(y = ji_mf, color = "MF Jaccard")) +
   facet_wrap(. ~ limit,
              labeller = labeller(
                limit =
@@ -85,6 +95,9 @@ prob_intersect <- ggplot(
   geom_point(aes(y = intersect_cc, color = "CC intersect")) +
   geom_point(aes(y = intersect_bp, color = "BP intersect")) +
   geom_point(aes(y = intersect_mf, color = "MF intersect")) +
+  geom_line(aes(y = intersect_cc, color = "CC intersect")) +
+  geom_line(aes(y = intersect_bp, color = "BP intersect")) +
+  geom_line(aes(y = intersect_mf, color = "MF intersect")) +
   facet_wrap(. ~ limit,
              labeller = labeller(
                limit =
@@ -108,14 +121,93 @@ add_label <- function(plot, label) {
                                    gp = gpar(fontsize = 16, fontface = "bold")))
 }
 
-abundance_GO <- grid.arrange(
+jaccard_GO <- grid.arrange(
   add_label(plot_jaccard, "A"),
   add_label(prob_intersect, "B"),
   nrow=2)
 
-ggsave(output,
-       abundance_GO,
+ggsave(output_jacccard,
+       jaccard_GO,
        dpi=300,
        height=6,
        width=6
+)
+
+
+### GO output_accumulation
+plot_bait <- ggplot(
+  go_df,
+  aes(
+    x=value
+  )
+) +
+  geom_point(aes(y = n_go_bait_bp_cc, color = "CC Jaccard")) +
+  geom_point(aes(y = n_go_bait_bp_bp, color = "BP Jaccard")) +
+  geom_point(aes(y = n_go_bait_bp_mf, color = "MF Jaccard")) +
+  geom_line(aes(y = n_go_bait_bp_cc, color = "CC Jaccard")) +
+  geom_line(aes(y = n_go_bait_bp_bp, color = "BP Jaccard")) +
+  geom_line(aes(y = n_go_bait_bp_mf, color = "MF Jaccard")) +
+  facet_wrap(. ~ limit,
+             labeller = labeller(
+               limit =
+                 c("lower_bound_pod" = "mean(Pmin > POD)",
+                   "upper_bound_pod" = "mean(Pmax < POD)")
+             ), scales = "free_x") +
+  labs(
+    x = "Probability of detection",
+    y = "Mean bait N GO",
+    title = paste("Bait GO terms vs POD:", name),
+    color="GO category"
+  ) +
+  theme_bw() +
+  theme(legend.position = "bottom",
+        strip.text = element_text(size = 10, face = "bold"))
+
+
+prob_prey <- ggplot(
+  go_df,
+  aes(
+    x=value
+  )
+) +
+  geom_point(aes(y = n_go_prey_cc, color = "CC intersect")) +
+  geom_point(aes(y = n_go_prey_bp, color = "BP intersect")) +
+  geom_point(aes(y = n_go_prey_mf, color = "MF intersect")) +
+  geom_line(aes(y = n_go_prey_cc, color = "CC intersect")) +
+  geom_line(aes(y = n_go_prey_bp, color = "BP intersect")) +
+  geom_line(aes(y = n_go_prey_mf, color = "MF intersect")) +
+  facet_wrap(. ~ limit,
+             labeller = labeller(
+               limit =
+                 c("lower_bound_pod" = "Pmin > POD",
+                   "upper_bound_pod" = "Pmax < POD")
+             ), scales = "free_x") +
+labs(
+  x = "Probability of detection",
+  y = "Mean prey N GO",
+  title = paste("Prey GO terms vs POD:", name),
+  color="GO category"
+) +
+  theme_bw() +
+  theme(legend.position = "bottom",
+        strip.text = element_text(size = 10, face = "bold"))
+
+
+add_label <- function(plot, label) {
+  arrangeGrob(plot, top = textGrob(label, x = unit(0.05, "npc"), y = unit(0.9, "npc"),
+                                   just = c("left", "top"),
+                                   gp = gpar(fontsize = 16, fontface = "bold")))
+}
+
+accumulation_GO <- grid.arrange(
+  add_label(plot_bait, "A"),
+  add_label(plot_prey, "B"),
+  nrow=2)
+
+
+ggsave(output_accumulation,
+   accumulation_GO,
+   dpi=300,
+   height=6,
+   width=6
 )

@@ -16,6 +16,7 @@ include: "src/Analysis/AbundanceAwareDetection/MCMC_abundance.smk"
 include: "src/Analysis/Enrichment/GetDegree.smk"
 include: "src/Analysis/Enrichment/EnrichmentGODO.smk"
 include: "src/Analysis/Annotation/OverlapGO.smk"
+include: "src/Analysis/Annotation/OverlapDO.smk"
 include: "src/Analysis/Annotation/HydrophobicitySimilarity.smk"
 include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
 
@@ -56,7 +57,12 @@ colocalisation_plot = [
     for data in datasets
 ]
 go_jaccards_plot = [
-    f"work_folder/plots/AccumulationPOD/go_{data}.png"
+    f"work_folder/plots/AccumulationPOD/go_{data}_jaccard.png"
+    for data in datasets
+]
+
+do_jaccards_plot = [
+    f"work_folder/plots/AccumulationPOD/do_{data}_jaccard.png"
     for data in datasets
 ]
 
@@ -72,7 +78,8 @@ negatome_compare = [
 ]
 
 expected_output = pods + colocalisation + go_jaccards + hydro_delta
-expected_output += colocalisation_plot + go_jaccards_plot + hydro_delta_plot + negatome_compare
+expected_output += colocalisation_plot + go_jaccards_plot + hydro_delta_plot +  do_jaccards_plot
+expected_output += negatome_compare
 
 rule all:
     input:
