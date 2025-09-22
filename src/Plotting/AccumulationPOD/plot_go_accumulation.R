@@ -4,7 +4,6 @@ library(magrittr)
 library(grid)
 library(gridExtra)
 
-min_pairs = 200
 
 ## Input
 args <- commandArgs(trailingOnly = TRUE)
@@ -48,13 +47,13 @@ go_df$intersect_cc <- go_df$sum_intersect_cc/go_df$non_na_pairs_intersect_cc
 go_df$intersect_mf <- go_df$sum_intersect_mf/go_df$non_na_pairs_intersect_mf
 
 
-go_df$n_go_bait_bp <- go_df$sum_n_go_bait_bp/go_df$non_na_pairs_n_go_bait
-go_df$n_go_bait_cc <- go_df$sum_n_go_bait_cc/go_df$non_na_pairs_n_go_bait
-go_df$n_go_bait_mf <- go_df$sum_n_go_bait_mf/go_df$non_na_pairs_n_go_bait
+go_df$n_go_bait_bp <- go_df$sum_n_go_bait_bp/go_df$non_na_pairs_n_go_bait_bp
+go_df$n_go_bait_cc <- go_df$sum_n_go_bait_cc/go_df$non_na_pairs_n_go_bait_cc
+go_df$n_go_bait_mf <- go_df$sum_n_go_bait_mf/go_df$non_na_pairs_n_go_bait_mf
 
-go_df$n_go_prey_bp <- go_df$sum_n_go_prey_bp/go_df$non_na_pairs_n_go_prey
-go_df$n_go_prey_cc <- go_df$sum_n_go_prey_cc/go_df$non_na_pairs_n_go_prey
-go_df$n_go_prey_mf <- go_df$sum_n_go_prey_mf/go_df$non_na_pairs_n_go_prey
+go_df$n_go_prey_bp <- go_df$sum_n_go_prey_bp/go_df$non_na_pairs_n_go_prey_bp
+go_df$n_go_prey_cc <- go_df$sum_n_go_prey_cc/go_df$non_na_pairs_n_go_prey_cc
+go_df$n_go_prey_mf <- go_df$sum_n_go_prey_mf/go_df$non_na_pairs_n_go_prey_mf
 
 ### GO
 plot_jaccard <- ggplot(
@@ -141,12 +140,12 @@ plot_bait <- ggplot(
     x=value
   )
 ) +
-  geom_point(aes(y = n_go_bait_bp_cc, color = "CC Jaccard")) +
-  geom_point(aes(y = n_go_bait_bp_bp, color = "BP Jaccard")) +
-  geom_point(aes(y = n_go_bait_bp_mf, color = "MF Jaccard")) +
-  geom_line(aes(y = n_go_bait_bp_cc, color = "CC Jaccard")) +
-  geom_line(aes(y = n_go_bait_bp_bp, color = "BP Jaccard")) +
-  geom_line(aes(y = n_go_bait_bp_mf, color = "MF Jaccard")) +
+  geom_point(aes(y = n_go_bait_cc, color = "CC Jaccard")) +
+  geom_point(aes(y = n_go_bait_bp, color = "BP Jaccard")) +
+  geom_point(aes(y = n_go_bait_mf, color = "MF Jaccard")) +
+  geom_line(aes(y = n_go_bait_cc, color = "CC Jaccard")) +
+  geom_line(aes(y = n_go_bait_bp, color = "BP Jaccard")) +
+  geom_line(aes(y = n_go_bait_mf, color = "MF Jaccard")) +
   facet_wrap(. ~ limit,
              labeller = labeller(
                limit =
@@ -164,7 +163,7 @@ plot_bait <- ggplot(
         strip.text = element_text(size = 10, face = "bold"))
 
 
-prob_prey <- ggplot(
+plot_prey <- ggplot(
   go_df,
   aes(
     x=value
