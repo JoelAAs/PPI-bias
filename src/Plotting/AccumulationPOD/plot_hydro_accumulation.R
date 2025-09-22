@@ -36,7 +36,7 @@ if (name=="abundance_mcmc") {
     hydro_df$value <- prob(hydro_df$value)
     c_xlab = "Probability of detection"
 } else {
-    hydro_df[hydro_df$limit ==upper_bound_pod, "value"] = logit(hydro_df[hydro_df$limit ==upper_bound_pod, "value"])
+    hydro_df[hydro_df$limit =="upper_bound_pod", "value"] = logit(hydro_df[hydro_df$limit =="upper_bound_pod", "value"])
     c_xlab = "Probability of detection -- logit(POD)"
 }
 
