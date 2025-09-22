@@ -35,6 +35,10 @@ go_df = bind_rows(
 
 if (name=="abundance_mcmc") {
     go_df$value <- prob(go_df$value)
+    c_xlab = "Probability of detection"
+}  else {
+    go_df[go_df$limit ==upper_bound_pod, "value"] = logit(go_df[go_df$limit ==upper_bound_pod, "value"])
+    c_xlab = "Probability of detection -- logit(POD)"
 }
 
 
@@ -75,7 +79,7 @@ plot_jaccard <- ggplot(
                    "upper_bound_pod" = "mean(Pmax < POD)")
              ), scales = "free_x") +
   labs(
-    x = "Probability of detection",
+    x = c_xlab,
     y = "Average Jaccard index",
     title = paste("GO jaccard index vs POD:", name),
     color="GO category"
@@ -104,7 +108,7 @@ prob_intersect <- ggplot(
                    "upper_bound_pod" = "Pmax < POD")
              ), scales = "free_x") +
 labs(
-  x = "Probability of detection",
+  x = c_xlab,
   y = "Average length intersection",
   title = paste("GO Intersection index vs POD:", name),
   color="GO category"
@@ -153,7 +157,7 @@ plot_bait <- ggplot(
                    "upper_bound_pod" = "mean(Pmax < POD)")
              ), scales = "free_x") +
   labs(
-    x = "Probability of detection",
+    x = c_xlab,
     y = "Mean bait N GO",
     title = paste("Bait GO terms vs POD:", name),
     color="GO category"
@@ -182,7 +186,7 @@ plot_prey <- ggplot(
                    "upper_bound_pod" = "Pmax < POD")
              ), scales = "free_x") +
 labs(
-  x = "Probability of detection",
+  x = c_xlab,
   y = "Mean prey N GO",
   title = paste("Prey GO terms vs POD:", name),
   color="GO category"

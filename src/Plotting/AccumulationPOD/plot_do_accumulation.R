@@ -36,7 +36,13 @@ do_df = bind_rows(
 
 if (name=="abundance_mcmc") {
     do_df$value <- prob(do_df$value)
+    c_xlab = "Probability of detection"
+} else {
+    do_df[do_df$limit =="upper_bound_pod", "value"] = logit(do_df[do_df$limit =="upper_bound_pod", "value"])
+    c_xlab = "Probability of detection -- logit(POD)"
 }
+
+
 
 
 do_df$ji <- do_df$sum_ji_do/do_df$non_na_pairs_ji_do
@@ -62,7 +68,7 @@ plot_jaccard <- ggplot(
                    "upper_bound_pod" = "mean(Pmax < POD)")
              ), scales = "free_x") +
   labs(
-    x = "Probability of detection",
+    x = c_xlab,
     y = "Average Jaccard index",
     title = paste("do jaccard index vs POD:", name),
   ) +
@@ -87,7 +93,7 @@ prob_intersect <- ggplot(
                    "upper_bound_pod" = "Pmax < POD")
              ), scales = "free_x") +
 labs(
-  x = "Probability of detection",
+  x = c_xlab,
   y = "Average length intersection",
   title = paste("do Intersection index vs POD:", name),
   color="do category"
@@ -133,7 +139,7 @@ prob_n_do <- ggplot(
                    "upper_bound_pod" = "Pmax < POD")
              ), scales = "free_x") +
 labs(
-  x = "Probability of detection",
+  x = c_xlab,
   y = "Average N DO-annotations",
   title = paste("DO Intersection index vs POD:", name),
   color="do category"

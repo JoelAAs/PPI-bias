@@ -34,6 +34,10 @@ prob  <- function(x) 1/(1+exp(-x))
 logit <- function(x) -log(1/x-1)
 if (name=="abundance_mcmc") {
     hydro_df$value <- prob(hydro_df$value)
+    c_xlab = "Probability of detection"
+} else {
+    hydro_df[hydro_df$limit ==upper_bound_pod, "value"] = logit(hydro_df[hydro_df$limit ==upper_bound_pod, "value"])
+    c_xlab = "Probability of detection -- logit(POD)"
 }
 
 hydro_df$thsa_delta_avg <- hydro_df$sum_thsa_netsurfp2_delta/hydro_df$non_na_pairs_thsa_netsurfp2_delta
@@ -71,7 +75,7 @@ plot_rhsa <- ggplot(
                    "upper_bound_pod" = "mean(Pmax < POD)")
              ),nrow=2, scales = "free_x") +
   labs(
-    x = "Probability of detection",
+    x = c_xlab,
     y = "Normalised difference",
     title = paste("Hydrophobicity vs POD:", name),
     color="Hydrophobicity"

@@ -30,7 +30,12 @@ prob  <- function(x) 1/(1+exp(-x))
 logit <- function(x) -log(1/x-1)
 if (name=="abundance_mcmc") {
     colocalisation_df$value <- prob(colocalisation_df$value)
+    c_xlab = "Probability of detection"
+} else {
+    colocalisation_df[colocalisation_df$limit == "upper_bound_pod", "value"] = logit(colocalisation_df[colocalisation_df$limit == "upper_bound_pod", "value"])
+    c_xlab = "Probability of detection -- logit(POD)"
 }
+
 
 
 
@@ -52,7 +57,7 @@ prob_localisation <- ggplot(
                    "upper_bound_pod" = "P(m| Pmax < POD)")
   ), scales="free_x") +
   labs(
-    x = "Probability of detection",
+    x = c_xlab,
     y = "% different in expected localisation match",
     title = paste("Observed vs Expected colocalisation:", name)
   ) +
