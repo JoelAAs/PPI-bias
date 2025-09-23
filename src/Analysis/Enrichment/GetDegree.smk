@@ -16,7 +16,7 @@ def get_degree(df, bait=True):
     other_col = f"gene_name_{suffix[1]}"
 
     n_unique = df[other_col].nunique()
-    prob_cols = ["p", "lower_bound_pod", "lower_bound_pod"]
+    prob_cols = ["p", "lower_bound_pod", "upper_bound_pod"]
     df_degree = df.groupby(id_col,as_index=False)[prob_cols].sum()
     df_tests = df.groupby(id_col,as_index=False).size().rename({id_col: "gene_name"},axis=1)
     df_tests[f"num_untested_{suffix[0]}"] = n_unique - df_tests["size"]
