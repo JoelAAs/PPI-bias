@@ -92,7 +92,7 @@ rule get_degree_dist_hippie:
 
 rule flat_degree_dist:
     input:
-        flat_probability="work_folder/inferred_search_space/analysis/bias_reduced_ppis/p_estimated_protein_pairs.csv"
+        flat_probability="work_folder/analysis/POD/POD_flat.csb"
     output:
         summed_probability="work_folder/degree/flat_summed.csv",
         threshold_1="work_folder/degree/flat_min.1.csv",
