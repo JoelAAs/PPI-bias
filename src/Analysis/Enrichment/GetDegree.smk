@@ -16,7 +16,7 @@ def get_degree(df, bait=True):
     other_col = f"gene_name_{suffix[1]}"
 
     n_unique = df[other_col].nunique()
-    prob_cols = ["p", "p_lower_ci", "p_upper_ci"]
+    prob_cols = ["p", "lower_bound_pod", "lower_bound_pod"]
     df_degree = df.groupby(id_col,as_index=False)[prob_cols].sum()
     df_tests = df.groupby(id_col,as_index=False).size().rename({id_col: "gene_name"},axis=1)
     df_tests[f"num_untested_{suffix[0]}"] = n_unique - df_tests["size"]
@@ -24,8 +24,8 @@ def get_degree(df, bait=True):
     df_degree = df_degree.rename({
         f"gene_name_{suffix[0]}": "gene_name",
         "p": f"obs_mean_{suffix[0]}_degree",
-        "p_lower_ci": f"obs_lower_{suffix[0]}_degree",
-        "p_upper_ci": f"obs_upper_{suffix[0]}_degree"
+        "lower_bound_pod": f"obs_lower_{suffix[0]}_degree",
+        "upper_bound_pod": f"obs_upper_{suffix[0]}_degree"
     },axis=1)
     df_degree = df_degree.merge(df_tests,on="gene_name")
 
@@ -54,7 +54,7 @@ def fill_na(df, params_bait, params_prey):
 
 
 def threshold_degree(df, t):
-    df_t = df[df["p_lower_ci"] > t]
+    df_t = df[df["lower_bound_pod"] > t]
     df_bait_degree = df_t.groupby("gene_name_bait",as_index=False).size()
     df_bait_degree = df_bait_degree.rename({
         "gene_name_bait": "gene_name",
