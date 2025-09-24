@@ -90,5 +90,5 @@ ggsave(output,
        plot_rhsa,
        dpi=300,
        height=6,
-       width=4
+       width=6
 )
