@@ -41,13 +41,13 @@ if (name=="abundance_mcmc") {
 }
 
 hydro_df$thsa_delta_avg <- hydro_df$sum_thsa_netsurfp2_delta/hydro_df$non_na_pairs_thsa_netsurfp2_delta
-hydro_df$thsa_delta_normalised <- (hydro_df$thsa_delta_avg - mean(hydro_df$thsa_delta_avg))/sd(hydro_df$thsa_delta_avg)
+hydro_df$thsa_delta_normalised <- hydro_df$thsa_delta_avg/max(hydro_df$thsa_delta_avg)
 
 hydro_df$tasa_delta_avg <- hydro_df$sum_tasa_netsurfp2_delta/hydro_df$non_na_pairs_tasa_netsurfp2_delta
-hydro_df$tasa_delta_normalised <- (hydro_df$tasa_delta_avg - mean(hydro_df$tasa_delta_avg))/sd(hydro_df$tasa_delta_avg)
+hydro_df$tasa_delta_normalised <- hydro_df$tasa_delta_avg/max(hydro_df$tasa_delta_avg)
 
 hydro_df$rhsa_delta_avg <- hydro_df$sum_rhsa_netsurfp2_delta/hydro_df$non_na_pairs_rhsa_netsurfp2_delta
-hydro_df$rhsa_delta_normalised <- (hydro_df$rhsa_delta_avg - mean(hydro_df$rhsa_delta_avg))/sd(hydro_df$rhsa_delta_avg)
+hydro_df$rhsa_delta_normalised <- hydro_df$rhsa_delta_avg/max(hydro_df$rhsa_delta_avg)
 
 
 ### plot
@@ -73,7 +73,7 @@ plot_rhsa <- ggplot(
                limit =
                  c("lower_bound_pod" = "mean(Pmin > POD)",
                    "upper_bound_pod" = "mean(Pmax < POD)")
-             ),nrow=2, scales = "free_x") +
+             ),nrow=1, scales = "free_x") +
   labs(
     x = c_xlab,
     y = "Normalised difference",

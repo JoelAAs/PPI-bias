@@ -211,6 +211,6 @@ accumulation_GO <- grid.arrange(
 ggsave(output_accumulation,
    accumulation_GO,
    dpi=300,
-   height=6,
+   height=3,
    width=6
 )

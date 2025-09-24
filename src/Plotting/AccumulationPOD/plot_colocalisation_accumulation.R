@@ -68,6 +68,6 @@ prob_localisation <- ggplot(
 ggsave(output,
        prob_localisation,
        dpi=300,
-       height=4,
-       width=7
+       height=3,
+       width=6
        )

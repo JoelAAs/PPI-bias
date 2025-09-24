@@ -2,6 +2,7 @@ library(HDO.db)
 library(clusterProfiler)
 library(tidyverse)
 library(org.Hs.eg.db)
+library(reshape2)
 
 map_entrez <- function(gene_name_df, gene_column="gene_name") {
   entrez_ids <- mapIds(

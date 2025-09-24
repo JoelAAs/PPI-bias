@@ -145,12 +145,12 @@ labs(
   color="do category"
 ) +
   theme_bw() +
-  theme(legend.position = "none",
+  theme(legend.position = "bottom",
         strip.text = element_text(size = 10, face = "bold"))
 
 ggsave(output_accumulation,
        prob_n_do,
        dpi=300,
-       height=6,
+       height=3,
        width=6
 )
