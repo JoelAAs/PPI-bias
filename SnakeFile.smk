@@ -84,13 +84,13 @@ negatome_compare = [
 ]
 
 
-
 expected_output = pods + colocalisation + go_jaccards + hydro_delta
 expected_output += colocalisation_plot + go_jaccards_plot + hydro_delta_plot +  do_jaccards_plot
 expected_output += negatome_compare + per_study_localisation
 
 rule all:
     input:
-        expected_output
+        expected_output,
+        "work_folder/plots/degree/GO_enrichment.png"
 
 

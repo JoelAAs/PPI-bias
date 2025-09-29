@@ -1,46 +1,31 @@
+import json
+
+from openpyxl.styles.builtins import output
+
 from localisation_support import *
 from mean_distance_support import get_cumulative_sum
 
 
-def get_probabilities(df, value_column, greater=True, min_samples=50):
-    bins = df[value_column].unique()
-    bins.sort()
+def read_localisation_json(filename):
+    with open(filename,"r") as f:
+        localisation_data = json.load(f)
+    return localisation_data
 
-    values = df[value_column].values
-    idx_val = values.argsort()
-    if greater:
-        idx_val = idx_val[::-1]
-        bins = bins[::-1]
-    values = values[idx_val]
-    probabilities = df["match_probability"].to_numpy()[idx_val]
-    matches = df["localisation_match"].to_numpy()[idx_val]
+def combine(dict_1, dict_2):
+    localisation_keys = set(dict_1) | set(dict_2)
+    combined = {k: dict_1.get(k, 0) + dict_2.get(k, 0) for k in localisation_keys}
+    return combined
 
-    if not greater:
-        bins = -bins
-        values = -values
+def get_localisation_per_bait(baits, localisation_files):
+    bait_localisations = {b: dict() for b in baits}
+    for lf in localisation_files:
+        loc_data_dict = read_localisation_json(lf)
+        for b in bait_localisations.keys():
+            bait_localisations[b] = combine(
+                bait_localisations[b],
+                loc_data_dict.get(b, loc_data_dict["other"]))
+    return loc_data_dict
 
-    expected = 0
-    observed = 0
-    previous = 0
-    i = 0
-    j = 0
-    rows = [{}] * len(bins)
-    for threshold in bins:
-        while (i < len(values) and threshold <= values[i]) or i < min_samples:
-            i += 1
-        if previous != i:
-            expected += probabilities[previous:i].sum()
-            observed += matches[previous:i].sum()
-            previous = i
-            rows[j] = {
-                "limit": value_column,
-                "value": (threshold if greater else -threshold),
-                "expected": expected,
-                "observed": observed,
-                "number_of_pairs": i
-            }
-            j += 1
-    return pd.DataFrame(rows).dropna()
 
 
 rule method_comparison:
@@ -154,3 +139,85 @@ rule accumulation_colocalisation:
             cumulative_columns=measurement_columns,
             greater=False).to_csv(
             output.localisation_lesser,sep="\t",index=False)
+
+
+def get_expected_localisations(wc):
+    # TODO: HARDCODED and ugly fix, later
+    _ = checkpoints.all_methods_filter_out.get(data=wc.data).output[0]
+    pod_df = pd.read_csv(f"work_folder/analysis/POD/POD_{wc.data}.csv",sep="\t")
+    pids = pod_df["pubmed_id"].unique()
+    pids = [p.split(";") for p in pids]
+    pids = [item for studies in pids for item in studies]
+    pids = set(pids)
+    expected=[
+        f"work_folder/analysis/localisation/study_match_probability/{pid}.json" for pid in pids
+    ]
+    return expected
+
+
+rule get_per_study_localisation:
+    params:
+        localisation_csv=config["localisation_file"]
+    input:
+        study="work_folder/inferred_search_space/experimental_method/{pid}_{method}.csv"
+    output:
+        probability="work_folder/analysis/localisation/study_match_probability/{pid}_{method}.json"
+    run:
+        study_df = pd.read_csv(input.study,sep="\t")
+        df_localisation = pd.read_csv(params.localisation_csv,sep="\t")
+
+        prey_pool = study_df["gene_name_prey"].unique()
+        baits = study_df["gene_name_bait"].unique()
+        baits = [b for b in baits if b in prey_pool]
+        bait_df = df_localisation[df_localisation["gene_name"].isin(baits)]
+
+        prey_localisation = df_localisation[df_localisation["gene_name"].isin(prey_pool)]
+        localisation_count = prey_localisation.groupby("localisation",as_index=False).size()
+        n_localisations = localisation_count["size"].sum()
+
+        with open(output.probability,"w") as w:
+            w.write("{\n")
+            loc_tuple = list(localisation_count.itertuples(index=False,name=None))
+            for bait in bait_df["gene_name"].unique():
+                w.write(f'\t"{bait}": {{\n')
+                bait_localisation = bait_df[bait_df["gene_name"] == bait]["localisation"]
+                bait_n_localisations = n_localisations - len(bait_localisation)
+
+                for i, (localisation, count) in enumerate(loc_tuple):
+                    if localisation in bait_localisation:
+                        count -= 1
+                    w.write(f'\t\t"{localisation}": {str(count / bait_n_localisations)}{"," if i + 1 < len(loc_tuple) else ""}\n')
+                w.write("\t},\n")
+
+            w.write(f'\t"other": {{\n')
+
+            for i, (localisation, count) in enumerate(loc_tuple):
+                w.write(f'\t\t"{localisation}": {str(count / n_localisations)}{"," if i + 1 < len(loc_tuple) else ""}\n')
+            w.write("\t}\n")
+            w.write("}\n")
+
+rule get_bait_test_localisation_probability:
+    input:
+        pod_data = "work_folder/analysis/POD/POD_{data}.csv",
+        localisations = get_expected_localisations
+    output:
+        all_probs="work_folder/analysis/localisation/study_match_probability/subsets/{data}_unique_prob.json"
+    run:
+        unique_probs = pd.read_csv(input.pod_data,sep="\t")[["gene_name_bait", "pubmed_id"]].drop_duplicates()
+        unique_probs = unique_probs.groupby("pubmed_id", as_index=False)["gene_name_bait"].unique()
+        first=True
+        with open(output.all_probs, "w") as w:
+            w.write("{\n")
+            for _, (pids, baits) in unique_probs.iterrows():
+                if not first:
+                    w.write(",\n")
+                else:
+                    first = False
+                localisation_files = [
+                    f"work_folder/analysis/localisation/study_match_probability/{pid}.json" for pid in pids.split(";")
+                    ]
+                pids_expected=get_localisation_per_bait(baits, localisation_files)
+                json_str = json.dumps(pids_expected)
+                w.write(f'"{pids}": {json_str}')
+            w.write("\n}\n")
+

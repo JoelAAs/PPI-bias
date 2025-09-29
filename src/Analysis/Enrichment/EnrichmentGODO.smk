@@ -10,6 +10,7 @@ rule get_go_do_enrichment:
         do_enrichment="work_folder/plots/degree/DO_enrichment.png",
         top_delta_genes="work_folder/plots/degree/genes_top_delta.png",
         doid_vs_degree="work_folder/plots/degree/doid_vs_deg.png"
+    conda: "do_enrichment"
     shell:
         """
         Rscript src/Analysis/Enrichment/enrichment_degree.R
