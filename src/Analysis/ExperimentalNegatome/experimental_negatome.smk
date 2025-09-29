@@ -1,6 +1,6 @@
 from scipy.stats import beta
 
-rule all_methods_filter_out:
+checkpoint all_methods_filter_out:
     """
     TODO: OBS bait-bait still here
     """

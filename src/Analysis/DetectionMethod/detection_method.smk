@@ -38,4 +38,5 @@ rule aggregate_pids:
     output:
         method_aggregate = "work_folder/inferred_search_space/aggregated/methods/{subset}_experimental_wise.csv"
     run:
-        aggregate_inferred_experiments(input.subsets, output.method_aggregate)
+        single = wildcards.subset not in config
+        aggregate_inferred_experiments(input.subsets, output.method_aggregate, single)

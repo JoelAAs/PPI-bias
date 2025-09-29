@@ -24,13 +24,13 @@ wildcard_constraints:
     cell_line="_[_a-zA-Z]+",
     subset="[a-zA-Z0-9-]+",
     model="[_a-zA-Z0-9-]+",
-
+    pid="[:a-zA-Z0-9-]+"
 
 datasets = [
-    "flat",
-    "ms",
+#    "flat",
+#    "ms",
     "y2h",
-    "abundance_mcmc",
+#    "abundance_mcmc",
     "MI-1314"
 ]
 pods = [
@@ -56,6 +56,12 @@ colocalisation_plot = [
     f"work_folder/plots/AccumulationPOD/colocalisation_{data}.png"
     for data in datasets
 ]
+
+per_study_localisation = [
+    "work_folder/analysis/localisation/study_match_probability/subsets/{data}_unique_prob.json"
+    for data in datasets
+]
+
 go_jaccards_plot = [
     f"work_folder/plots/AccumulationPOD/go_{data}_jaccard.png"
     for data in datasets
@@ -77,9 +83,11 @@ negatome_compare = [
     for data in datasets
 ]
 
+
+
 expected_output = pods + colocalisation + go_jaccards + hydro_delta
 expected_output += colocalisation_plot + go_jaccards_plot + hydro_delta_plot +  do_jaccards_plot
-expected_output += negatome_compare
+expected_output += negatome_compare + per_study_localisation
 
 rule all:
     input:

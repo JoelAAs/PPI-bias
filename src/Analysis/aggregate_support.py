@@ -7,13 +7,13 @@ def update_idx(c_dict, key):
     return c_dict[key]
 
 
-def aggregate_inferred_experiments(pids, output_file, cl=False):
+def aggregate_inferred_experiments(pids, output_file, single=True):
     """
     Aggregated counts of tests per experiment
     :param pids: (list) of files to be aggregated
     :param output_file: (str) of output file location
-    :param cl: (boolean) if cell_line should be considered or not
     :return: -
+    :param single: (boolean) if its from a single study or aggregation
     """
     ppi_dict = defaultdict(lambda: [0, 0, set()])
     bait_idx = dict()
@@ -28,6 +28,9 @@ def aggregate_inferred_experiments(pids, output_file, cl=False):
                 values = line.strip().split("\t")
                 bait, prey, n_tested, n_observed = values[:4]
                 pid = values[-2]
+                if single:
+                    method = values[4]
+                    pid = f"{pid}_{method}"
                 keys = (update_idx(bait_idx, bait), update_idx(prey_idx, prey), update_idx(cl_idx, values[-1]))
                 pid_id = update_idx(pid_idx, pid)
                 ppi_dict[keys][0] += int(n_tested)
