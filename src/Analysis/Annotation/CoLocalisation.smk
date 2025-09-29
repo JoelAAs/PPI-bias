@@ -1,7 +1,5 @@
 import json
 
-from openpyxl.styles.builtins import output
-
 from localisation_support import *
 from mean_distance_support import get_cumulative_sum
 
