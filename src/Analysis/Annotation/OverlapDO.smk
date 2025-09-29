@@ -47,16 +47,13 @@ def get_pair_jaccard_do(gene1, gene2, gene_idx_dicts):
 
 
 rule get_gene_do_terms:
-    """
-    Does not work with insufficient HPO.DB version
-    TODO: Apptainer
-    """
     params:
         script="src/Analysis/Annotation/get_DO.R"
     input:
         pod_df="work_folder/analysis/POD/POD_{data}.csv"
     output:
         do_terms="work_folder/analysis/DO/gene_do_{data}.txt"
+    conda: "do_enrichment"
     shell:
         """
         Rscript {params.script} {input.pod_df} {output.do_terms}
