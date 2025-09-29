@@ -58,7 +58,7 @@ colocalisation_plot = [
 ]
 
 per_study_localisation = [
-    "work_folder/analysis/localisation/study_match_probability/subsets/{data}_unique_prob.json"
+    f"work_folder/analysis/localisation/study_match_probability/subsets/{data}_unique_prob.json"
     for data in datasets
 ]
 
