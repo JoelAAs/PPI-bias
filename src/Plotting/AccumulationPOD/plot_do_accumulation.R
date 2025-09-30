@@ -51,6 +51,8 @@ do_df$intersect_do <- do_df$sum_intersect_do/do_df$non_na_pairs_intersect_do
 do_df$n_do_bait <- do_df$sum_n_do_bait/do_df$non_na_pairs_n_do_bait
 do_df$n_do_prey <- do_df$sum_n_do_prey/do_df$non_na_pairs_n_do_prey
 
+do_df$limit <- factor(do_df$limit, levels = c("upper_bound_pod", "lower_bound_pod"))
+
 ### do
 plot_jaccard <- ggplot(
   do_df,

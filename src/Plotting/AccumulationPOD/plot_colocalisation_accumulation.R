@@ -35,6 +35,7 @@ if (name=="abundance_mcmc") {
     colocalisation_df[colocalisation_df$limit == "upper_bound_pod", "value"] = logit(colocalisation_df[colocalisation_df$limit == "upper_bound_pod", "value"])
     c_xlab = "Probability of detection -- logit(POD)"
 }
+colocalisation_df$limit <- factor(colocalisation_df$limit, levels = c("upper_bound_pod", "lower_bound_pod"))
 
 
 

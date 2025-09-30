@@ -59,6 +59,7 @@ go_df$n_go_prey_bp <- go_df$sum_n_go_prey_bp/go_df$non_na_pairs_n_go_prey_bp
 go_df$n_go_prey_cc <- go_df$sum_n_go_prey_cc/go_df$non_na_pairs_n_go_prey_cc
 go_df$n_go_prey_mf <- go_df$sum_n_go_prey_mf/go_df$non_na_pairs_n_go_prey_mf
 
+go_df$limit <- factor(go_df$limit, levels = c("upper_bound_pod", "lower_bound_pod"))
 ### GO
 plot_jaccard <- ggplot(
   go_df,

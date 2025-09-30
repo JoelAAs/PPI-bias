@@ -50,6 +50,7 @@ hydro_df$rhsa_delta_avg <- hydro_df$sum_rhsa_netsurfp2_delta/hydro_df$non_na_pai
 hydro_df$rhsa_delta_normalised <- hydro_df$rhsa_delta_avg/max(hydro_df$rhsa_delta_avg)
 
 
+hydro_df$limit <- factor(hydro_df$limit, levels = c("upper_bound_pod", "lower_bound_pod"))
 ### plot
 plot_rhsa <- ggplot(
   hydro_df,
