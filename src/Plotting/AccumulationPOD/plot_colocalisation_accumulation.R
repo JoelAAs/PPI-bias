@@ -58,7 +58,7 @@ prob_localisation <- ggplot(
   ), scales="free_x") +
   labs(
     x = c_xlab,
-    y = "% different in expected localisation match",
+    y = "Relative deviation (O-E)/E",
     title = paste("Observed vs Expected colocalisation:", name)
   ) +
   theme_bw() +

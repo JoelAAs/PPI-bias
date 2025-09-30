@@ -27,10 +27,10 @@ wildcard_constraints:
     pid="[:a-zA-Z0-9-]+"
 
 datasets = [
-#    "flat",
-#    "ms",
+    "flat",
+    "ms",
     "y2h",
-#    "abundance_mcmc",
+    "abundance_mcmc",
     "MI-1314"
 ]
 pods = [
@@ -57,8 +57,8 @@ colocalisation_plot = [
     for data in datasets
 ]
 
-per_study_localisation = [
-    f"work_folder/analysis/localisation/study_match_probability/subsets/{data}_unique_prob.json"
+matched_colocalisation_plot = [
+    f"work_folder/plots/AccumulationPOD/matched_colocalisation_{data}.png"
     for data in datasets
 ]
 
@@ -86,11 +86,12 @@ negatome_compare = [
 
 expected_output = pods + colocalisation + go_jaccards + hydro_delta
 expected_output += colocalisation_plot + go_jaccards_plot + hydro_delta_plot +  do_jaccards_plot
-expected_output += negatome_compare + per_study_localisation
+expected_output += negatome_compare + matched_colocalisation_plot
 
 rule all:
     input:
-        expected_output,
+        #expected_output,
+        matched_colocalisation_plot,
         "work_folder/plots/degree/GO_enrichment.png"
 
 

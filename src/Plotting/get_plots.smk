@@ -63,7 +63,7 @@ rule plot_do:
 
 
 
-rule plot_colocalisation:
+rule plot_naive_colocalisation:
     params:
         script_location = "src/Plotting/AccumulationPOD/plot_colocalisation_accumulation.R"
     input:
@@ -76,6 +76,18 @@ rule plot_colocalisation:
         Rscript {params.script_location} {input.greater_colocalisation} {input.lesser_colocalisation} {wildcards.data} {output.plot}
         """
 
+rule plot_matched_colocalisation:
+    params:
+        script_location = "src/Plotting/AccumulationPOD/plot_colocalisation_accumulation.R"
+    input:
+        matched_colocalisation_lesser="work_folder/analysis/localisation/study_match_probability/cumulative/POD_{data}_localisation_lesser.csv",
+        matched_colocalisation_greater="work_folder/analysis/localisation/study_match_probability/cumulative/POD_{data}_localisation_greater.csv"
+    output:
+        plot = "work_folder/plots/AccumulationPOD/matched_colocalisation_{data}.png"
+    shell:
+        """
+        Rscript {params.script_location} {input.matched_colocalisation_greater} {input.matched_colocalisation_lesser} {wildcards.data} {output.plot}
+        """
 
 rule plot_hydrophobicity:
     params:
