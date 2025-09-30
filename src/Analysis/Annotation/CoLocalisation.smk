@@ -1,5 +1,5 @@
 import json
-
+from json import JSONDecodeError
 from localisation_support import *
 from mean_distance_support import get_cumulative_sum
 
@@ -162,6 +162,7 @@ rule get_per_study_localisation:
         probability="work_folder/analysis/localisation/study_match_probability/{pid}_{method}.json"
     run:
         study_df = pd.read_csv(input.study,sep="\t")
+
         df_localisation = pd.read_csv(params.localisation_csv,sep="\t")
 
         prey_pool = study_df["gene_name_prey"].unique()
@@ -177,10 +178,11 @@ rule get_per_study_localisation:
             w.write("{\n")
             loc_tuple = list(localisation_count.itertuples(index=False,name=None))
             for bait in bait_df["gene_name"].unique():
-                w.write(f'\t"{bait}": {{\n')
                 bait_localisation = bait_df[bait_df["gene_name"] == bait]["localisation"]
                 bait_n_localisations = n_localisations - len(bait_localisation)
-
+                if bait_n_localisations == 0:
+                    continue
+                w.write(f'\t"{bait}": {{\n')
                 for i, (localisation, count) in enumerate(loc_tuple):
                     if localisation in bait_localisation:
                         count -= 1

@@ -19,12 +19,13 @@ def get_tested_observed_dicts(ppi_ss, id_pattern):
         create_or_update(tested_bait_prey_dict,bait,dict())
 
         _ = [
-            create_or_update(tested_bait_prey_dict[bait],prey,1) for prey in preys
+            create_or_update(tested_bait_prey_dict[bait],prey,1) for prey in preys if prey != bait
         ]
 
     for _, (bait, prey) in ppi_ss[[f"{id_pattern}_bait", f"{id_pattern}_prey"]].iterrows():
-        create_or_update(observation_bait_prey_dict,bait,dict())
-        create_or_update(observation_bait_prey_dict[bait],prey,1)
+        if bait != prey:
+            create_or_update(observation_bait_prey_dict,bait,dict())
+            create_or_update(observation_bait_prey_dict[bait],prey,1)
 
     return tested_bait_prey_dict, observation_bait_prey_dict
 
