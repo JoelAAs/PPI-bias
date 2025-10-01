@@ -1,4 +1,8 @@
 import json
+import re
+
+import pandas as pd
+
 from localisation_support import *
 from mean_distance_support import get_cumulative_sum
 
@@ -19,11 +23,16 @@ def get_localisation_per_bait(baits, localisation_files):
     bait_localisations = {b: dict() for b in baits}
     for lf in localisation_files:
         loc_data_dict = read_localisation_json(lf)
-        for b in bait_localisations.keys():
+        for b in baits:
             bait_localisations[b] = combine(
                 bait_localisations[b],
                 loc_data_dict.get(b,loc_data_dict["other"]))
-    return loc_data_dict
+        bait_localisations["other"] = combine(
+            bait_localisations.get("other", dict()),
+            loc_data_dict["other"]
+        )
+
+    return bait_localisations
 
 
 rule method_comparison:
@@ -221,6 +230,25 @@ rule get_bait_test_localisation_probability:
                 w.write(f'"{pids}": {json_str}')
             w.write("\n}\n")
 
+
+def get_study_combination_dict(filename, pubmed_id):
+    pattern = '^\"([0-9-_a-zA-Z;]+)\":'
+    i = 0
+    with open(filename,"r") as f:
+        for line in f:
+            i += 1
+            search = re.search(pattern,line)
+            if search:
+                current_match = search.groups()[0]
+                if pubmed_id == current_match:
+                    line = line.strip()
+                    if line[-1] == ",":
+                        line = line[:-1]
+                    prob_dict = json.loads("{" + line + "}")
+                    return prob_dict
+
+    raise KeyError(f"{pubmed_id} not in {filename}")
+
 rule annotate_per_study_prob:
     params:
         localisation_csv=config["localisation_file"]
@@ -233,32 +261,37 @@ rule annotate_per_study_prob:
         localisation_df = pd.read_csv(params.localisation_csv,sep="\t")
         localisation_dict = localisation_df.groupby('gene_name')['localisation'].apply(set).to_dict()
 
-        with open(input.all_probs,"r") as f:
-            localisation_probability = json.load(f)
+        pod_df = pd.read_csv(input.pod_data,sep="\t")
+        pod_df = pod_df.sort_values("pubmed_id")
 
-        first_line = True
+        pre_pubmed_id = ""
+        localisation_prob_dict = dict()
         with open(output.expected_df,"w") as w:
-            with open(input.pod_data,"r") as f:
-                for line in f:
-                    if first_line:
-                        first_line = False
-                        w.write(line.strip() + "\tmatch_probability\tlocalisation_match\n")
-                    else:
-                        values = line.strip().split("\t")
-                        bait, prey, n_tested = values[:3]
-                        pubmed_id = values[4]
-                        match = int(bool(localisation_dict.get(bait,set()) & localisation_dict.get(prey,set())))
-                        expected = sum(
-                            [
-                                localisation_probability[pubmed_id].get(
-                                    bait,localisation_probability[pubmed_id]["other"]
-                                ).get(b_localisation,0) for b_localisation in localisation_dict.get(bait,set())
-                            ])/int(n_tested)
-                        w.write(line.strip() + f"\t{str(expected)}\t{str(match)}\n")
+            w.write("\t".join(pod_df.columns.values) + "\tmatch_probability\tlocalisation_match\n")
+
+            for i, row in pod_df.iterrows():
+
+                bait = row["gene_name_bait"]
+                prey = row["gene_name_prey"]
+                pubmed_id = row["pubmed_id"]
+                n_tested = row["n_tested"]
+                if pre_pubmed_id != pubmed_id:
+                    localisation_prob_dict = get_study_combination_dict(input.all_probs, pubmed_id)
+                    pre_pubmed_id = pubmed_id
 
 
+                match = int(bool(localisation_dict.get(bait,set()) & localisation_dict.get(prey,set())))
+                expected = sum(
+                    [
+                        localisation_prob_dict[pubmed_id].get(
+                            bait,localisation_prob_dict[pubmed_id]["other"]
+                        ).get(b_localisation,0) for b_localisation in localisation_dict.get(bait,set())
+                    ]) / int(n_tested)
 
-rule accumulation_mathed_colocalisation:
+                w.write("\t".join(map(str,row.values)) + f"\t{str(expected)}\t{str(match)}\n")
+
+
+rule accumulation_matched_colocalisation:
     input:
         expected_df="work_folder/analysis/localisation/study_match_probability/expected/POD_{data}_expected.csv"
     output:
