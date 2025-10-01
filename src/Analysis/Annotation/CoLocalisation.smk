@@ -187,7 +187,7 @@ rule get_per_study_localisation:
             w.write("{\n")
             loc_tuple = list(localisation_count.itertuples(index=False,name=None))
             for bait in bait_df["gene_name"].unique():
-                bait_localisation = bait_df[bait_df["gene_name"] == bait]["localisation"]
+                bait_localisation = bait_df[bait_df["gene_name"] == bait]["localisation"].values
                 bait_n_localisations = n_localisations - len(bait_localisation)
                 if bait_n_localisations == 0:
                     continue

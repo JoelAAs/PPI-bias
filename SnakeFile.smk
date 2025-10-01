@@ -59,7 +59,7 @@ colocalisation_plot = [
 
 matched_colocalisation_plot = [
     f"work_folder/plots/AccumulationPOD/matched_colocalisation_{data}.png"
-    for data in datasets
+    for data in datasets if data != "abundance_mcmc"
 ]
 
 go_jaccards_plot = [
