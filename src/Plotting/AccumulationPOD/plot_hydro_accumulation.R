@@ -37,7 +37,7 @@ if (name=="abundance_mcmc") {
     c_xlab = "Probability of detection"
 } else {
     hydro_df[hydro_df$limit =="upper_bound_pod", "value"] = logit(hydro_df[hydro_df$limit =="upper_bound_pod", "value"])
-    c_xlab = "Probability of detection -- logit(POD)"
+    c_xlab = "logit(POD)                  Probability of detection"
 }
 
 hydro_df$thsa_delta_avg <- hydro_df$sum_thsa_netsurfp2_delta/hydro_df$non_na_pairs_thsa_netsurfp2_delta

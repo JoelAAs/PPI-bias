@@ -38,7 +38,7 @@ if (name=="abundance_mcmc") {
     c_xlab = "Probability of detection"
 }  else {
     go_df[go_df$limit =="upper_bound_pod", "value"] = logit(go_df[go_df$limit =="upper_bound_pod", "value"])
-    c_xlab = "Probability of detection -- logit(POD)"
+    c_xlab = "logit(POD)                  Probability of detection"
 }
 
 
