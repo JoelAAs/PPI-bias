@@ -33,7 +33,7 @@ if (name=="abundance_mcmc") {
     c_xlab = "Probability of detection"
 } else {
     colocalisation_df[colocalisation_df$limit == "upper_bound_pod", "value"] = logit(colocalisation_df[colocalisation_df$limit == "upper_bound_pod", "value"])
-    c_xlab = "Probability of detection -- logit(POD)"
+    c_xlab = "logit(POD)                  Probability of detection"
 }
 colocalisation_df$limit <- factor(colocalisation_df$limit, levels = c("upper_bound_pod", "lower_bound_pod"))
 
@@ -50,7 +50,8 @@ prob_localisation <- ggplot(
   )
 ) +
   geom_point(color="red") +
-  geom_line() + 
+  geom_line() +
+  geom_hline(xintercept=0, linetype="dashed") +
   facet_wrap(. ~ limit,
              labeller = labeller(
                limit =
