@@ -51,7 +51,7 @@ prob_localisation <- ggplot(
 ) +
   geom_point(color="red") +
   geom_line() +
-  geom_hline(xintercept=0, linetype="dashed") +
+  geom_hline(yintercept=0, linetype="dashed") +
   facet_wrap(. ~ limit,
              labeller = labeller(
                limit =
