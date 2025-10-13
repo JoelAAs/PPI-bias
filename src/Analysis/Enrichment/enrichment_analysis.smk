@@ -1,6 +1,8 @@
 import pandas as pd
 
 rule get_bait_list:
+    # TODO: evaluate id this is used or useful
+
     params:
         other_ms_methods = [
             "MI-0006",
@@ -44,6 +46,7 @@ rule get_bait_list:
 
 
 rule bait_enrichment:
+    # TODO: evaluate id this is used or useful
     params:
         n_top_baits = 100
     input:

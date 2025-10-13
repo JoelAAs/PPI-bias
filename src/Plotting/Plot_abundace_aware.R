@@ -90,27 +90,27 @@ df[, "min_prob"] <- df[, "mixture_RA"]*df[, "beta_bait_low_ci"]
 df[, "max_prob"] <- df[, "mixture_RA"]*df[, "beta_bait_high_ci"]
 
 
-#df_a <- read.table("data/normalised_log_ra.csv", sep="\t", header=T)
-#df_a <- melt(df, id.vars = "cell_line")
-#df$value <- as.numeric(df_a$value)
-#df_a %>%
-#  group_by(cell_line, variable) %>%
-#  summarise(
-#    means = mean(value, na.rm=T)
-#  ) -> df_abundance
+df_a <- read.table("data/normalised_log_ra.csv", sep="\t", header=T)
+df_a <- melt(df_a, id.vars = "cell_line")
+df_a$value <- as.numeric(df_a$value)
+df_a %>%
+  group_by(cell_line, variable) %>%
+  summarise(
+    means = mean(value, na.rm=T)
+  ) -> df_abundance
 
 
-#df_wide <- df_abundance %>%
-#  pivot_wider(
-#    names_from = cell_line,
-#    values_from = means
-#  )
+df_wide <- df_abundance %>%
+  pivot_wider(
+    names_from = cell_line,
+    values_from = means
+  )
 
-#df_wide$gene_name_prey <- df_wide$variable
-#df_wide$variable <- NULL
+df_wide$gene_name_prey <- df_wide$variable
+df_wide$variable <- NULL
 
-#df <- merge(df, df_wide, by="gene_name_prey")
-#df[, "mixture_mean_flat"] <- apply(df, 1, function(x) mixture_mean(x, samples,"CVCL_", ""))
+df <- merge(df, df_wide, by="gene_name_prey")
+df[, "mixture_mean_flat"] <- apply(df, 1, function(x) mixture_mean(x, samples,"CVCL_", ""))
 
 
 ### Observed vs Abundance
@@ -246,8 +246,8 @@ ggplot(
 p_dist_pos <- ggplot(
   df %>% filter(total_observed != 0),
   aes(
-    x=prob(min_prob),
-    y=mixture_min_RA,
+    x=prob(lower_bound_pod),
+    y=mixture_mean,
     colour = rate_of_detection
   )) +
   geom_point() +
@@ -256,14 +256,14 @@ p_dist_pos <- ggplot(
   theme(legend.position = "top") +
   labs(
     x="Lower bound POD",
-    y="Harmonized abundance"
+    y="Weighted abundance"
   )
 
 
 p_dist_neg <- ggplot(
-  df,
+  df %>% filter(total_observed == 0),
   aes(
-    x=max_prob,
+    x=upper_bound_pod,
     y=mixture_mean,
     colour = total_tested
   )) +
@@ -273,12 +273,12 @@ p_dist_neg <- ggplot(
   theme(legend.position = "top") +
   labs(
     x="Upper bound logit(POD)",
-    y="Harmonized abundance"
+    y="Weighted abundance"
     )
 
 max_min <- grid.arrange(
-  add_label(p_dist_pos, "A"),
-  add_label(p_dist_neg, "B"),
+  add_label(p_dist_neg, "A"),
+  add_label(p_dist_pos, "B"),
   nrow=1)
 
 

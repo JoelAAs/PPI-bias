@@ -71,10 +71,13 @@ def threshold_degree(df, t):
 
 
 rule get_degree_dist_hippie:
+    """
+    Get degree list from HIPPIE-current
+    """
     input:
         hippie="data/HIPPIE-current.mitab.txt"
     output:
-            degree="work_folder/degree/full_hippie.csv"
+            degree=f"work_folder/{pn}/degree/full_hippie.csv"
     run:
         df_hippie = pd.read_csv(input.hippie,sep="\t")
         gene_cols = ["Gene Name Interactor A", "Gene Name Interactor B"]
@@ -91,12 +94,15 @@ rule get_degree_dist_hippie:
         hippie_degree.to_csv(output.degree,sep="\t",index=False)
 
 rule flat_degree_dist:
+    """
+    Get degree distribution for flat POD
+    """
     input:
-        flat_probability="work_folder/analysis/POD/POD_flat.csv"
+        flat_probability=f"work_folder/analysis/POD/POD_flat.csv"
     output:
-        summed_probability="work_folder/degree/flat_summed.csv",
-        threshold_1="work_folder/degree/flat_min.1.csv",
-        threshold_2="work_folder/degree/flat_min.2.csv"
+        summed_probability=f"work_folder/{pn}/degree/flat_summed.csv",
+        threshold_1=f"work_folder/{pn}/degree/flat_min.1.csv",
+        threshold_2=f"work_folder/{pn}/degree/flat_min.2.csv"
     run:
         df = pd.read_csv(input.flat_probability,sep="\t")
 

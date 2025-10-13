@@ -1,64 +1,16 @@
 import pandas as pd
 from mean_distance_support import get_cumulative_sum
 
-#TODO: generalise this for all similarity
-
-def get_sliding_avg_enrichment_hydro(df, value_column, greater=True, min_samples=50):
-    bins = df[value_column].unique()
-    bins.sort()
-    values = df[value_column].values
-    idx_val = values.argsort()
-    if greater:
-        idx_val = idx_val[::-1]
-        bins = bins[::-1]
-    values = values[idx_val]
-
-    thsa = df["thsa_netsurfp2_delta"].to_numpy()[idx_val]
-    tasa = df["tasa_netsurfp2_delta"].to_numpy()[idx_val]
-    rhsa = df["rhsa_netsurfp2_delta"].to_numpy()[idx_val]
-
-    if not greater:
-        bins = -bins
-        values = -values
-
-    thsa_sum = 0
-    tasa_sum = 0
-    rhsa_sum = 0
-
-    previous = 0
-    i = 0
-    j = 0
-    rows = [{}] * len(bins)
-    for threshold in bins:
-        while (i < len(values) and threshold <= values[i]) or i < min_samples:
-            i += 1
-
-        thsa_sum += thsa[previous:i].sum()
-        tasa_sum += tasa[previous:i].sum()
-        rhsa_sum += rhsa[previous:i].sum()
-
-        rows[j] = {
-            "limit": value_column,
-            "value": (threshold if greater else -threshold),
-            "thsa_delta_avg": thsa_sum / i,
-            "tasa_delta_avg": tasa_sum / i,
-            "rhsa_delta_avg": rhsa_sum / i,
-            "number_of_pairs": i
-        }
-        if previous != i:
-            j += 1
-        previous = i
-
-    return pd.DataFrame([r for r in rows if r])
-
-
 rule get_hyrdophobicity_delta:
+    """
+    Join TASA and THSA from NetSurfP2.0 to POD data
+    """
     input:
-        uniprot_gene="work_folder/intact/uniprot_to_gene_name.csv",
+        uniprot_gene=f"work_folder/{pn}/intact/uniprot_to_gene_name.csv",
         rhsa_pdb="data/hydrophobicity/NSP2_complete.tab",
-        pod_data="work_folder/analysis/POD/POD_{data}.csv"
+        pod_data=f"work_folder/{pn}/analysis/POD/POD_{{data}}.csv"
     output:
-        hydro_annotated="work_folder/analysis/hydrophobicity/POD_{data}_netsurfp2.csv"
+        hydro_annotated=f"work_folder/{pn}/analysis/hydrophobicity/POD_{{data}}_netsurfp2.csv"
     run:
         ## NetSurfP2.0
         uniprot_2_gene = pd.read_csv(input.uniprot_gene,sep="\t")
@@ -85,11 +37,14 @@ rule get_hyrdophobicity_delta:
 
 
 rule get_hydro_accumulation:
+    """
+    Get sliding average of hydrophobicity given POD 
+    """
     input:
-        hydro_pod_data="work_folder/analysis/hydrophobicity/POD_{data}_netsurfp2.csv"
+        hydro_pod_data=f"work_folder/{pn}/analysis/hydrophobicity/POD_{{data}}_netsurfp2.csv"
     output:
-        hydro_lesser="work_folder/analysis/hydrophobicity/cumulative/POD_{data}_netsurfp2_lesser.csv",
-        hydro_greater="work_folder/analysis/hydrophobicity/cumulative/POD_{data}_netsurfp2_greater.csv"
+        hydro_lesser=f"work_folder/{pn}/analysis/hydrophobicity/cumulative/POD_{{data}}_netsurfp2_lesser.csv",
+        hydro_greater=f"work_folder/{pn}/analysis/hydrophobicity/cumulative/POD_{{data}}_netsurfp2_greater.csv"
     run:
         measurement_columns = [
             "thsa_netsurfp2_delta",

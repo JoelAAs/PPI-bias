@@ -8,7 +8,7 @@ rule get_gene_name_uniprot:
     input:
         miTab = "data/intact/human.txt"
     output:
-        uniprot = "work_folder/intact/uniprot_to_gene_name.csv"
+        uniprot = f"work_folder/{pn}/intact/uniprot_to_gene_name.csv"
     run:
         get_gene_names(input.miTab, output.uniprot)
 
@@ -19,17 +19,17 @@ rule format_miTab:
     """
     input:
         miTab = "data/intact/human.txt",
-        gene_names = "work_folder/intact/uniprot_to_gene_name.csv"
+        gene_names = f"work_folder/{pn}/intact/uniprot_to_gene_name.csv"
     output:
-        formated = "work_folder/formated/bait_prey_publications.csv"
+        formated = f"work_folder/{pn}/formated/bait_prey_publications.csv"
     run:
         mitab_df    = filter_mitab(input.miTab)
         bait_prey_df = reform_to_bait_prey(mitab_df)
         gene_name_df = pd.read_csv(input.gene_names, sep = "\t")
 
-        bait_prey_df = bait_prey_df.merge(gene_name_df, left_on="uniprot_bait", right_on="uniprot_id")
+        bait_prey_df = bait_prey_df.merge(gene_name_df, left_on="uniprot_id_bait", right_on="uniprot_id")
         del bait_prey_df["uniprot_id"]
-        bait_prey_df = bait_prey_df.merge(gene_name_df, left_on="uniprot_prey", right_on="uniprot_id", suffixes=("_bait", "_prey"))
+        bait_prey_df = bait_prey_df.merge(gene_name_df, left_on="uniprot_id_prey", right_on="uniprot_id", suffixes=("_bait", "_prey"))
         del bait_prey_df["uniprot_id"]
 
         bait_prey_df.to_csv(

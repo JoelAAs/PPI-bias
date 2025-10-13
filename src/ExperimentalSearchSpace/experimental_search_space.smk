@@ -62,18 +62,22 @@ def get_input_ppi_file(cell_line_wc):
 
 
 checkpoint infer_experimental_search_space:
+    """
+    Inferres negative data for baits of other preys seen in multibait experiments.
+    If {cell_line} is "cell_line" it will infere using cell line specific data specified in config "cell_line_ppis" 
+    """
     params:
         id_pattern = config["id_pattern"],
     input:
         bait_prey_file = lambda wc: get_input_ppi_file(wc.cell_line)
     output:
-        directory("work_folder/inferred_search_space/experimental{cell_line}")
+        directory(f"work_folder/{pn}/inferred_search_space/experimental{{cell_line}}")
     run:
         os.makedirs(output[0], exist_ok=True)
         bait_prey_df = pd.read_csv(input.bait_prey_file, sep="\t")
         bait_prey_df = bait_prey_df[
             bait_prey_df[f"{params.id_pattern}_bait"] != bait_prey_df[f"{params.id_pattern}_prey"]
-        ]
+        ] # Checked before for proteins, not for gene names
         if params.id_pattern == "gene_name":
             id_cols = [
                 f"{params.id_pattern}_bait", f"{params.id_pattern}_prey",

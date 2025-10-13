@@ -1,4 +1,4 @@
-#configfile: "config_cell.yaml"
+configfile: "config_files/config.yaml"
 import pandas as pd
 from collections import defaultdict
 from scipy.stats import fisher_exact, false_discovery_control
@@ -30,7 +30,7 @@ datasets = [
     "flat",
     "ms",
     "y2h",
-    "abundance_mcmc",
+    #"abundance_mcmc",
     "MI-1314"
 ]
 pods = [
@@ -84,14 +84,15 @@ negatome_compare = [
 ]
 
 
-expected_output = pods + colocalisation + go_jaccards + hydro_delta
+expected_output = pods
+expected_output += colocalisation + go_jaccards + hydro_delta
 expected_output += colocalisation_plot + go_jaccards_plot + hydro_delta_plot +  do_jaccards_plot
 expected_output += negatome_compare + matched_colocalisation_plot
+expected_output = "work_folder/plots/degree/GO_enrichment.png"
 
 rule all:
     input:
-        #expected_output,
-        matched_colocalisation_plot,
+        expected_output,
         "work_folder/plots/degree/GO_enrichment.png"
 
 

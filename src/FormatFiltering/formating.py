@@ -66,8 +66,8 @@ def reform_to_bait_prey(mitab_df):
             prey = row["IDA"]
 
         reform_list.append({
-            "uniprot_bait": bait,
-            "uniprot_prey": prey,
+            "uniprot_id_bait": bait,
+            "uniprot_id_prey": prey,
             "pubmed_id": row["pubmed_id"],
             "detection_method": row["detection_method"].replace(":", "-")
         })

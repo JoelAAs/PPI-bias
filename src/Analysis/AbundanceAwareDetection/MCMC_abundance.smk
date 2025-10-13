@@ -4,6 +4,7 @@ import glob
 import os
 import numpy as np
 
+# This part is a bit messy so ill comment properly when I've thought this through properly
 
 def get_bait_parameters(wildcards):
     BAIT_FOLDER = checkpoints.batch_tests.get().output[0]
@@ -233,17 +234,16 @@ rule rerun_divergent:
         div_parameters="work_folder/analysis/abundance_aware/parameters_abundance/divergent_rerun_{model}.csv"
     shell:
         """
-        touch {output}
-        # python src/Analysis/AbundanceAwareDetection/fit_model_mp.py \
-        #     --prey_tested {input.divergent} \
-        #     --abundance_cell_lines {input.abundance_cell_lines} \
-        #     --abundance 1 \
-        #     --bait_output {output.div_parameters} \
-        #     --workers {params.workers} \
-        #     --batch_size {params.batch_size} \
-        #     --samples {params.samples} \
-        #     --burin_samples {params.burin_samples}
-        #     --stepsize
+        python src/Analysis/AbundanceAwareDetection/fit_model_mp.py \
+            --prey_tested {input.divergent} \
+            --abundance_cell_lines {input.abundance_cell_lines} \
+            --abundance 1 \
+            --bait_output {output.div_parameters} \
+            --workers {params.workers} \
+            --batch_size {params.batch_size} \
+            --samples {params.samples} \
+            --burin_samples {params.burin_samples}
+            --stepsize
         """
 
 

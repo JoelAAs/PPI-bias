@@ -2,14 +2,14 @@ from scipy.stats import beta
 
 checkpoint all_methods_filter_out:
     """
-    TODO: OBS bait-bait still here
+    Get upper and lower bound probability of detection given test/observations of each bait-prey combination
     """
     params:
         pseudo_n=config["pseudo_n"],
     input:
-        method_aggregate="work_folder/inferred_search_space/aggregated/methods/{data}_experimental_wise.csv"
+        method_aggregate=f"work_folder/{pn}/inferred_search_space/aggregated/methods/{{data}}_experimental_wise.csv"
     output:
-        full_detection="work_folder/analysis/POD/POD_{data}.csv"
+        full_detection=f"work_folder/{pn}/analysis/POD/POD_{{data}}.csv"
     run:
         inferred_negative_df = pd.read_csv(
             input.method_aggregate,
@@ -44,6 +44,7 @@ checkpoint all_methods_filter_out:
 
 
 rule differential_detected_flat_negatome:
+    #  TODO: Evaluate if this is used or useful
     """
     Flat interaction/non-interactions given cl specific prey-detection 
     """

@@ -3,6 +3,15 @@ import pandas as pd
 
 
 def get_cumulative_sum(df, value_column, cumulative_columns, greater=True, min_samples=200):
+    """
+    Get mean of value column above/below limit column
+    :param df: (pandas Dataframe) Dataframe with sum column and limit colum
+    :param value_column: (string) column name of value columns
+    :param cumulative_columns: (list) column names of columns mean value above/below value column
+    :param greater: (bool) is greater slide descend and sum above among cumulative columns, vice versa otherwise
+    :param min_samples: (integer) min observations before starting recording mean
+    :return: (pandas DataFrame) containing sliding mean of each cumulative columns above/below value column
+    """
     bins = df[value_column].unique()
     bins.sort()
 

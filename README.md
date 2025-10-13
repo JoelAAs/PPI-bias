@@ -8,7 +8,7 @@ The [Snakemake](https://snakemake.github.io/) workflow is as follows:
 
 ## Output:
 Expected output files are listed is `SnakeFile.smk` and are as follows:
-- Interactions/non-interactions:
+- Scored interactions
   - `"work_folder/inferred_search_space/analysis/bias_reduced_ppis/threshold_negatome.csv"`: High confidence non-interactions  
   - `"work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/high_confidence.csv"`: High confidence interactions
 - Cell line:

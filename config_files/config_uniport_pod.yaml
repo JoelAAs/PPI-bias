@@ -1,0 +1,45 @@
+project_name: "uniprot_pod"
+formated_ppi: "work_folder/uniprot_pod/formated/bait_prey_publications.csv" # TODO: make it get the project_name
+cell_line_ppis: "/home/joel/Projects/Cl-annotated-ppis/work_folder/CL_annotated_bait_prey.csv"
+
+remove_single_publications: True
+min_total_tests: 30
+min_total_observed: 4
+part_or_difference_cutoff: 50
+pseudo_n: 1
+hci_frac: 0.8
+negatome_tested_threshold: 4
+id_pattern: "uniprot_id"
+prey_n_MCMC_batch: 2000
+MCMC_workers: 45
+batch_per_write: 2000
+mcmc_samples: 4000
+mcmc_burin: 500
+
+localisation_file: "data/localisation/gene_to_location.csv"
+
+selected_cell_lines:
+  - "CVCL_0030"
+  - "CVCL_0063"
+  - "CVCL_0291"
+
+ms:
+  - "MI-0006"
+  - "MI-0007"
+  - "MI-0096"
+  - "MI-0676"
+  #- "MI-1314" # Bioid, proximity but MS detecting. Unclear if it should be included
+
+y2h:
+  - "MI-0397" # (two hybrid array) usually involves a mating strategy
+  - "MI-1112" # (two hybrid prey pooling approach)
+  - "MI-0398" # (two hybrid pooling approach)
+  #- "MI-0018" # (two hybrid) Cannot be guaranteed to do library screening
+  #- "MI-0399" # (two hybrid fragment pooling approach) is it random fragmented of multiple protein-preys or singular
+  - "MI-1356" # (validated two hybrid) ... often the entire search space ...
+  - "MI-2215" # (barcode fusion genetics two hybrid) all against all
+  - "MI-1113" # (two hybrid bait and prey pooling approach)
+
+flat:
+  - "ms"
+  - "y2h"
