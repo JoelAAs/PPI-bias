@@ -18,7 +18,7 @@ checkpoint all_methods_filter_out:
         )
 
         inferred_negative_df = inferred_negative_df[
-            inferred_negative_df[f"{params.id_pattern}_bait"] != inferred_negative_df[f"{params.id_pattern}_prey",]
+            inferred_negative_df[f"{params.id_pattern}_bait"] != inferred_negative_df[f"{params.id_pattern}_prey"]
             ].copy()  # should be fixed later
         global_pod = inferred_negative_df["n_observed"].sum() / inferred_negative_df[
             "n_tested"].sum()  # if a test is made, probability of interaction
