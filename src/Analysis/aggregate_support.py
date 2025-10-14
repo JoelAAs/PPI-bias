@@ -7,7 +7,7 @@ def update_idx(c_dict, key):
     return c_dict[key]
 
 
-def aggregate_inferred_experiments(pids, output_file, single=True):
+def aggregate_inferred_experiments(pids, output_file, id_pattern, single=True):
     """
     Aggregated counts of tests per experiment
     :param pids: (list) of files to be aggregated
@@ -44,7 +44,7 @@ def aggregate_inferred_experiments(pids, output_file, single=True):
 
 
     with open(output_file, "w") as w:
-        header_line = "gene_name_bait\tgene_name_prey\tn_tested\tn_observed\tpubmed_id\tcl_id\n"
+        header_line = f"{id_pattern}_bait\t{id_pattern}_prey\tn_tested\tn_observed\tpubmed_id\tcl_id\n"
         w.write(header_line)
         for keys, observed_tested_pids in ppi_dict.items():
             pids = ";".join(sorted(

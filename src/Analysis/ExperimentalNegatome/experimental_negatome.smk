@@ -6,6 +6,7 @@ checkpoint all_methods_filter_out:
     """
     params:
         pseudo_n=config["pseudo_n"],
+        id_pattern= config["id_pattern"],
     input:
         method_aggregate=f"work_folder/{pn}/inferred_search_space/aggregated/methods/{{data}}_experimental_wise.csv"
     output:
@@ -17,7 +18,7 @@ checkpoint all_methods_filter_out:
         )
 
         inferred_negative_df = inferred_negative_df[
-            inferred_negative_df["gene_name_bait"] != inferred_negative_df["gene_name_prey"]
+            inferred_negative_df[f"{params.id_pattern}_bait"] != inferred_negative_df[f"{params.id_pattern}_prey",]
             ].copy()  # should be fixed later
         global_pod = inferred_negative_df["n_observed"].sum() / inferred_negative_df[
             "n_tested"].sum()  # if a test is made, probability of interaction

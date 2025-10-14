@@ -44,6 +44,8 @@ rule aggregate_pids:
     """
     Aggregate data from studies of the same method
     """
+    params:
+        id_pattern = config["id_pattern"]
     input:
         input_ppi = config["formated_ppi"],
         subsets = lambda wc: get_subsets(wc)
@@ -51,4 +53,4 @@ rule aggregate_pids:
         method_aggregate = f"work_folder/{pn}/inferred_search_space/aggregated/methods/{{subset}}_experimental_wise.csv"
     run:
         single = wildcards.subset not in config
-        aggregate_inferred_experiments(input.subsets, output.method_aggregate, single)
+        aggregate_inferred_experiments(input.subsets, output.method_aggregate, params.id_pattern, single)

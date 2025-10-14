@@ -67,7 +67,7 @@ checkpoint infer_experimental_search_space:
     If {cell_line} is "cell_line" it will infere using cell line specific data specified in config "cell_line_ppis" 
     """
     params:
-        id_pattern = config["id_pattern"],
+        id_pattern = config["id_pattern"]
     input:
         bait_prey_file = lambda wc: get_input_ppi_file(wc.cell_line)
     output:
