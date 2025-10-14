@@ -21,7 +21,11 @@ The [Snakemake](https://snakemake.github.io/) workflow is as follows:
       - `p`: Mean probability of detection 
       - `lower_bound_pod`: 2.5 % credibility interval limit of posterior density  
       - `upper_bound_pod`: 97.5 % credibility interval limit of posterior density
-
+  - Datasets:
+    - `y2h`: y2h strategies
+    - `ms`: Masspectrometry detecting (excluding BioID/TurboID)
+    - `flat`: union of `y2h` and `ms`
+    - `MI-1314`: BioID/TurboID
 - Comparative statistics:
   - All metrics are reported as a cumulative distribution mean of:
     - Probability of detection > `lower_bound_pod` for `direction=greater`
