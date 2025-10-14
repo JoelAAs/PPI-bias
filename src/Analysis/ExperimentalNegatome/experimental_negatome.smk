@@ -6,7 +6,7 @@ checkpoint all_methods_filter_out:
     """
     params:
         pseudo_n=config["pseudo_n"],
-        id_pattern= config["id_pattern"],
+        id_pattern= config["id_pattern"]
     input:
         method_aggregate=f"work_folder/{pn}/inferred_search_space/aggregated/methods/{{data}}_experimental_wise.csv"
     output:
