@@ -58,13 +58,6 @@ Parameters are set in `config_files/config.yaml` as:
 
 ## Setup
 ### Data
-**Interaction data**: Interactome from Intact
-
-```commandline
-wget https://ftp.ebi.ac.uk/pub/databases/intact/current/psimitab/species/human.zip -P data/intact
-unzip data/intact/human.zip -d data/intact/
-```
-
 **Subcellular localisation**: Human protein atlas
 ```commandline
 wget https://www.proteinatlas.org/download/tsv/subcellular_location.tsv.zip -P data/localisation/
