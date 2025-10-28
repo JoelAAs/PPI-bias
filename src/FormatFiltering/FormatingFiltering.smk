@@ -1,12 +1,20 @@
 from formating import *
 
 ##### Rules
+rule get_intact:
+    output:
+        intact="work_folder/data/intact/human.txt"
+    shell:
+        """
+        wget https://ftp.ebi.ac.uk/pub/databases/intact/current/psimitab/species/human.txt -O {output.intact}
+        """
+
 rule get_gene_name_uniprot:
     """
     Extract uniprotID-gene_name from miTab aliases column
     """
     input:
-        miTab = "data/intact/human.txt"
+        miTab = "work_folder/data/intact/human.txt"
     output:
         uniprot = f"work_folder/{pn}/intact/uniprot_to_gene_name.csv"
     run:
@@ -18,7 +26,7 @@ rule format_miTab:
     Filter and format miTab interaction file into bait-prey-publication-detection_method csv
     """
     input:
-        miTab = "data/intact/human.txt",
+        miTab = "work_folder/data/intact/human.txt",
         gene_names = f"work_folder/{pn}/intact/uniprot_to_gene_name.csv"
     output:
         formated = f"work_folder/{pn}/formated/bait_prey_publications.csv"
