@@ -1,11 +1,11 @@
-import matplotlib.pyplot as plt
+from urllib.request import Request
+
 import pandas as pd
 import numpy as np
-from openpyxl.styles.builtins import output
+from urllib3.exceptions import RequestError
 
 from ..Annotation.localisation_support import add_localisation
-from scipy.stats import wilcoxon, ttest_ind
-import seaborn as sns
+import requests
 
 rule get_bioplex:
     output:
@@ -117,3 +117,45 @@ rule localisation_delta:
         pd.concat(
             [prey_summed_delta[columns], bait_summed_delta[columns]]
         ).to_csv(output.localisation_method, sep="\t", index=None)
+
+
+rule membrane_delta:
+    input:
+        cvcl_0063_bp="work_folder/data/bioplex/CVCL_0063.csv",
+        huri="work_folder/data/huri/intact_huri.csv"
+    output:
+        localisation_method="work_folder/analysis/localisation/HuRI_vs_Bioplex.csv"
+    run:
+        bp_df = pd.read_csv(input.cvcl_0063_bp,sep="\t")[["Bait Symbol", "Prey Symbol"]]
+        bp_df.columns = ["gene_name_bait", "gene_name_prey"]
+        huri_df = pd.read_csv(input.huri,sep="\t")
+        url = "https://rest.uniprot.org/idmapping/run"
+        params = {
+            "from": "Gene_Name",
+            "to": "UniProtKB",
+            "ids": ",".join(gene_names),
+            "taxonId": "9606"  # Homo sapiens taxonomy ID
+        }
+        response = requests.post(url,data=params)
+
+
+
+
+
+def map_membrane_structure(gene_names):
+    url = "https://rest.uniprot.org/idmapping/run"
+    params = {
+        "from": "Gene_Name",
+        "to": "UniProtKB",
+        "ids": ",".join(gene_names),
+        "taxonId": "9606"  # Homo sapiens taxonomy ID
+    }
+    response = requests.post(url,data=params)
+    if not response.ok:
+        raise RequestError("Couldn't submit to uniprot")
+
+    jobid = response.json()["jobId"]
+
+    results_response = requests.get(
+        f"https://rest.uniprot.org/idmapping/uniprotkb/results/{jobid}")
+
