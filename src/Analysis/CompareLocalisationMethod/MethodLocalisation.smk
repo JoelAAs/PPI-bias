@@ -113,7 +113,7 @@ rule localisation_delta:
         prey_summed_delta["localisation"] = prey_summed_delta["localisation_prey"]
         prey_summed_delta[["ci_2.5", "ci_97.5"]] = np.nanpercentile(per_mat,[2.5, 97.5], axis=0).transpose()
         prey_summed_delta["role"] = "Prey"
-        columns = ['delta', 'ci_2.5', 'ci_97.5', 'Role', 'localisation']
+        columns = ['delta', 'ci_2.5', 'ci_97.5', 'role', 'localisation']
         pd.concat(
             [prey_summed_delta[columns], bait_summed_delta[columns]]
         ).to_csv(output.localisation_method, sep="\t", index=None)
