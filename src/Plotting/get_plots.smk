@@ -102,4 +102,15 @@ rule plot_hydrophobicity:
         Rscript {params.script_location} {input.greater_hydro} {input.lesser_hydro} {wildcards.data} {output.plot}
         """
 
+rule plot_localisation_huri_bioplex:
+    params:
+        script_location = "src/Plotting/Method/plot_localisation_huri_bioplex.R"
+    input:
+        localisation_method = "work_folder/analysis/localisation/HuRI_vs_Bioplex.csv"
+    output:
+        png = "work_folder/{pn}/plots/localisation/HuRI_bioplex.png"
+    shell:
+        """
+        Rscript {params.script_location} {input.localisation_method} {output.png}
+        """
 

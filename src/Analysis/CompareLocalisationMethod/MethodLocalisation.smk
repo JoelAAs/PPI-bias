@@ -1,4 +1,7 @@
+import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
+from openpyxl.styles.builtins import output
 
 from ..Annotation.localisation_support import add_localisation
 from scipy.stats import wilcoxon, ttest_ind
@@ -33,8 +36,10 @@ rule localisation_delta:
         huri="work_folder/data/huri/intact_huri.csv",
         localisation_csv="work_folder/analysis/localisation/gene_to_localisation.csv"
     output:
-        ""
+        localisation_method="work_folder/analysis/localisation/HuRI_vs_Bioplex.csv"
     run:
+        n_permutations = 500000
+
         bp_df = pd.read_csv(input.cvcl_0063_bp,sep="\t")[["Bait Symbol", "Prey Symbol"]]
         bp_df.columns = ["gene_name_bait", "gene_name_prey"]
         huri_df = pd.read_csv(input.huri,sep="\t")
@@ -45,54 +50,70 @@ rule localisation_delta:
 
         bait_intersect = set(bp_df["gene_name_bait"]) & set(huri_df["gene_name_bait"])
         prey_intersect = set(bp_df["gene_name_prey"]) & set(huri_df["gene_name_prey"])
-        bp_df = bp_df[bp_df["gene_name_bait"].isin(bait_intersect)]
-        huri_df = huri_df[huri_df["gene_name_bait"].isin(bait_intersect)]
-        bp_df = bp_df[bp_df["gene_name_prey"].isin(prey_intersect)]
-        huri_df = huri_df[huri_df["gene_name_prey"].isin(prey_intersect)]
+        shared_baits_bp_df = bp_df[bp_df["gene_name_bait"].isin(bait_intersect)]
+        shared_baits_huri_df = huri_df[huri_df["gene_name_bait"].isin(bait_intersect)]
 
 
         # Prey localisation PPI count:
-        local_bait_huri = huri_df.groupby(["gene_name_bait", "localisation_bait"],as_index=False).size().rename({
+        local_bait_huri = shared_baits_huri_df.groupby(["gene_name_bait", "localisation_bait"],as_index=False).size().rename({
             "size": "huri_ppi"},axis=1)
-        local_bait_bp = bp_df.groupby(["gene_name_bait", "localisation_bait"],as_index=False).size().rename({
+        local_bait_bp = shared_baits_bp_df.groupby(["gene_name_bait", "localisation_bait"],as_index=False).size().rename({
             "size": "bp_ppi"},axis=1)
 
         local_bait_ppis = local_bait_bp.merge(local_bait_huri,on=["gene_name_bait", "localisation_bait"],how="outer").fillna(0)
-        local_bait_ppis["delta"] = local_bait_ppis["bp_ppi"] - local_bait_ppis["huri_ppi"]
+
+        local_bait_ppis["delta"] = local_bait_ppis["huri_ppi"] - local_bait_ppis["bp_ppi"]
         keep_local = local_bait_ppis.groupby("localisation_bait").size()
         keep_local = keep_local[keep_local >10].index.values
 
         local_bait_ppis = local_bait_ppis[local_bait_ppis["localisation_bait"].isin(keep_local)]
-        sns.kdeplot(data=local_bait_ppis, y="delta", hue="localisation_bait")
 
+        per_mat = np.zeros(shape=(n_permutations, len(keep_local)))
+        sample_size = round((1-0.10)*local_bait_ppis.shape[0])
+        for i in range(n_permutations):  # SD on baits not individual ppis
+            ss_bait_ppis = local_bait_ppis.sample(sample_size)
+            per_mat[i,:] = ss_bait_ppis.groupby("localisation_bait")["delta"].sum().values
 
-        for c_local in local_bait_ppis["localisation_bait"].unique():
-            hu_ppi = local_bait_ppis[local_bait_ppis["localisation_bait"] == c_local]["huri_ppi"]
-            bp_ppi = local_bait_ppis[local_bait_ppis["localisation_bait"] == c_local]["bp_ppi"]
-            s, p = ttest_ind(hu_ppi,bp_ppi)
-            print(f"{c_local}, p: {p}")
-
+        bait_summed_delta = local_bait_ppis.groupby("localisation_bait", as_index=False)["delta"].sum()
+        bait_summed_delta["localisation"] = bait_summed_delta["localisation_bait"]
+        bait_summed_delta[["ci_2.5", "ci_97.5"]] = np.percentile(per_mat,[2.5, 97.5], axis=0).transpose()
+        bait_summed_delta["role"] = "Bait"
 
         # PPI count non overlapping
-        bp_df["ppi_id"] = bp_df[["gene_name_bait", "gene_name_prey"]].apply(lambda x: ":".join(x),axis=1)
-        huri_df["ppi_id"] = huri_df[["gene_name_bait", "gene_name_prey"]].apply(lambda x: ":".join(x),axis=1)
+        shared_baits_bp_df["ppi_id"] = shared_baits_bp_df[["gene_name_bait", "gene_name_prey"]].apply(lambda x: ":".join(x),axis=1)
+        shared_baits_huri_df["ppi_id"] = shared_baits_huri_df[["gene_name_bait", "gene_name_prey"]].apply(lambda x: ":".join(x),axis=1)
 
-        shared_ppi = set(bp_df["ppi_id"]) & set(huri_df["ppi_id"])
-        shared_prey = set(bp_df["gene_name_prey"]) & set(huri_df["gene_name_prey"])
+        shared_ppi = set(shared_baits_bp_df["ppi_id"]) & set(shared_baits_huri_df["ppi_id"])
+        shared_prey = set(shared_baits_bp_df["gene_name_prey"]) & set(shared_baits_huri_df["gene_name_prey"])
 
-        bp_df = bp_df[~bp_df["ppi_id"].isin(shared_ppi)]
-        huri_df = huri_df[~huri_df["ppi_id"].isin(shared_ppi)]
+        no_overlap_bp_df = shared_baits_bp_df[~shared_baits_bp_df["ppi_id"].isin(shared_ppi)]
+        no_overlap_huri_df = shared_baits_huri_df[~shared_baits_huri_df["ppi_id"].isin(shared_ppi)]
 
-        localisation_bp = bp_df.groupby(["localisation_bait", "localisation_prey"],as_index=False).size().rename({
-            "size": "bp_count"},axis=1)
-        localisation_huri = huri_df.groupby(["localisation_bait", "localisation_prey"],as_index=False).size().rename({
-            "size": "huri_count"},axis=1)
 
-        localisation_prey = localisation_bp.merge(localisation_huri,on=["localisation_bait", "localisation_prey"],how="outer").fillna(0)
-        for c_local in localisation_prey["localisation_bait"].unique():
-            hu_ppi = localisation_prey[localisation_prey["localisation_prey"] == c_local]["huri_count"]
-            bp_ppi = localisation_prey[localisation_prey["localisation_prey"] == c_local]["bp_count"]
-            s, p = wilcoxon(x=hu_ppi-bp_ppi)
-            mu = round(np.mean(hu_ppi-bp_ppi),2)
-            sd = round(np.std(hu_ppi-bp_ppi),2)
-            print(f"mu:{mu}\t sd:{sd}\t p: {p}\t{c_local}")
+        localisation_bp = no_overlap_bp_df.groupby(["gene_name_prey","localisation_prey"],as_index=False).size().rename({
+            "size": "bp_ppi"},axis=1)
+        localisation_huri = no_overlap_huri_df.groupby(["gene_name_prey","localisation_prey"],as_index=False).size().rename({
+            "size": "huri_ppi"},axis=1)
+        localisation_prey = localisation_bp.merge(localisation_huri,on=["gene_name_prey","localisation_prey"],how="outer").fillna(0)
+
+        keep_local = localisation_prey.groupby("localisation_prey").size()
+        keep_local = keep_local[keep_local >10].index.values
+        localisation_prey = localisation_prey[localisation_prey["localisation_prey"].isin(keep_local)]
+        localisation_prey["delta"] = localisation_prey["huri_ppi"] - localisation_prey["bp_ppi"]
+
+        per_mat = np.zeros(shape=(n_permutations, len(keep_local)))
+        sample_size = round((1-0.10)*localisation_prey.shape[0])
+        for i in range(n_permutations):  # SD on baits not individual ppis
+            ss_bait_ppis = localisation_prey.sample(sample_size)
+            prey_delta = ss_bait_ppis.groupby("localisation_prey")["delta"].sum()
+            ordered = prey_delta.reindex(keep_local)
+            per_mat[i, :] = ordered
+
+        prey_summed_delta = localisation_prey.groupby("localisation_prey", as_index=False)["delta"].sum()
+        prey_summed_delta["localisation"] = prey_summed_delta["localisation_prey"]
+        prey_summed_delta[["ci_2.5", "ci_97.5"]] = np.nanpercentile(per_mat,[2.5, 97.5], axis=0).transpose()
+        prey_summed_delta["role"] = "Prey"
+        columns = ['delta', 'ci_2.5', 'ci_97.5', 'Role', 'localisation']
+        pd.concat(
+            [prey_summed_delta[columns], bait_summed_delta[columns]]
+        ).to_csv(output.localisation_method, sep="\t", index=None)
