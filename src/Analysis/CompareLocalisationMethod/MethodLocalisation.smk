@@ -1,8 +1,9 @@
-from urllib.request import Request
-
+import mygene
+import re
+from UniProtMapper import ProtMapper
 import pandas as pd
 import numpy as np
-from urllib3.exceptions import RequestError
+from partd.utils import suffix
 
 from ..Annotation.localisation_support import add_localisation
 import requests
@@ -53,35 +54,39 @@ rule localisation_delta:
         shared_baits_bp_df = bp_df[bp_df["gene_name_bait"].isin(bait_intersect)]
         shared_baits_huri_df = huri_df[huri_df["gene_name_bait"].isin(bait_intersect)]
 
-
         # Prey localisation PPI count:
-        local_bait_huri = shared_baits_huri_df.groupby(["gene_name_bait", "localisation_bait"],as_index=False).size().rename({
+        local_bait_huri = shared_baits_huri_df.groupby(["gene_name_bait",
+                                                        "localisation_bait"],as_index=False).size().rename({
             "size": "huri_ppi"},axis=1)
-        local_bait_bp = shared_baits_bp_df.groupby(["gene_name_bait", "localisation_bait"],as_index=False).size().rename({
+        local_bait_bp = shared_baits_bp_df.groupby(["gene_name_bait",
+                                                    "localisation_bait"],as_index=False).size().rename({
             "size": "bp_ppi"},axis=1)
 
-        local_bait_ppis = local_bait_bp.merge(local_bait_huri,on=["gene_name_bait", "localisation_bait"],how="outer").fillna(0)
+        local_bait_ppis = local_bait_bp.merge(local_bait_huri,on=["gene_name_bait",
+                                                                  "localisation_bait"],how="outer").fillna(0)
 
         local_bait_ppis["delta"] = local_bait_ppis["huri_ppi"] - local_bait_ppis["bp_ppi"]
         keep_local = local_bait_ppis.groupby("localisation_bait").size()
-        keep_local = keep_local[keep_local >10].index.values
+        keep_local = keep_local[keep_local > 10].index.values
 
         local_bait_ppis = local_bait_ppis[local_bait_ppis["localisation_bait"].isin(keep_local)]
 
         per_mat = np.zeros(shape=(n_permutations, len(keep_local)))
-        sample_size = round((1-0.10)*local_bait_ppis.shape[0])
+        sample_size = round((1 - 0.10) * local_bait_ppis.shape[0])
         for i in range(n_permutations):  # SD on baits not individual ppis
             ss_bait_ppis = local_bait_ppis.sample(sample_size)
-            per_mat[i,:] = ss_bait_ppis.groupby("localisation_bait")["delta"].sum().values
+            per_mat[i, :] = ss_bait_ppis.groupby("localisation_bait")["delta"].sum().values
 
-        bait_summed_delta = local_bait_ppis.groupby("localisation_bait", as_index=False)["delta"].sum()
+        bait_summed_delta = local_bait_ppis.groupby("localisation_bait",as_index=False)["delta"].sum()
         bait_summed_delta["localisation"] = bait_summed_delta["localisation_bait"]
-        bait_summed_delta[["ci_2.5", "ci_97.5"]] = np.percentile(per_mat,[2.5, 97.5], axis=0).transpose()
+        bait_summed_delta[["ci_2.5", "ci_97.5"]] = np.percentile(per_mat,[2.5, 97.5],axis=0).transpose()
         bait_summed_delta["role"] = "Bait"
 
         # PPI count non overlapping
-        shared_baits_bp_df["ppi_id"] = shared_baits_bp_df[["gene_name_bait", "gene_name_prey"]].apply(lambda x: ":".join(x),axis=1)
-        shared_baits_huri_df["ppi_id"] = shared_baits_huri_df[["gene_name_bait", "gene_name_prey"]].apply(lambda x: ":".join(x),axis=1)
+        shared_baits_bp_df["ppi_id"] = shared_baits_bp_df[
+            ["gene_name_bait", "gene_name_prey"]].apply(lambda x: ":".join(x),axis=1)
+        shared_baits_huri_df["ppi_id"] = shared_baits_huri_df[
+            ["gene_name_bait", "gene_name_prey"]].apply(lambda x: ":".join(x),axis=1)
 
         shared_ppi = set(shared_baits_bp_df["ppi_id"]) & set(shared_baits_huri_df["ppi_id"])
         shared_prey = set(shared_baits_bp_df["gene_name_prey"]) & set(shared_baits_huri_df["gene_name_prey"])
@@ -89,34 +94,125 @@ rule localisation_delta:
         no_overlap_bp_df = shared_baits_bp_df[~shared_baits_bp_df["ppi_id"].isin(shared_ppi)]
         no_overlap_huri_df = shared_baits_huri_df[~shared_baits_huri_df["ppi_id"].isin(shared_ppi)]
 
-
-        localisation_bp = no_overlap_bp_df.groupby(["gene_name_prey","localisation_prey"],as_index=False).size().rename({
+        localisation_bp = no_overlap_bp_df.groupby(
+            ["gene_name_prey", "localisation_prey"],as_index=False).size().rename({
             "size": "bp_ppi"},axis=1)
-        localisation_huri = no_overlap_huri_df.groupby(["gene_name_prey","localisation_prey"],as_index=False).size().rename({
+        localisation_huri = no_overlap_huri_df.groupby(
+            ["gene_name_prey", "localisation_prey"],as_index=False).size().rename({
             "size": "huri_ppi"},axis=1)
-        localisation_prey = localisation_bp.merge(localisation_huri,on=["gene_name_prey","localisation_prey"],how="outer").fillna(0)
+        localisation_prey = localisation_bp.merge(localisation_huri,
+            on=["gene_name_prey", "localisation_prey"],how="outer").fillna(0)
 
         keep_local = localisation_prey.groupby("localisation_prey").size()
-        keep_local = keep_local[keep_local >10].index.values
+        keep_local = keep_local[keep_local > 10].index.values
         localisation_prey = localisation_prey[localisation_prey["localisation_prey"].isin(keep_local)]
         localisation_prey["delta"] = localisation_prey["huri_ppi"] - localisation_prey["bp_ppi"]
 
         per_mat = np.zeros(shape=(n_permutations, len(keep_local)))
-        sample_size = round((1-0.10)*localisation_prey.shape[0])
+        sample_size = round((1 - 0.10) * localisation_prey.shape[0])
         for i in range(n_permutations):  # SD on baits not individual ppis
             ss_bait_ppis = localisation_prey.sample(sample_size)
             prey_delta = ss_bait_ppis.groupby("localisation_prey")["delta"].sum()
             ordered = prey_delta.reindex(keep_local)
             per_mat[i, :] = ordered
 
-        prey_summed_delta = localisation_prey.groupby("localisation_prey", as_index=False)["delta"].sum()
+        prey_summed_delta = localisation_prey.groupby("localisation_prey",as_index=False)["delta"].sum()
         prey_summed_delta["localisation"] = prey_summed_delta["localisation_prey"]
-        prey_summed_delta[["ci_2.5", "ci_97.5"]] = np.nanpercentile(per_mat,[2.5, 97.5], axis=0).transpose()
+        prey_summed_delta[["ci_2.5", "ci_97.5"]] = np.nanpercentile(per_mat,[2.5, 97.5],axis=0).transpose()
         prey_summed_delta["role"] = "Prey"
         columns = ['delta', 'ci_2.5', 'ci_97.5', 'role', 'localisation']
         pd.concat(
             [prey_summed_delta[columns], bait_summed_delta[columns]]
-        ).to_csv(output.localisation_method, sep="\t", index=None)
+        ).to_csv(output.localisation_method,sep="\t",index=None)
+
+
+def rec_nested_get(keys, dict):
+    if len(keys) == 1:
+        return dict.get(keys[0],[])
+    elif keys[0] in dict:
+        res = rec_nested_get(keys[1:],dict[keys[0]])
+        if type(res) is not list:
+            return [res, ]
+        else:
+            return res
+    return []
+
+
+def map_membrane_structure(gene_names):
+    mg = mygene.MyGeneInfo()
+    results = mg.querymany(
+        gene_names,
+        scopes='symbol, alias',
+        fields='uniprot.Swiss-Prot',
+        species='human')
+
+    rows = [
+        (result["query"], prot_id)
+        for result in results for prot_id in rec_nested_get(["uniprot", "Swiss-Prot"],result)
+    ]
+    map_df = pd.DataFrame(rows,columns=["gene_name", "uniprot_id"])
+    map_df = map_df.dropna()
+    return map_df
+
+
+def get_membrane_annotation(map_df):
+    mapper = ProtMapper()
+    feature_columns = ["ft_region", "ft_transmem", "organism_name", "annotation_score"]
+    result_df, failed = mapper.get(
+        ids=map_df["uniprot_id"].unique(),
+        from_db='UniProtKB_AC-ID',
+        fields=feature_columns)
+
+    contains_membrane = lambda x: bool(re.search(r"[Mm]embrane",x))
+    result_df["membrane_association"] = result_df["Region"].apply(contains_membrane) | result_df[
+        "Transmembrane"].apply(bool)
+    trans_df = map_df.merge(result_df,left_on="uniprot_id",right_on="From")
+    trans_df = trans_df.sort_values("Annotation",ascending=False)
+    trans_df = trans_df.drop_duplicates(subset="gene_name",keep="first")  # keep the first with the highest annotation
+
+    return trans_df[["gene_name", "membrane_association"]]
+
+
+def join_membrane_annotation(ppi_df, membrane_df):
+    ppi_df = ppi_df.merge(
+        membrane_df,
+        left_on="gene_name_bait",
+        right_on="gene_name",
+        how="left")
+    del ppi_df["gene_name"]
+
+    ppi_df = ppi_df.merge(
+        membrane_df,
+        left_on="gene_name_prey",
+        right_on="gene_name",
+        how="left",
+        suffixes=("_bait", "_prey")
+    )
+    del ppi_df["gene_name"]
+
+    return ppi_df
+
+
+def permute_selection(n_ppi_df, selection_group, target_value, n_permutations=10000, mean=False, permut_fraction=.1):
+    category_order = n_ppi_df[selection_group].unique()
+    permutation_mat = np.zeros(shape=(n_permutations, len(category_order)))
+
+    sample_size = round((1 - permut_fraction) * n_ppi_df.shape[0])
+    for i in range(n_permutations):  # SD on individual proteins not individual PPIs
+        ss_n_ppis_df = n_ppi_df.sample(sample_size)
+        if mean:
+            statistics = ss_n_ppis_df.groupby(selection_group)[target_value].mean()
+        else:
+            statistics = ss_n_ppis_df.groupby(selection_group)[target_value].sum()
+        ordered = statistics.reindex(category_order)
+        permutation_mat[i, :] = ordered
+
+    if mean:
+        summed_df = n_ppi_df.groupby(selection_group,as_index=False)[target_value].mean()
+    else:
+        summed_df = n_ppi_df.groupby(selection_group,as_index=False)[target_value].sum()
+    summed_df[["ci_2.5", "ci_97.5"]] = np.nanpercentile(permutation_mat,[2.5, 97.5],axis=0).transpose()
+    return summed_df
 
 
 rule membrane_delta:
@@ -124,38 +220,118 @@ rule membrane_delta:
         cvcl_0063_bp="work_folder/data/bioplex/CVCL_0063.csv",
         huri="work_folder/data/huri/intact_huri.csv"
     output:
-        localisation_method="work_folder/analysis/localisation/HuRI_vs_Bioplex.csv"
+        total_mean = "work_folder/analysis/membrane/HuRI_vs_Bioplex_total_mean.csv",
+        shared_mean = "work_folder/analysis/membrane/HuRI_vs_Bioplex_shared_mean.csv"
     run:
         bp_df = pd.read_csv(input.cvcl_0063_bp,sep="\t")[["Bait Symbol", "Prey Symbol"]]
         bp_df.columns = ["gene_name_bait", "gene_name_prey"]
         huri_df = pd.read_csv(input.huri,sep="\t")
-        url = "https://rest.uniprot.org/idmapping/run"
-        params = {
-            "from": "Gene_Name",
-            "to": "UniProtKB",
-            "ids": ",".join(gene_names),
-            "taxonId": "9606"  # Homo sapiens taxonomy ID
-        }
-        response = requests.post(url,data=params)
 
+        all_genes = (
+                set(bp_df["gene_name_bait"]) |
+                set(bp_df["gene_name_prey"]) |
+                set(huri_df["gene_name_bait"]) |
+                set(huri_df["gene_name_prey"])
+        )
+        uniprot_id_df = map_membrane_structure(all_genes)
+        membrane_df = get_membrane_annotation(uniprot_id_df)
+        huri_df = join_membrane_annotation(huri_df,membrane_df)
+        bp_df = join_membrane_annotation(bp_df,membrane_df)
 
+        # Mean per dataset
+        huri_bait_degree = huri_df.groupby(
+            ["gene_name_bait", "membrane_association_bait"],as_index=False).size().dropna().rename({
+            "membrane_association_bait": "membrane_association"
+        }, axis=1)
+        huri_bait_degree = permute_selection(
+            huri_bait_degree,"membrane_association",
+            "size", mean=True)
+        huri_bait_degree[["target", "dataset"]] = ["Bait", "HuRI"]
 
+        bp_bait_degree = bp_df.groupby(
+            ["gene_name_bait", "membrane_association_bait"],as_index=False).size().dropna().rename({
+            "membrane_association_bait": "membrane_association"
+        }, axis=1)
+        bp_bait_degree = permute_selection(
+            bp_bait_degree, "membrane_association",
+            "size", mean=True)
+        bp_bait_degree[["target", "dataset"]] = ["Bait", "Bioplex"]
 
+        huri_prey_degree = huri_df.groupby(
+            ["gene_name_prey", "membrane_association_prey"],as_index=False).size().dropna().rename({
+            "membrane_association_prey": "membrane_association"
+        }, axis=1)
+        huri_prey_degree = permute_selection(
+            huri_prey_degree,"membrane_association",
+            "size", mean=True)
+        huri_prey_degree[["target", "dataset"]] = ["Prey", "HuRI"]
 
-def map_membrane_structure(gene_names):
-    url = "https://rest.uniprot.org/idmapping/run"
-    params = {
-        "from": "Gene_Name",
-        "to": "UniProtKB",
-        "ids": ",".join(gene_names),
-        "taxonId": "9606"  # Homo sapiens taxonomy ID
-    }
-    response = requests.post(url,data=params)
-    if not response.ok:
-        raise RequestError("Couldn't submit to uniprot")
+        bp_prey_degree = bp_df.groupby(
+            ["gene_name_prey", "membrane_association_prey"],as_index=False).size().dropna().rename({
+            "membrane_association_prey": "membrane_association"
+        }, axis=1)
+        bp_prey_degree = permute_selection(
+            bp_prey_degree, "membrane_association",
+            "size", mean=True)
+        bp_prey_degree[["target", "dataset"]] = ["Prey", "Bioplex"]
 
-    jobid = response.json()["jobId"]
+        mean_ppis_total = pd.concat(
+            [
+                bp_bait_degree,
+                huri_bait_degree,
+                bp_prey_degree,
+                huri_prey_degree
+            ]
+        )
+        mean_ppis_total.to_csv(output.total_mean, sep="\t", index=False)
 
-    results_response = requests.get(
-        f"https://rest.uniprot.org/idmapping/uniprotkb/results/{jobid}")
+        # Shared bait mean
+        bait_intersect = set(bp_df["gene_name_bait"]) & set(huri_df["gene_name_bait"])
+        bp_df = bp_df[bp_df["gene_name_bait"].isin(bait_intersect)]
+        huri_df = huri_df[huri_df["gene_name_bait"].isin(bait_intersect)]
 
+        huri_bait_degree = huri_df.groupby(
+            ["gene_name_bait", "membrane_association_bait"],as_index=False).size().dropna().rename({
+            "membrane_association_bait": "membrane_association"
+        },axis=1)
+        huri_bait_degree = permute_selection(
+            huri_bait_degree,"membrane_association",
+            "size",mean=True)
+        huri_bait_degree[["target", "dataset"]] = ["Bait", "HuRI"]
+
+        bp_bait_degree = bp_df.groupby(
+            ["gene_name_bait", "membrane_association_bait"],as_index=False).size().dropna().rename({
+            "membrane_association_bait": "membrane_association"
+        },axis=1)
+        bp_bait_degree = permute_selection(
+            bp_bait_degree,"membrane_association",
+            "size",mean=True)
+        bp_bait_degree[["target", "dataset"]] = ["Bait", "Bioplex"]
+
+        huri_prey_degree = huri_df.groupby(
+            ["gene_name_prey", "membrane_association_prey"],as_index=False).size().dropna().rename({
+            "membrane_association_prey": "membrane_association"
+        },axis=1)
+        huri_prey_degree = permute_selection(
+            huri_prey_degree,"membrane_association",
+            "size",mean=True)
+        huri_prey_degree[["target", "dataset"]] = ["Prey", "HuRI"]
+
+        bp_prey_degree = bp_df.groupby(
+            ["gene_name_prey", "membrane_association_prey"],as_index=False).size().dropna().rename({
+            "membrane_association_prey": "membrane_association"
+        },axis=1)
+        bp_prey_degree = permute_selection(
+            bp_prey_degree,"membrane_association",
+            "size",mean=True)
+        bp_prey_degree[["target", "dataset"]] = ["Prey", "Bioplex"]
+
+        mean_ppis_shared = pd.concat(
+            [
+                bp_bait_degree,
+                huri_bait_degree,
+                bp_prey_degree,
+                huri_prey_degree
+            ]
+        )
+        mean_ppis_shared.to_csv(output.shared_mean, sep="\t", index=False)
