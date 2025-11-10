@@ -106,9 +106,21 @@ rule plot_localisation_huri_bioplex:
     params:
         script_location = "src/Plotting/Method/plot_localisation_huri_bioplex.R"
     input:
-        localisation_method = "work_folder/analysis/localisation/HuRI_vs_Bioplex.csv"
+        localisation_method = f"work_folder/{pn}/analysis/localisation/HuRI_vs_Bioplex.csv"
     output:
-        png = "work_folder/{pn}/plots/localisation/HuRI_bioplex.png"
+        png = f"work_folder/{pn}/plots/localisation/HuRI_bioplex.png"
+    shell:
+        """
+        Rscript {params.script_location} {input.localisation_method} {output.png}
+        """
+
+rule plot_membrane_huri_bioplex:
+    params:
+        script_location = "src/Plotting/Membrane/plot_membrane_huri_bioplex.R"
+    input:
+        localisation_method = f"work_folder/{pn}/analysis/membrane/HuRI_vs_Bioplex_total_mean.csv"
+    output:
+        png = f"work_folder/{pn}/plots/membrane/HuRI_bioplex.png"
     shell:
         """
         Rscript {params.script_location} {input.localisation_method} {output.png}

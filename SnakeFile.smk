@@ -12,7 +12,6 @@ include: "src/Analysis/CellLine/cell_line_analysis.smk"
 include: "src/Analysis/DetectionMethod/detection_method.smk"
 include: "src/Analysis/Annotation/CoLocalisation.smk"
 include: "src/Analysis/ExperimentalNegatome/experimental_negatome.smk"
-include: "src/Plotting/get_plots.smk"
 include: "src/Analysis/AbundanceAwareDetection/MCMC_abundance.smk"
 include: "src/Analysis/Enrichment/GetDegree.smk"
 include: "src/Analysis/Enrichment/EnrichmentGODO.smk"
@@ -20,6 +19,8 @@ include: "src/Analysis/Annotation/OverlapGO.smk"
 include: "src/Analysis/Annotation/OverlapDO.smk"
 include: "src/Analysis/Annotation/HydrophobicitySimilarity.smk"
 include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
+include: "src/Analysis/CompareLocalisationMethod/MethodLocalisation.smk"
+include: "src/Plotting/get_plots.smk"
 
 wildcard_constraints:
     cell_line="_[_a-zA-Z]+",
@@ -93,7 +94,10 @@ expected_output = "work_folder/plots/degree/GO_enrichment.png"
 
 rule all:
     input:
-        expected_output,
-        "work_folder/plots/degree/GO_enrichment.png"
+        # expected_output,
+        # "work_folder/plots/degree/GO_enrichment.png"
+        f"work_folder/{pn}/plots/localisation/HuRI_bioplex.png",
+        f"work_folder/{pn}/plots/membrane/HuRI_bioplex.png"
+
 
 

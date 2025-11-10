@@ -12,8 +12,9 @@ across_zero <- function(ci_lower, ci_upper) {
 }
 
 local_df$contain_zero <- across_zero(local_df$ci_2.5, local_df$ci_97.5)
-
-g = ggplot(local_df[!local_df$contain_zero,],
+keep_localisation <- unique(local_df[!local_df$contain_zero, "localisation"])
+local_df$keep <- local_df$localisation %in% keep_localisation
+g = ggplot(local_df[local_df$keep,],
   aes(y=reorder(localisation, delta),
       x=delta,
       fill=role
@@ -29,14 +30,14 @@ g = ggplot(local_df[!local_df$contain_zero,],
   theme_bw() +
   labs(
     fill="Experimental role",
-    x = "Summed PPIs: HuRI - Bioplex",
+    x = "PPI localisation fraction: HuRI - Bioplex",
     y="") +
   theme(
     legend.position = "bottom")
   
 size = 4
 ggsave(
-  output_png,
+  png,
   g,
   width = size*1.6,
   height = size,

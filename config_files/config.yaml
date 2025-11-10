@@ -16,7 +16,7 @@ batch_per_write: 2000
 mcmc_samples: 4000
 mcmc_burin: 500
 
-localisation_file: "data/localisation/subcellular_location.tsv
+localisation_file: "data/localisation/subcellular_location.tsv"
 
 selected_cell_lines:
   - "CVCL_0030"
