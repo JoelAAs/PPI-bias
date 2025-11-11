@@ -1,3 +1,4 @@
+from openpyxl.styles.builtins import output
 from scipy.stats import beta
 
 checkpoint all_methods_filter_out:
@@ -98,5 +99,5 @@ rule get_hcl_degree:
         neg_gt5 = f"work_folder/{pn}/degree/{{method}}_gt_5.csv"
     run:
         df = pd.read_csv(input.ppis, sep="\t")
-        t_threshold_degree(df, 0.1).to_csv(input.ppis, sep="\t", index=False)
-        t_threshold_degree(df,0.1, greater=False).to_csv(input.neg_gt5, sep="\t", index=False)
+        t_threshold_degree(df, 0.1).to_csv(output.pos_01, sep="\t", index=False)
+        t_threshold_degree(df,0.1, greater=False).to_csv(output.neg_gt5, sep="\t", index=False)
