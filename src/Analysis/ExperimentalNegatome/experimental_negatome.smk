@@ -1,3 +1,4 @@
+from openpyxl.styles.builtins import input
 from scipy.stats import beta
 
 checkpoint all_methods_filter_out:
@@ -69,3 +70,34 @@ rule differential_detected_flat_negatome:
             df_diff,
             on="gene_name_prey"
         ).to_csv(output.cl_hci,sep="\t")
+
+def threshold_degree(df, t, greater=True, n = 5):
+    if greater:
+        df_t = df[df["lower_bound_pod"] > t]
+    else:
+        df_t = df[(df["n_observed"] == 0) & (df["n_tested"] >= n)]
+
+    df_bait_degree = df_t.groupby("gene_name_bait",as_index=False).size()
+    df_bait_degree = df_bait_degree.rename({
+        "gene_name_bait": "gene_name",
+        "size": "degree_bait"
+    },axis=1)
+    df_prey_degree = df_t.groupby("gene_name_prey",as_index=False).size()
+    df_prey_degree = df_prey_degree.rename({
+        "gene_name_prey": "gene_name",
+        "size": "degree_prey"
+    },axis=1)
+    t_degree = df_bait_degree.merge(df_prey_degree,on="gene_name",how="outer").fillna(0)
+
+    return t_degree
+
+rule get_hcl_degree:
+    input:
+        ppis = f"work_folder{pn}/analysis/POD/POD_{{method}}.csv"
+    output:
+        pos_01 = "fwork_folder/{pn}/degree/{{method}}_t0.1.csv",
+        neg_gt5 = "fwork_folder/{pn}/degree/{{method}}_gt_5.csv"
+    run:
+        df = pd.read_csv(input.ppis, sep="\t")
+        threshold_degree(df, 0.1).to_csv(input.ppis, sep="\t", index=False)
+        threshold_degree(df,0.1, greater=False).to_csv(input.neg_gt5, sep="\t", index=False)
