@@ -1,4 +1,3 @@
-from openpyxl.styles.builtins import input
 from scipy.stats import beta
 
 checkpoint all_methods_filter_out:
@@ -95,8 +94,8 @@ rule get_hcl_degree:
     input:
         ppis = f"work_folder{pn}/analysis/POD/POD_{{method}}.csv"
     output:
-        pos_01 = "fwork_folder/{pn}/degree/{{method}}_t0.1.csv",
-        neg_gt5 = "fwork_folder/{pn}/degree/{{method}}_gt_5.csv"
+        pos_01 = f"work_folder/{pn}/degree/{{method}}_t0.1.csv",
+        neg_gt5 = f"work_folder/{pn}/degree/{{method}}_gt_5.csv"
     run:
         df = pd.read_csv(input.ppis, sep="\t")
         threshold_degree(df, 0.1).to_csv(input.ppis, sep="\t", index=False)
