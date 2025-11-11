@@ -100,9 +100,9 @@ def get_pair_jaccard(gene1, gene2, gene_idx_dicts):
 
 rule get_jaccard_go_bait_prey:
     input:
-        pod_df=f"work_folder/{pn}/analysis/POD/POD_{{data}}.csv",
+        pod_df=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv",
     output:
-        go_jaccard=f"work_folder/{pn}/analysis/GO/POD_{{data}}_jaccard.csv"
+        go_jaccard=f"work_folder{pn}/analysis/GO/POD_{{data}}_jaccard.csv"
     run:
         go_terms = ["bp", "cc", "mf"]
         go_cols = (
@@ -125,10 +125,10 @@ rule get_jaccard_go_bait_prey:
 
 rule get_go_accumulation:
     input:
-        go_jaccard=f"work_folder/{pn}/analysis/GO/POD_{{data}}_jaccard.csv"
+        go_jaccard=f"work_folder{pn}/analysis/GO/POD_{{data}}_jaccard.csv"
     output:
-        jaccard_greater=f"work_folder/{pn}/analysis/GO/cumulative/POD_{{data}}_jaccard_greater.csv",
-        jaccard_lesser=f"work_folder/{pn}/analysis/GO/cumulative/POD_{{data}}_jaccard_lesser.csv"
+        jaccard_greater=f"work_folder{pn}/analysis/GO/cumulative/POD_{{data}}_jaccard_greater.csv",
+        jaccard_lesser=f"work_folder{pn}/analysis/GO/cumulative/POD_{{data}}_jaccard_lesser.csv"
     run:
         go_df = pd.read_csv(
             input.go_jaccard,sep="\t"
@@ -165,7 +165,7 @@ rule abundance_go_plot:
     input:
         norm_log="data/normalised_log_ra.csv"
     output:
-        goterms_abundance=f"work_folder/{pn}/analysis/GO/ra_pod_vs_go_terms.csv"
+        goterms_abundance=f"work_folder{pn}/analysis/GO/ra_pod_vs_go_terms.csv"
     run:
         abundance_df = pd.read_csv(input.norm_log,sep="\t")
         del abundance_df["samples"]
@@ -197,9 +197,9 @@ rule abundance_go_plot:
 
 rule bait_usage:
     input:
-        bait_prey=f"work_folder/{pn}/formated/bait_prey_publications.csv"
+        bait_prey=f"work_folder{pn}/formated/bait_prey_publications.csv"
     output:
-        goterms_studies=f"work_folder/{pn}/analysis/GO/n_studies_go_terms.csv"
+        goterms_studies=f"work_folder{pn}/analysis/GO/n_studies_go_terms.csv"
     run:
         df = pd.read_csv(input.bait_prey,sep="\t")
         df_bait = df[

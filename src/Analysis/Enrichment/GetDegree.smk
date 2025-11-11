@@ -77,7 +77,7 @@ rule get_degree_dist_hippie:
     input:
         hippie="data/HIPPIE-current.mitab.txt"
     output:
-            degree=f"work_folder/{pn}/degree/full_hippie.csv"
+            degree=f"work_folder{pn}/degree/full_hippie.csv"
     run:
         df_hippie = pd.read_csv(input.hippie,sep="\t")
         gene_cols = ["Gene Name Interactor A", "Gene Name Interactor B"]
@@ -100,9 +100,9 @@ rule flat_degree_dist:
     input:
         flat_probability=f"work_folder/analysis/POD/POD_flat.csv"
     output:
-        summed_probability=f"work_folder/{pn}/degree/flat_summed.csv",
-        threshold_1=f"work_folder/{pn}/degree/flat_min.1.csv",
-        threshold_2=f"work_folder/{pn}/degree/flat_min.2.csv"
+        summed_probability=f"work_folder{pn}/degree/flat_summed.csv",
+        threshold_1=f"work_folder{pn}/degree/flat_min.1.csv",
+        threshold_2=f"work_folder{pn}/degree/flat_min.2.csv"
     run:
         df = pd.read_csv(input.flat_probability,sep="\t")
 

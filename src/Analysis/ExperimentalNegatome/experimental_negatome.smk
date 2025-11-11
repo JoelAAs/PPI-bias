@@ -8,9 +8,9 @@ checkpoint all_methods_filter_out:
         pseudo_n=config["pseudo_n"],
         id_pattern= config["id_pattern"]
     input:
-        method_aggregate=f"work_folder/{pn}/inferred_search_space/aggregated/methods/{{data}}_experimental_wise.csv"
+        method_aggregate=f"work_folder{pn}/inferred_search_space/aggregated/methods/{{data}}_experimental_wise.csv"
     output:
-        full_detection=f"work_folder/{pn}/analysis/POD/POD_{{data}}.csv"
+        full_detection=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
     run:
         inferred_negative_df = pd.read_csv(
             input.method_aggregate,
@@ -94,8 +94,8 @@ rule get_hcl_degree:
     input:
         ppis = f"work_folder{pn}/analysis/POD/POD_{{method}}.csv"
     output:
-        pos_01 = f"work_folder/{pn}/degree/{{method}}_t0.1.csv",
-        neg_gt5 = f"work_folder/{pn}/degree/{{method}}_gt_5.csv"
+        pos_01 = f"work_folder{pn}/degree/{{method}}_t0.1.csv",
+        neg_gt5 = f"work_folder{pn}/degree/{{method}}_gt_5.csv"
     run:
         df = pd.read_csv(input.ppis, sep="\t")
         t_threshold_degree(df, 0.1).to_csv(output.pos_01, sep="\t", index=False)

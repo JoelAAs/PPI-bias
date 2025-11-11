@@ -7,8 +7,8 @@ from src.Analysis.Annotation.localisation_support import add_localisation
 
 rule get_bioplex:
     output:
-        cvcl_0291_bp=f"work_folder/{pn}/data/bioplex/CVCL_0291.csv",
-        cvcl_0063_bp=f"work_folder/{pn}/data/bioplex/CVCL_0063.csv"
+        cvcl_0291_bp=f"work_folder{pn}/data/bioplex/CVCL_0291.csv",
+        cvcl_0063_bp=f"work_folder{pn}/data/bioplex/CVCL_0063.csv"
     shell:
         """
         wget https://bioplex.hms.harvard.edu/data/BioPlex_3.0_293T_DirectedEdges.tsv -O {output.cvcl_0063_bp}
@@ -20,9 +20,9 @@ rule get_huri:
     must be annotated on gene name as bioplex is reported on gene name 
     """
     input:
-        intact=f"work_folder/{pn}/formated/bait_prey_publications.csv"
+        intact=f"work_folder{pn}/formated/bait_prey_publications.csv"
     output:
-        huri=f"work_folder/{pn}/data/huri/intact_huri.csv"
+        huri=f"work_folder{pn}/data/huri/intact_huri.csv"
     run:
         intact = pd.read_csv(input.intact,sep="\t")
         huri_df = intact[intact["pubmed_id"] == 32296183]
@@ -31,11 +31,11 @@ rule get_huri:
 rule localisation_delta:
     # TODO: reformat
     input:
-        cvcl_0063_bp=f"work_folder/{pn}/data/bioplex/CVCL_0063.csv",
-        huri=f"work_folder/{pn}/data/huri/intact_huri.csv",
-        localisation_csv=f"work_folder/{pn}/analysis/localisation/gene_to_localisation.csv"
+        cvcl_0063_bp=f"work_folder{pn}/data/bioplex/CVCL_0063.csv",
+        huri=f"work_folder{pn}/data/huri/intact_huri.csv",
+        localisation_csv=f"work_folder{pn}/analysis/localisation/gene_to_localisation.csv"
     output:
-        localisation_method=f"work_folder/{pn}/analysis/localisation/HuRI_vs_Bioplex.csv"
+        localisation_method=f"work_folder{pn}/analysis/localisation/HuRI_vs_Bioplex.csv"
     run:
         n_permutations = 100000
 
@@ -224,7 +224,7 @@ rule membrane_delta:
         cvcl_0063_bp="work_folder/data/bioplex/CVCL_0063.csv",
         huri="work_folder/data/huri/intact_huri.csv"
     output:
-        membrane_ppis = f"work_folder/{pn}/analysis/membrane/HuRI_vs_Bioplex_total_mean.csv"
+        membrane_ppis = f"work_folder{pn}/analysis/membrane/HuRI_vs_Bioplex_total_mean.csv"
     run:
         bp_df = pd.read_csv(input.cvcl_0063_bp,sep="\t")[["Bait Symbol", "Prey Symbol"]]
         bp_df.columns = ["gene_name_bait", "gene_name_prey"]

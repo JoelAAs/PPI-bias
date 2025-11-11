@@ -16,7 +16,7 @@ rule get_gene_name_uniprot:
     input:
         miTab = "work_folder/data/intact/human.txt"
     output:
-        uniprot = f"work_folder/{pn}/intact/uniprot_to_gene_name.csv"
+        uniprot = f"work_folder{pn}/intact/uniprot_to_gene_name.csv"
     run:
         get_gene_names(input.miTab, output.uniprot)
 
@@ -27,9 +27,9 @@ rule format_miTab:
     """
     input:
         miTab = "work_folder/data/intact/human.txt",
-        gene_names = f"work_folder/{pn}/intact/uniprot_to_gene_name.csv"
+        gene_names = f"work_folder{pn}/intact/uniprot_to_gene_name.csv"
     output:
-        formated = f"work_folder/{pn}/formated/bait_prey_publications.csv"
+        formated = f"work_folder{pn}/formated/bait_prey_publications.csv"
     run:
         mitab_df    = filter_mitab(input.miTab)
         bait_prey_df = reform_to_bait_prey(mitab_df)

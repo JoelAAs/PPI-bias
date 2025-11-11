@@ -5,6 +5,8 @@ from scipy.stats import fisher_exact, false_discovery_control
 from src.Analysis.aggregate_support import aggregate_inferred_experiments
 
 pn = config["project_name"]
+if pn:
+    pn = "/"+ pn
 
 include: "src/FormatFiltering/FormatingFiltering.smk"
 include: "src/ExperimentalSearchSpace/experimental_search_space.smk"

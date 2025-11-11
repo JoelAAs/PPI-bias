@@ -71,7 +71,7 @@ checkpoint infer_experimental_search_space:
     input:
         bait_prey_file = lambda wc: get_input_ppi_file(wc.cell_line)
     output:
-        directory(f"work_folder/{pn}/inferred_search_space/experimental{{cell_line}}")
+        directory(f"work_folder{pn}/inferred_search_space/experimental{{cell_line}}")
     run:
         os.makedirs(output[0], exist_ok=True)
         bait_prey_df = pd.read_csv(input.bait_prey_file, sep="\t")

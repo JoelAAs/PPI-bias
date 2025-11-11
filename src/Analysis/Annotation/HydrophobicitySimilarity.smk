@@ -6,11 +6,11 @@ rule get_hyrdophobicity_delta:
     Join TASA and THSA from NetSurfP2.0 to POD data
     """
     input:
-        uniprot_gene=f"work_folder/{pn}/intact/uniprot_to_gene_name.csv",
+        uniprot_gene=f"work_folder{pn}/intact/uniprot_to_gene_name.csv",
         rhsa_pdb="data/hydrophobicity/NSP2_complete.tab",
-        pod_data=f"work_folder/{pn}/analysis/POD/POD_{{data}}.csv"
+        pod_data=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
     output:
-        hydro_annotated=f"work_folder/{pn}/analysis/hydrophobicity/POD_{{data}}_netsurfp2.csv"
+        hydro_annotated=f"work_folder{pn}/analysis/hydrophobicity/POD_{{data}}_netsurfp2.csv"
     run:
         ## NetSurfP2.0
         uniprot_2_gene = pd.read_csv(input.uniprot_gene,sep="\t")
@@ -41,10 +41,10 @@ rule get_hydro_accumulation:
     Get sliding average of hydrophobicity given POD 
     """
     input:
-        hydro_pod_data=f"work_folder/{pn}/analysis/hydrophobicity/POD_{{data}}_netsurfp2.csv"
+        hydro_pod_data=f"work_folder{pn}/analysis/hydrophobicity/POD_{{data}}_netsurfp2.csv"
     output:
-        hydro_lesser=f"work_folder/{pn}/analysis/hydrophobicity/cumulative/POD_{{data}}_netsurfp2_lesser.csv",
-        hydro_greater=f"work_folder/{pn}/analysis/hydrophobicity/cumulative/POD_{{data}}_netsurfp2_greater.csv"
+        hydro_lesser=f"work_folder{pn}/analysis/hydrophobicity/cumulative/POD_{{data}}_netsurfp2_lesser.csv",
+        hydro_greater=f"work_folder{pn}/analysis/hydrophobicity/cumulative/POD_{{data}}_netsurfp2_greater.csv"
     run:
         measurement_columns = [
             "thsa_netsurfp2_delta",
