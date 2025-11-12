@@ -6,6 +6,8 @@ from src.Analysis.aggregate_support import aggregate_inferred_experiments
 
 
 pn = config["project_name"]
+if pn:
+    pn = "/"+ pn
 
 include: "src/FormatFiltering/FormatingFiltering.smk"
 include: "src/ExperimentalSearchSpace/experimental_search_space.smk"
@@ -37,7 +39,7 @@ datasets = [
 ]
 
 pods = [
-    f"work_folder/{pn}/analysis/POD/POD_{data}.csv" for data in datasets
+    f"work_folder{pn}/analysis/POD/POD_{data}.csv" for data in datasets
 ]
 
 expected_output = pods
