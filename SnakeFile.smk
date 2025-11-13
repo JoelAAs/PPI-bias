@@ -105,7 +105,7 @@ wildcard_constraints:
 rule all:
     input:
         expected_output,
-        "work_folder{pn}/plots/degree/GO_enrichment.png",
+        f"work_folder{pn}/plots/degree/GO_enrichment.png",
         f"work_folder{pn}/plots/localisation/HuRI_bioplex.png",
         f"work_folder{pn}/plots/membrane/HuRI_bioplex.png"
 
