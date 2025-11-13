@@ -74,7 +74,6 @@ expected_output = pods
 expected_output += colocalisation + go_jaccards + hydro_delta
 expected_output += colocalisation_plot + go_jaccards_plot + hydro_delta_plot +  do_jaccards_plot
 expected_output += negatome_compare + matched_colocalisation_plot
-expected_output += ["work_folder/plots/degree/GO_enrichment.png"]
 
 
 ## Sub workflows
