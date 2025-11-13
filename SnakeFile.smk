@@ -35,56 +35,55 @@ datasets = [
     "flat",
     "ms",
     "y2h",
-    #"abundance_mcmc",
     "MI-1314"
 ]
 pods = [
-    f"work_folder/analysis/POD/POD_{data}.csv" for data in datasets
+    f"work_folder{pn}/analysis/POD/POD_{data}.csv" for data in datasets
 ]
 
 ### annotations
 colocalisation = [
-    f"work_folder/analysis/localisation/cumulative/POD_{data}_localisation_lesser.csv"
+    f"work_folder{pn}/analysis/localisation/cumulative/POD_{data}_localisation_lesser.csv"
     for data in datasets
 ]
 go_jaccards = [
-    f"work_folder/analysis/GO/cumulative/POD_{data}_jaccard_lesser.csv"
+    f"work_folder{pn}/analysis/GO/cumulative/POD_{data}_jaccard_lesser.csv"
     for data in datasets
 ]
 
 hydro_delta = [
-    f"work_folder/analysis/hydrophobicity/cumulative/POD_{data}_netsurfp2_lesser.csv"
+    f"work_folder{pn}/analysis/hydrophobicity/cumulative/POD_{data}_netsurfp2_lesser.csv"
     for data in datasets
 ]
 ### Plotting
 colocalisation_plot = [
-    f"work_folder/plots/AccumulationPOD/colocalisation_{data}.png"
+    f"work_folder{pn}/plots/AccumulationPOD/colocalisation_{data}.png"
     for data in datasets
 ]
 
 matched_colocalisation_plot = [
-    f"work_folder/plots/AccumulationPOD/matched_colocalisation_{data}.png"
+    f"work_folder{pn}/plots/AccumulationPOD/matched_colocalisation_{data}.png"
     for data in datasets if data != "abundance_mcmc"
 ]
 
 go_jaccards_plot = [
-    f"work_folder/plots/AccumulationPOD/go_{data}_jaccard.png"
+    f"work_folder{pn}/plots/AccumulationPOD/go_{data}_jaccard.png"
     for data in datasets
 ]
 
 do_jaccards_plot = [
-    f"work_folder/plots/AccumulationPOD/do_{data}_jaccard.png"
+    f"work_folder{pn}/plots/AccumulationPOD/do_{data}_jaccard.png"
     for data in datasets
 ]
 
 hydro_delta_plot = [
-    f"work_folder/plots/AccumulationPOD/hydrophobicity_{data}.png"
+    f"work_folder{pn}/plots/AccumulationPOD/hydrophobicity_{data}.png"
     for data in datasets
 ]
 
 ### Negatome compare
 negatome_compare = [
-    f"work_folder/analysis/neg2compare/{data}.txt"
+    f"work_folder{pn}/analysis/neg2compare/{data}.txt"
     for data in datasets
 ]
 
@@ -93,14 +92,14 @@ expected_output = pods
 expected_output += colocalisation + go_jaccards + hydro_delta
 expected_output += colocalisation_plot + go_jaccards_plot + hydro_delta_plot +  do_jaccards_plot
 expected_output += negatome_compare + matched_colocalisation_plot
-expected_output = "work_folder/plots/degree/GO_enrichment.png"
+expected_output += ["work_folder/plots/degree/GO_enrichment.png"]
 
 rule all:
     input:
-        # expected_output,
-        # "work_folder/plots/degree/GO_enrichment.png"
-        f"work_folder/{pn}/plots/localisation/HuRI_bioplex.png",
-        f"work_folder/{pn}/plots/membrane/HuRI_bioplex.png"
+        expected_output,
+        "work_folder{pn}/plots/degree/GO_enrichment.png",
+        f"work_folder{pn}/plots/localisation/HuRI_bioplex.png",
+        f"work_folder{pn}/plots/membrane/HuRI_bioplex.png"
 
 
 

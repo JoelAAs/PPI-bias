@@ -1,5 +1,5 @@
-project_name: ""
-formated_ppi: "work_folder/formated/bait_prey_publications.csv"
+project_name: "per_gene"
+formated_ppi: "work_folder/per_gene/formated/bait_prey_publications.csv"
 cell_line_ppis: "/home/joel/Projects/Cl-annotated-ppis/work_folder/CL_annotated_bait_prey.csv"
 
 remove_single_publications: True
@@ -28,7 +28,7 @@ ms:
   - "MI-0007"
   - "MI-0096"
   - "MI-0676"
-  - "MI-1314"
+  #- "MI-1314"
 
 y2h:
   - "MI-0397" # (two hybrid array) usually involves a mating strategy

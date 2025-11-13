@@ -25,5 +25,6 @@ rule join_counts:
         all_dfs = [pd.read_csv(single_count, sep="\t") for single_count in input.counts]
         base_df = all_dfs[0]
         for single_df in all_dfs[1:]:
-            base_df = base_df.merge(single_df, by=["n_tested",  "n_observed"], how="full").fillna(0)
+            base_df = base_df.merge(single_df, on=["n_tested",  "n_observed"], how="outer").fillna(0)
+        base_df.to_csv(output.all_counts, sep="\t", index=False)
 
