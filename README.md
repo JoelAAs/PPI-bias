@@ -71,7 +71,7 @@ Make sure to have miniconda or anaconda installed then:
 conda env create -f envs/snakemake.yml
 conda env create -f envs/do_enrichment.yml 
 conda activate do_enrichment
-Rscript envs/serup_do_enrichment.R
+Rscript envs/setup_do_enrichment.R
 ```
 
 ## Run
