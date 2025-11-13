@@ -221,8 +221,8 @@ def sum_and_permute(ppi_df, type, dataset, mean):
 
 rule membrane_delta:
     input:
-        cvcl_0063_bp="work_folder/data/bioplex/CVCL_0063.csv",
-        huri="work_folder/data/huri/intact_huri.csv"
+        cvcl_0063_bp=f"work_folder{pn}/data/bioplex/CVCL_0063.csv",
+        huri=f"work_folder{pn}/data/huri/intact_huri.csv"
     output:
         membrane_ppis = f"work_folder{pn}/analysis/membrane/HuRI_vs_Bioplex_total_mean.csv"
     run:
