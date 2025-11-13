@@ -17,7 +17,7 @@ rule count_tested_pairs:
 
 rule join_counts:
     input:
-        counts = expand(f"work_folder{pn}/analysis/POD/summary/POD_{data}.csv", data = datasets)
+        counts = expand(f"work_folder{pn}/analysis/POD/summary/POD_{{data}}.csv", data = datasets)
     output:
         all_counts = f"work_folder{pn}/analysis/POD/summary/all.csv"
     run:
@@ -27,4 +27,3 @@ rule join_counts:
         for single_df in all_dfs[1:]:
             base_df = base_df.merge(single_df, by=["n_tested",  "n_observed"], how="full").fillna(0)
 
-        
