@@ -98,7 +98,7 @@ rule flat_degree_dist:
     Get degree distribution for flat POD
     """
     input:
-        flat_probability=f"work_folder/analysis/POD/POD_flat.csv"
+        flat_probability=f"work_folder{pn}/analysis/POD/POD_flat.csv"
     output:
         summed_probability=f"work_folder{pn}/degree/flat_summed.csv",
         threshold_1=f"work_folder{pn}/degree/flat_min.1.csv",
