@@ -3,11 +3,21 @@ import pandas as pd
 from collections import defaultdict
 from scipy.stats import fisher_exact, false_discovery_control
 from src.Analysis.aggregate_support import aggregate_inferred_experiments
+
+
 #### Config
 pn = config["project_name"]
 if pn:
     pn = "/"+ pn
 
+
+datasets = [
+    "flat",
+    "ms",
+    "y2h",
+    #"abundance_mcmc",
+    "MI-1314"
+]
 
 pods = [
     f"work_folder{pn}/analysis/POD/POD_{data}.csv" for data in datasets
