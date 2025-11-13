@@ -22,6 +22,7 @@ include: "src/Analysis/Annotation/OverlapDO.smk"
 include: "src/Analysis/Annotation/HydrophobicitySimilarity.smk"
 include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
 include: "src/Analysis/CompareLocalisationMethod/MethodLocalisation.smk"
+include: "src/ExperimentalSearchSpace/CountProteinPairs.smk"
 include: "src/Plotting/get_plots.smk"
 
 wildcard_constraints:
