@@ -37,7 +37,7 @@ g = ggplot(local_df[local_df$keep,],
   
 size = 4
 ggsave(
-  png,
+  output_png,
   g,
   width = size*1.6,
   height = size,
