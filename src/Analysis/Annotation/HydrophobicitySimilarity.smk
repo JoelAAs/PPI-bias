@@ -45,7 +45,7 @@ rule get_hydro_accumulation:
     """
     input:
         pod_data=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv",
-        hydro_pod_data=f"work_folder{pn}/analysis/hydrophobicity/POD_{{data}}_netsurfp2.csv"
+        hydro_pod_data=f"work_folder{pn}/analysis/hydrophobicity/pairs_{{data}}_netsurfp2.csv"
     output:
         hydro_lesser=f"work_folder{pn}/analysis/hydrophobicity/cumulative/POD_{{data}}_netsurfp2_lesser.csv",
         hydro_greater=f"work_folder{pn}/analysis/hydrophobicity/cumulative/POD_{{data}}_netsurfp2_greater.csv"
