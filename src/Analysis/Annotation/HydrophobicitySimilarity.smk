@@ -10,7 +10,7 @@ rule get_hyrdophobicity_delta:
         rhsa_pdb="data/hydrophobicity/NSP2_complete.tab",
         pod_data=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
     output:
-        hydro_annotated=f"work_folder{pn}/analysis/hydrophobicity/POD_{{data}}_netsurfp2.csv"
+        hydro_annotated=f"work_folder{pn}/analysis/hydrophobicity/pairs_{{data}}_netsurfp2.csv"
     run:
         ## NetSurfP2.0
         uniprot_2_gene = pd.read_csv(input.uniprot_gene,sep="\t")
@@ -23,17 +23,20 @@ rule get_hyrdophobicity_delta:
         hydro_cols = ["thsa_netsurfp2", "tasa_netsurfp2", "rhsa_netsurfp2"]
         full = full[["gn"] + hydro_cols]
 
-        abundance_df = pd.read_csv(input.pod_data,sep="\t")
-        abundance_df = abundance_df.merge(
+        pod_df = pd.read_csv(input.pod_data,sep="\t")
+        input_columns = pod_df.columns.values
+        pod_df = pod_df.merge(
             full,left_on="gene_name_bait",right_on="gn"
         ).merge(
             full,left_on="gene_name_prey",right_on="gn",suffixes=["_bait", "_prey"]
         )
-        abundance_df = abundance_df.drop(["gn_bait", "gn_prey"],axis=1)
+        pod_df = pod_df.drop(["gn_bait", "gn_prey"],axis=1)
         for c in hydro_cols:
-            abundance_df[f"{c}_delta"] = abs(abundance_df[f"{c}_bait"] - abundance_df[f"{c}_prey"])
+            pod_df[f"{c}_delta"] = abs(pod_df[f"{c}_bait"] - pod_df[f"{c}_prey"])
 
-        abundance_df.to_csv(output.hydro_annotated,sep="\t",index=False)
+        all_columns = pod_df.columns.values
+        selected_columns = [c for c in all_columns if c not in input_columns]
+        pod_df[["pair_id"] + selected_columns].to_csv(output.hydro_annotated,sep="\t",index=False)
 
 
 rule get_hydro_accumulation:
@@ -41,6 +44,7 @@ rule get_hydro_accumulation:
     Get sliding average of hydrophobicity given POD 
     """
     input:
+        pod_data=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv",
         hydro_pod_data=f"work_folder{pn}/analysis/hydrophobicity/POD_{{data}}_netsurfp2.csv"
     output:
         hydro_lesser=f"work_folder{pn}/analysis/hydrophobicity/cumulative/POD_{{data}}_netsurfp2_lesser.csv",
@@ -52,9 +56,14 @@ rule get_hydro_accumulation:
             "rhsa_netsurfp2_delta"
         ]
 
-        hydro_pod_df = pd.read_csv(
+        hydro_data = pd.read_csv(
             input.hydro_pod_data,sep="\t"
         )
+        pod_df = pd.read_csv(
+            input.pod_data,sep="\t"
+        )
+
+        hydro_pod_df = pod_df.merge(hydro_data, on="pair_id")
 
         get_cumulative_sum(
             hydro_pod_df,

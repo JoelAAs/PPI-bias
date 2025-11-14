@@ -48,7 +48,7 @@ rule format_localisation_data:
         df_unformated["Main location"] = df_unformated["Main location"].str.split(';')
         df_unformated = df_unformated[["Gene name", "Main location"]].explode("Main location")
         df_unformated.columns = ["gene_name", "localisation"]
-        df_unformated.to_csv(output.formated_localisation, sep="\t", index=None)
+        df_unformated.to_csv(output.formated_localisation,sep="\t",index=None)
 
 
 rule method_comparison:
@@ -59,7 +59,7 @@ rule method_comparison:
     params:
         min_localisation_genes=100
     input:
-        localisation_csv = f"work_folder{pn}/analysis/localisation/gene_to_localisation.csv",
+        localisation_csv=f"work_folder{pn}/analysis/localisation/gene_to_localisation.csv",
         multi_method_ms=f"work_folder{pn}/inferred_search_space/aggregated/multi_methods/ms_experimental_wise.csv",
         multi_method_y2h=f"work_folder{pn}/inferred_search_space/aggregated/multi_methods/y2h_experimental_wise.csv"
     output:
@@ -132,7 +132,7 @@ rule accumulation_colocalisation:
     This is not 100% correct as we both remove bait-bait interactions and that each experiments assumed prey pool is different
     """
     input:
-        localisation_csv = f"work_folder{pn}/analysis/localisation/gene_to_localisation.csv",
+        localisation_csv=f"work_folder{pn}/analysis/localisation/gene_to_localisation.csv",
         pod_data=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
     output:
         localisation_annotated=f"work_folder{pn}/analysis/localisation/POD_{{data}}_localisation.csv",
@@ -172,7 +172,7 @@ def get_expected_localisations(wc):
     # TODO: HARDCODED and ugly fix, later
     _ = checkpoints.all_methods_filter_out.get(data=wc.data).output[0]
     pod_df = pd.read_csv(
-        f"work_folder{pn}/analysis/POD/POD_{wc.data}.csv", sep = "\t")
+        f"work_folder{pn}/analysis/POD/POD_{wc.data}.csv",sep="\t")
     pids = pod_df["pubmed_id"].unique()
     pids = [p.split(";") for p in pids]
     pids = [item for studies in pids for item in studies]
@@ -185,7 +185,7 @@ def get_expected_localisations(wc):
 
 rule get_per_study_localisation:
     input:
-        localisation_csv = f"work_folder{pn}/analysis/localisation/gene_to_localisation.csv",
+        localisation_csv=f"work_folder{pn}/analysis/localisation/gene_to_localisation.csv",
         study=f"work_folder{pn}/inferred_search_space/experimental_method/{{pid}}_{{method}}.csv"
     output:
         probability=f"work_folder{pn}/analysis/localisation/study_match_probability/{{pid}}_{{method}}.json"
@@ -273,11 +273,11 @@ def get_study_combination_dict(filename, pubmed_id):
 
 rule annotate_per_study_prob:
     input:
-        localisation_csv = f"work_folder{pn}/analysis/localisation/gene_to_localisation.csv",
+        localisation_csv=f"work_folder{pn}/analysis/localisation/gene_to_localisation.csv",
         pod_data=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv",
         all_probs=f"work_folder{pn}/analysis/localisation/study_match_probability/subsets/{{data}}_unique_prob.json"
     output:
-        expected_df=f"work_folder{pn}/analysis/localisation/study_match_probability/expected/POD_{{data}}_expected.csv"
+        expected_df=f"work_folder{pn}/analysis/localisation/study_match_probability/expected/pairs_{{data}}_expected.csv"
     run:
         localisation_df = pd.read_csv(input.localisation_csv,sep="\t")
         localisation_dict = localisation_df.groupby('gene_name')['localisation'].apply(set).to_dict()
@@ -288,7 +288,7 @@ rule annotate_per_study_prob:
         pre_pubmed_id = ""
         localisation_prob_dict = dict()
         with open(output.expected_df,"w") as w:
-            w.write("\t".join(pod_df.columns.values) + "\tmatch_probability\tlocalisation_match\n")
+            w.write("pair_id\tmatch_probability\tlocalisation_match\n")
 
             for i, row in pod_df.iterrows():
 
@@ -308,7 +308,7 @@ rule annotate_per_study_prob:
                         ).get(b_localisation,0) for b_localisation in localisation_dict.get(bait,set())
                     ]) / int(n_tested)
 
-                w.write("\t".join(map(str,row.values)) + f"\t{str(expected)}\t{str(match)}\n")
+                w.write(f"{row["pair_id"]}\t{str(expected)}\t{str(match)}\n")
 
 
 rule accumulation_matched_colocalisation:
@@ -317,14 +317,21 @@ rule accumulation_matched_colocalisation:
     Calculates the mean number of localisation matches over the studies where a bait-prey combination could be observed  
     """
     input:
-        expected_df=f"work_folder{pn}/analysis/localisation/study_match_probability/expected/POD_{{data}}_expected.csv"
+        expected_df=f"work_folder{pn}/analysis/localisation/study_match_probability/expected/pairs_{{data}}_expected.csv",
+        pod_data=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
     output:
         localisation_lesser=f"work_folder{pn}/analysis/localisation/study_match_probability/cumulative/POD_{{data}}_localisation_lesser.csv",
         localisation_greater=f"work_folder{pn}/analysis/localisation/study_match_probability/cumulative/POD_{{data}}_localisation_greater.csv"
     run:
-        mco_df = pd.read_csv(
+        mco_data = pd.read_csv(
             input.expected_df,sep="\t"
         )
+        pod_df = pd.read_csv(
+            input.pod_data,sep="\t"
+        )
+
+        mco_df = pod_df.merge(mco_data, on="pair_id")
+
         measurement_columns = ["match_probability", "localisation_match"]
         mco_df = mco_df[~((mco_df['match_probability'] == 0) & (mco_df['localisation_match'] == 0))]
 

@@ -64,7 +64,7 @@ rule get_jaccard_do_bait_prey:
         do_gene_df=f"work_folder{pn}/analysis/DO/gene_do_{{data}}.txt",
         pod_df=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv",
     output:
-        do_jaccard=f"work_folder{pn}/analysis/DO/POD_{{data}}_jaccard.csv"
+        do_jaccard=f"work_folder{pn}/analysis/DO/pairs_{{data}}_jaccard.csv"
     run:
         do_cols = [
             "ji_do",
@@ -81,19 +81,26 @@ rule get_jaccard_do_bait_prey:
             axis=1,
             result_type='expand'
         )
-        df.to_csv(output.do_jaccard,sep="\t",index=False)
+        df[["pair_id"] + do_cols].to_csv(output.do_jaccard,sep="\t",index=False)
 
 
 rule get_do_accumulation:
     input:
-        do_jaccard=f"work_folder{pn}/analysis/DO/POD_{{data}}_jaccard.csv"
+        pod_df=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv",
+        do_jaccard=f"work_folder{pn}/analysis/DO/pairs_{{data}}_jaccard.csv"
     output:
         jaccard_greater=f"work_folder{pn}/analysis/DO/cumulative/POD_{{data}}_jaccard_greater.csv",
         jaccard_lesser=f"work_folder{pn}/analysis/DO/cumulative/POD_{{data}}_jaccard_lesser.csv"
     run:
-        do_df = pd.read_csv(
+        do_data = pd.read_csv(
             input.do_jaccard,sep="\t"
         )
+        pod_df = pd.read_csv(
+            input.pod_df,
+            sep="\t"
+        )
+        do_df = pod_df.merge(do_data, on="pair_id")
+
         do_cols = [
             "ji_do",
             "intersect_do",

@@ -36,6 +36,7 @@ checkpoint all_methods_filter_out:
             inferred_negative_df["alpha_post"],inferred_negative_df["beta_post"])
         inferred_negative_df["upper_bound_pod"] = beta.ppf(0.975,
             inferred_negative_df["alpha_post"],inferred_negative_df["beta_post"])
+        inferred_negative_df["pair_id"] = range(inferred_negative_df.shape[0])
 
         inferred_negative_df.to_csv(
             output.full_detection,

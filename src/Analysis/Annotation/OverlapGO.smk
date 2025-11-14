@@ -100,9 +100,9 @@ def get_pair_jaccard(gene1, gene2, gene_idx_dicts):
 
 rule get_jaccard_go_bait_prey:
     input:
-        pod_df=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv",
+        pod_df=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
     output:
-        go_jaccard=f"work_folder{pn}/analysis/GO/POD_{{data}}_jaccard.csv"
+        go_jaccard=f"work_folder{pn}/analysis/GO/pairs_{{data}}_jaccard.csv"
     run:
         go_terms = ["bp", "cc", "mf"]
         go_cols = (
@@ -120,19 +120,27 @@ rule get_jaccard_go_bait_prey:
             axis=1,
             result_type='expand'
         )
-        df.to_csv(output.go_jaccard,sep="\t",index=False)
+        df[["pair_id"] + go_cols].to_csv(output.go_jaccard,sep="\t",index=False)
 
 
 rule get_go_accumulation:
     input:
-        go_jaccard=f"work_folder{pn}/analysis/GO/POD_{{data}}_jaccard.csv"
+        go_jaccard=f"work_folder{pn}/analysis/GO/pairs_{{data}}_jaccard.csv",
+        pod_df=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
     output:
         jaccard_greater=f"work_folder{pn}/analysis/GO/cumulative/POD_{{data}}_jaccard_greater.csv",
         jaccard_lesser=f"work_folder{pn}/analysis/GO/cumulative/POD_{{data}}_jaccard_lesser.csv"
     run:
-        go_df = pd.read_csv(
+        go_data = pd.read_csv(
             input.go_jaccard,sep="\t"
         )
+
+        pod_df = pd.read_csv(
+            input.pod_df,
+            sep="\t"
+        )
+        go_df = pod_df.merge(go_data,on="pair_id")
+
         go_terms = ["bp", "cc", "mf"]
         go_cols = (
                 [f"ji_{go}" for go in go_terms] +
