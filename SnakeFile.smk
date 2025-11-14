@@ -23,21 +23,6 @@ pods = [
     f"work_folder{pn}/analysis/POD/POD_{data}.csv" for data in datasets
 ]
 
-### annotations
-colocalisation = [
-    f"work_folder{pn}/analysis/localisation/cumulative/POD_{data}_localisation_lesser.csv"
-    for data in datasets
-]
-go_jaccards = [
-    f"work_folder{pn}/analysis/GO/cumulative/POD_{data}_jaccard_lesser.csv"
-    for data in datasets
-]
-
-hydro_delta = [
-    f"work_folder{pn}/analysis/hydrophobicity/cumulative/POD_{data}_netsurfp2_lesser.csv"
-    for data in datasets
-]
-### Plotting
 colocalisation_plot = [
     f"work_folder{pn}/plots/AccumulationPOD/colocalisation_{data}.png"
     for data in datasets
@@ -71,7 +56,6 @@ negatome_compare = [
 
 
 expected_output = pods
-expected_output += colocalisation + go_jaccards + hydro_delta
 expected_output += colocalisation_plot + go_jaccards_plot + hydro_delta_plot +  do_jaccards_plot
 expected_output += negatome_compare + matched_colocalisation_plot
 
