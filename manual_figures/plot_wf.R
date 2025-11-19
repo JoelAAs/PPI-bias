@@ -88,9 +88,7 @@ ggsave("hist_tested.png",
        units="mm")
 
 df_lower <- read.table("log_lower.csv", sep="\t", header=T)
-df_lower$density = df_lower$size/sum(df_lower$size)
 df_upper <- read.table("log_upper.csv", sep="\t", header=T)
-df_upper$density = df_upper$size/sum(df_upper$size)
 
 prob <- function(x) 1/(1+exp(-x))
 df_lower$p <- sapply(df_lower$log_lower, prob)
@@ -123,3 +121,33 @@ ggsave("HCI_dist.png",
         height=80,
         width=80,
         units="mm")
+
+prob <- function(x) 1/(1+exp(-x))
+df_upper$p <- sapply(df_upper$log_upper, prob)
+df_upper$group <- "excluded" 
+df_upper[df_upper$log_upper < -5.1, "group"] <- "included" 
+df_upper$cum_upper <- sapply(df_upper$p, function(x) sum(df_upper[df_upper$p <= x, "size"]))
+df_upper$density <- df_upper$cum_upper/sum(df_upper$cum_upper)
+hcni_plot <- ggplot(df_upper %>% filter(log_upper < -1),
+                   aes(
+                     y=log10(cum_upper),
+                     x=log_upper,
+                     fill=group
+                   )) + geom_density(stat="identity", alpha =1) +
+  geom_vline(
+    aes(xintercept=-5.1), 
+    colour="black", linetype="dashed", size=1) +
+  scale_fill_manual(values=c("orange", "darkorange")) +
+  labs(
+    x="97.5 % CI logit Probability of detection",
+    y="Log10 Cumsum protein pairs"
+  ) + 
+  theme_bw() +
+  theme(legend.position = "none")
+
+ggsave("HCNI_dist.png",
+       hcni_plot,
+       dpi=300,
+       height=80,
+       width=80,
+       units="mm")

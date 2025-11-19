@@ -106,10 +106,18 @@ get_norm_degree_delta <- function(df1, df2, merged_df, target_col, col_name, mis
   return(merged_df)
 }
 
-hippie_degree="work_folder/degree/full_hippie.csv"
-summed_probability="work_folder/degree/flat_summed.csv"
-threshold_1="work_folder/degree/flat_min.1.csv"
-threshold_2="work_folder/degree/flat_min.2.csv"
+args <- commandArgs(trailingOnly = TRUE)
+
+hippie_degree      <- args[1]
+summed_probability <- args[2]
+threshold_1        <- args[3]
+threshold_2        <- args[4]
+distribution_plot  <- args[5]
+go_enrichment      <- args[6]
+do_enrichment      <- args[7]
+do_delta           <- args[8]
+top_delta_genes    <- args[9]
+doid_vs_degree     <- args[10]
 
 df_hp = read.table(hippie_degree, sep ="\t", header=T) %>% 
   map_entrez() %>% filter(!is.na(entrez_id))
@@ -148,7 +156,7 @@ degree_dist <- ggplot(
     y="Density"
   )
 
-ggsave("work_folder/plots/degree/Distribution.png", degree_dist,
+ggsave(distribution_plot, degree_dist,
        width= 4,
        dpi=300)
 
@@ -186,7 +194,7 @@ go_plot <- dplot_go(df_go_top) + theme_bw() +
     shape="q < 0.05"
   ) +
   theme(axis.text.x = element_text(angle = -90))
-ggsave("work_folder/plots/degree/GO_enrichment.png",
+ggsave(go_enrichment,
        height = 5,
        width = 8,
        go_plot, dpi=300)
@@ -230,7 +238,7 @@ do_plot <- dplot_do(df_do_top) + theme_bw() +
     color="q < 0.05"
   ) +
   theme(axis.text.x = element_text(angle = -90))
-ggsave("work_folder/plots/degree/DO_enrichment.png",
+ggsave(do_enrichment,
        do_plot,
        height = 3.2,
        dpi=300)
@@ -275,7 +283,7 @@ do_delta_plot <- dplot_do(df_do_delta_top, color="qvalue") + theme_bw() +
     y="DO terms"
   ) +
   theme(axis.text.x = element_text(angle = -90))
-ggsave("work_folder/plots/degree/DO_delta_enrichment.png",
+ggsave(do_delta,
        do_delta_plot,
        height=3,
        width = 5,
@@ -340,7 +348,7 @@ delta_gene_plot <- ggplot(
     x="Gene name"
   ) + facet_wrap(dataset ~., nrow=3) 
 
-ggsave("work_folder/plots/degree/genes_top_delta.png", 
+ggsave(top_delta_genes,
        delta_gene_plot,
        width=7,
        height = 4,
@@ -442,7 +450,7 @@ deg_vs_doid_plot <- ggplot(
   theme(legend.position = "none")
 
 
-ggsave("work_folder/plots/degree/doid_vs_deg.png", 
+ggsave(doid_vs_degree,
        deg_vs_doid_plot,
        width=6,
        height = 6,
