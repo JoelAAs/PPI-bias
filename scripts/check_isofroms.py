@@ -23,7 +23,7 @@ df_ms_multi_id = df_ms[df_ms["gene_name_bait"].isin(bait_multi_ids)]
 
 
 def number_of_isoforms(id_list):
-    isoforms = {}
+    isoforms = set()
     for id in id_list:
         if "-" in id:
             isoforms &= {id.split("-")[1], }
@@ -35,7 +35,7 @@ bait_statistics = pd.DataFrame(
     bait_multi_ids
 )
 bait_statistics[["n_isoforms", "n_identifiers"]] = bait_multi_ids.apply(
-    lambda x: number_of_isoforms(df_ms_multi_id[df_ms_multi_id["gene_name_bait"] == x]["uniprot_id"]))
+    lambda x: number_of_isoforms(df_ms_multi_id[df_ms_multi_id["gene_name_bait"] == x]["uniprot_id_bait"]))
 bait_statistics["n_tests"] = bait_multi_ids.apply(
     lambda x: (df_ms_multi_id[df_ms_multi_id["gene_name_bait"] == x]["n_tested"].sum()))
 bait_statistics["n_observed"] = bait_multi_ids.apply(
