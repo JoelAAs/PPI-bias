@@ -21,15 +21,10 @@ print(f'{sum(n_ids_prey["uniprot_id_prey"] != 1)} / {len(n_ids_prey["uniprot_id_
 bait_multi_ids = n_ids_baits[n_ids_baits["uniprot_id_bait"] != 1]["gene_name_bait"]
 df_ms_multi_id = df_ms[df_ms["gene_name_bait"].isin(bait_multi_ids)]
 
-
-def number_of_isoforms(id_list):
-    isoforms = set()
-    for id in id_list:
-        if "-" in id:
-            isoforms &= {id.split("-")[1], }
-
-    return len(isoforms), len(id_list) - len(isoforms),
-
+df_ms_multi_id = df_ms_multi_id[~df_ms_multi_id["uniprot_id_bait"].duplicated()]
+df_ms_multi_id["isoform"] = df_ms_multi_id["uniprot_id_bait"].apply(lambda x: "-" in x)
+n_isoforms_bait = df_ms_multi_id.groupby("gene_name_bait")["isoform"].sum()
+n_alternative_id = df_ms_multi_id.groupby("gene_name_bait")[~"isoform"].sum()
 
 bait_statistics = pd.DataFrame(
     bait_multi_ids
