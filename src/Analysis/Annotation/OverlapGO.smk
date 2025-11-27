@@ -234,3 +234,9 @@ rule bait_usage:
         df_bait.to_csv(output.goterms_studies,sep="\t",index=False)
 
 
+rule get_huri_mf_counts:
+    input:
+        ""
+    output:
+        ""
+    run:

@@ -6,21 +6,18 @@ library(stringr)
 library(reshape2)
 min_point_y2h = 0.00255416
 min_point_ms = 0.002556271
-
-e_y2h = 12113
-o_y2h = 12549
-rd_y2h = (o_y2h-e_y2h)/e_y2h
-
-e_ms = 56153
-o_ms = 75207
-rd_ms = (o_ms-e_ms)/e_ms
+bp_y2h = 0.01762
+mf_y2h = 0.2039
+bp_ms = 0.03242
+mf_ms = 0.1383
 
 specific_point = data.frame(
-  limit = rep("lower_bound_pod", 2),
-  method = c("y2h", "ms"),
-  value = c(min_point_y2h, min_point_ms),
-  rd = c(rd_y2h, rd_ms),
-  desc = c("Y2H", "MS")
+  limit = rep("lower_bound_pod", 4),
+  method = c("y2h", "y2h", "ms", "ms"),
+  value = c(min_point_y2h, min_point_y2h, min_point_ms, min_point_ms),
+  jaccard = c(bp_y2h, mf_y2h, bp_ms, mf_ms),
+  GO = c("ji_bp", "ji_mf", "ji_bp", "ji_mf"),
+  desc = c("Y2H","Y2H", "MS", "MS")
 )
 specific_point$limit <- factor(specific_point$limit, levels = c("upper_bound_pod", "lower_bound_pod"))
 
@@ -85,8 +82,7 @@ go_df_t <- melt(
 
 go_df_t$limit <- factor(go_df$limit, levels = c("upper_bound_pod", "lower_bound_pod"))
 
-#prob_localisation <- 
-ggplot(
+go_jaccard <- ggplot(
   go_df_t,
   aes(
     x=value,
@@ -98,18 +94,19 @@ ggplot(
   geom_point() +
   geom_line() +
   geom_point() +
-  geom_line() 
-  #geom_point(data=specific_point, color="black", size=5, shape=2) +
+  geom_line() +
+  
   geom_hline(yintercept=0, linetype="dashed") +
-#   geom_text_repel(
-#     data = specific_point,
-#     aes(label = desc),
-#     color = "black",
-#     size = 4,
-#     nudge_x = 0.1,
-#     nudge_y = 0.05
-#   ) +
-#
+  geom_point(data=specific_point, color="black", size=5, shape=2) +
+  geom_text_repel(
+     data = specific_point,
+     aes(label = desc),
+     color = "black",
+     size = 4,
+     nudge_x = -0.1,
+     nudge_y = 0.005
+   ) +
+
   facet_wrap(. ~ limit,
              labeller = as_labeller(
                c("lower_bound_pod" = "P[0.025]",
@@ -118,21 +115,26 @@ ggplot(
              ), scales="free_x", strip.position = "bottom",) +
   labs(
     color = "Detection method",
+    shape = "GO-category",
     x = "",
-    y = "Mean RD (O-E)/E"
+    y = "Mean Jaccard index"
   ) +
   theme_bw() +
   scale_color_manual(
     values = c("darkorange", "blue"), 
     labels = c("AP/IP - MS", "Y2H")
   ) +
+  scale_shape_manual(
+    values = c(8, 15), 
+    labels = c("BP", "MF")
+  ) +
   theme(legend.position = "bottom",
         strip.text = element_text(size = 10),
         strip.background = element_blank(),
         strip.placement = "outside")
 
-ggsave("manual_figures/colocal_multi_method.png",
-       prob_localisation,
+ggsave("manual_figures/GO_jaccard.png",
+       go_jaccard,
        dpi=300,
        height=4,
        width=6
@@ -140,11 +142,11 @@ ggsave("manual_figures/colocal_multi_method.png",
 
 
 #### 
-colocalisation_df_lower = colocalisation_df %>% filter(limit == "lower_bound_pod")
-lower_count <- ggplot(colocalisation_df_lower,
+go_df_lower = go_df %>% filter(limit == "lower_bound_pod")
+lower_count <- ggplot(go_df_lower,
                       aes(
                         x=value,
-                        y=log10(non_na_pairs_match_probability),
+                        y=log10(non_na_pairs_ji_bp),
                         color=method
                       )) + 
   geom_line(stat="identity") +

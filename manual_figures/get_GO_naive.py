@@ -18,4 +18,3 @@ with open(f"go_{data}.txt") as w:
     w.write(f"Min pod: {min_pod}\n")
     w.write(f"Mean mf: {df_data_ss['sum_ji_mf'].sum() / df_data_ss['non_na_pairs_ji_mf'].sum()}\n")
     w.write(f"Mean bp: {df_data_ss['sum_ji_bp'].sum() / df_data_ss['non_na_pairs_ji_bp'].sum()}\n")
-    
