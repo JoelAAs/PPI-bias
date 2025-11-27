@@ -21,10 +21,15 @@ print(f'{sum(n_ids_prey["uniprot_id_prey"] != 1)} / {len(n_ids_prey["uniprot_id_
 bait_multi_ids = n_ids_baits[n_ids_baits["uniprot_id_bait"] != 1]["gene_name_bait"]
 df_ms_multi_id = df_ms[df_ms["gene_name_bait"].isin(bait_multi_ids)]
 
-df_ms_multi_id = df_ms_multi_id[~df_ms_multi_id["uniprot_id_bait"].duplicated()]
-df_ms_multi_id["isoform"] = df_ms_multi_id["uniprot_id_bait"].apply(lambda x: "-" in x)
-n_isoforms_bait = df_ms_multi_id.groupby("gene_name_bait")["isoform"].sum()
-n_alternative_id = df_ms_multi_id.groupby("gene_name_bait")[~"isoform"].sum()
+df_ms_multi_id_dedup = df_ms_multi_id[~df_ms_multi_id["uniprot_id_bait"].duplicated()]
+df_ms_multi_id_dedup["isoform"] = df_ms_multi_id_dedup["uniprot_id_bait"].apply(lambda x: "-" in x)
+n_isoforms_bait = df_ms_multi_id_dedup.groupby("gene_name_bait")["isoform"].sum()
+all_entries = df_ms_multi_id_dedup.groupby("gene_name_bait").size()
+n_interactions = df_ms_multi_id.groupby("gene_name_bait").size().rename({"size": "n_pairs_tested"})
+
+bait_statistics = n_isoforms_bait.join(all_entries)
+bait_statistics.columns = ["n_isoform_labels", "n_uniprot_id"]
+bait_statistics = bait_statistics.join(n_interactions)
 
 bait_statistics = pd.DataFrame(
     bait_multi_ids
