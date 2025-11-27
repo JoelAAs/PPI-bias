@@ -44,8 +44,8 @@ bait_statistics.columns = ["n_isoform_labels", "n_uniprot_id", "n_pairs_tested",
 bait_statistics.reset_index().to_csv("work_folder/uniprot_pod/isoforms_bait.csv")
 
 # Prey
-prey_multi_ids = n_ids_baits[n_ids_baits["uniprot_id_prey"] != 1]["gene_name_prey"]
-df_ms_multi_id = df_ms[df_ms["gene_name_prey"].isin(bait_multi_ids)]
+prey_multi_ids = n_ids_prey[n_ids_prey["uniprot_id_prey"] != 1]["gene_name_prey"]
+df_ms_multi_id = df_ms[df_ms["gene_name_prey"].isin(prey_multi_ids)]
 
 df_ms_multi_id_dedup = df_ms_multi_id[~df_ms_multi_id["uniprot_id_prey"].duplicated()]
 df_ms_multi_id_dedup["isoform"] = df_ms_multi_id_dedup["uniprot_id_prey"].apply(lambda x: "-" in x)
@@ -57,7 +57,7 @@ n_tests = df_ms_multi_id.groupby("gene_name_prey")["n_tested"].sum()
 
 
 prey_statistics = pd.concat([
-    n_isoforms_bait,
+    n_isoforms_prey,
     all_entries,
     n_interactions,
     n_observations,
