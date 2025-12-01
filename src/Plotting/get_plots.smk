@@ -126,3 +126,14 @@ rule plot_membrane_huri_bioplex:
         Rscript {params.script_location} {input.localisation_method} {output.png}
         """
 
+rule plot_mf_diff:
+    params:
+        script_location="src/Plotting/GO_terms/huri_vs_bioplex_mf_terms.R"
+    input:
+        compare = f"work_folder{pn}/analysis/GO/huri_vs_bioplex_annotation.csv"
+    output:
+        png = f"work_folder{pn}/plots/GO_terms/HuRI_bioplex_mf.png"
+    shell:
+        """
+        Rscript {params.script_location} {input.compare} {output.png}
+        """

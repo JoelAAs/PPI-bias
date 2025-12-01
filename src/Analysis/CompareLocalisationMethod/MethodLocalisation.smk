@@ -26,6 +26,7 @@ rule get_huri:
     run:
         intact = pd.read_csv(input.intact,sep="\t")
         huri_df = intact[intact["pubmed_id"] == 32296183]
+        huri_df = huri_df[huri_df["gene_name_prey"] != huri_df["gene_name_bait"]] # Not removed if we are interested in isofroms
         huri_df.to_csv(output.huri,sep="\t",index=False)
 
 rule localisation_delta:

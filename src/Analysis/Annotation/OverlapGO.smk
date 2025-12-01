@@ -2,13 +2,13 @@ import numpy as np
 import pandas as pd
 from mean_distance_support import get_cumulative_sum
 from mygene import MyGeneInfo
-
+from collections import Counter
 
 def get_go_genes(genes):
     mg = MyGeneInfo()
     result = mg.querymany(
         genes,
-        scopes="symbol",
+        scopes="symbol,alias",
         fields="go",
         species="human",
         returnall=True
@@ -236,7 +236,81 @@ rule bait_usage:
 
 rule get_huri_mf_counts:
     input:
-        ""
+        cvcl_0063_bp = f"work_folder{pn}/data/bioplex/CVCL_0063.csv",
+        huri = f"work_folder{pn}/data/huri/intact_huri.csv"
     output:
-        ""
+        compare_data = f"work_folder{pn}/analysis/GO/huri_vs_bioplex_annotation.csv"
     run:
+        bp_df = pd.read_csv(input.cvcl_0063_bp,sep="\t")[["Bait Symbol", "Prey Symbol"]]
+        bp_df.columns = ["gene_name_bait", "gene_name_prey"]
+
+        huri_df = pd.read_csv(input.huri,sep="\t")[["gene_name_bait", "gene_name_prey"]]
+
+
+        all_genes = set(bp_df["gene_name_bait"]) | \
+                    set(bp_df["gene_name_prey"]) | \
+                    set(huri_df["gene_name_bait"]) | \
+                    set(huri_df["gene_name_prey"])
+
+        go_dict = get_go_genes(all_genes)
+
+        def flat_and_count(nested_list, method, role):
+            n_ppis = len(nested_list)
+            flat_list = [i for l in nested_list for i in l]
+            count = Counter(flat_list)
+            mf_df = pd.DataFrame(count.items(), columns = ["mf_terms", "count"])
+            mf_df["mf_frequency"] = mf_df["count"]/n_ppis
+            mf_df[["method", "role"]] = [method, role]
+
+            return mf_df
+
+        def get_overlap_frequency(df, method):
+            df["shared_mf"] =df.apply(lambda x: x["mf_terms_bait"] & x["mf_terms_prey"], axis = 1)
+            flat_list = [i for l in df["shared_mf"].tolist() for i in l]
+            count = Counter(flat_list)
+            mf_df = pd.DataFrame(count.items(), columns = ["mf_terms", "count"])
+            mf_df["mf_frequency"] = mf_df["count"]/df.shape[0]
+            mf_df[["method", "role"]] = [method, "Shared"]
+            return mf_df
+
+        huri_df["mf_terms_bait"] = huri_df["gene_name_bait"].apply(lambda x: go_dict[x]["MF"])
+        huri_df["mf_terms_prey"] = huri_df["gene_name_prey"].apply(lambda x: go_dict[x]["MF"])
+        bp_df["mf_terms_bait"] = bp_df["gene_name_bait"].apply(lambda x: go_dict[x]["MF"])
+        bp_df["mf_terms_prey"] = bp_df["gene_name_prey"].apply(lambda x: go_dict[x]["MF"])
+
+        huri_shared_mf_count = get_overlap_frequency(huri_df, "HuRi")
+        bp_shared_mf_count = get_overlap_frequency(bp_df,"Bioplex")
+
+        huri_bait_mf_count = flat_and_count(
+            huri_df["mf_terms_bait"],
+            "HuRi",
+            "Bait"
+        )
+        huri_prey_mf_count = flat_and_count(
+            huri_df["mf_terms_prey"],
+            "HuRi",
+            "Prey"
+        )
+
+        bp_bait_mf_count = flat_and_count(
+            bp_df["mf_terms_bait"],
+            "Bioplex",
+            "Bait"
+        )
+        bp_prey_mf_count = flat_and_count(
+            bp_df["mf_terms_prey"],
+            "Bioplex",
+            "Prey"
+        )
+
+        mf_frequency_df = pd.concat(
+            [
+                huri_shared_mf_count,
+                bp_shared_mf_count,
+                huri_bait_mf_count,
+                huri_prey_mf_count,
+                bp_bait_mf_count,
+                bp_prey_mf_count
+            ]
+        )
+        mf_frequency_df.to_csv(output.compare_data, sep="\t", index=None)
