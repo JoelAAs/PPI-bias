@@ -133,6 +133,8 @@ rule plot_mf_diff:
         compare = f"work_folder{pn}/analysis/GO/huri_vs_bioplex_annotation.csv"
     output:
         png = f"work_folder{pn}/plots/GO_terms/HuRI_bioplex_mf.png"
+    conda:
+        "do_enrichment"
     shell:
         """
         Rscript {params.script_location} {input.compare} {output.png}
