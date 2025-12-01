@@ -4,6 +4,7 @@ if (!require("BiocManager", quietly = TRUE))
 BiocManager::install("HDO.db")
 BiocManager::install("clusterProfiler")
 BiocManager::install("org.Hs.eg.db")
+BiocManager::install("GOfuncR")
 
 install.packages(
     c("tidyverse", "ggplot2", "reshape2"),

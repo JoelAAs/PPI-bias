@@ -245,7 +245,10 @@ rule get_huri_mf_counts:
         bp_df.columns = ["gene_name_bait", "gene_name_prey"]
 
         huri_df = pd.read_csv(input.huri,sep="\t")[["gene_name_bait", "gene_name_prey"]]
+        shared_baits = set(bp_df["gene_name_bait"]) & set(huri_df["gene_name_bait"])
 
+        huri_df = huri_df[huri_df["gene_name_bait"].isin(shared_baits)]
+        bp_df = bp_df[bp_df["gene_name_bait"].isin(shared_baits)]
 
         all_genes = set(bp_df["gene_name_bait"]) | \
                     set(bp_df["gene_name_prey"]) | \
