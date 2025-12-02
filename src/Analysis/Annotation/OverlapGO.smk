@@ -4,6 +4,7 @@ from mean_distance_support import get_cumulative_sum
 from mygene import MyGeneInfo
 from collections import Counter
 
+
 def get_go_genes(genes):
     mg = MyGeneInfo()
     result = mg.querymany(
@@ -149,7 +150,6 @@ rule get_go_accumulation:
                 [f"n_go_prey_{go}" for go in go_terms]
         )
 
-
         get_cumulative_sum(
             go_df,
             value_column="lower_bound_pod",
@@ -236,10 +236,11 @@ rule bait_usage:
 
 rule get_huri_mf_counts:
     input:
-        cvcl_0063_bp = f"work_folder{pn}/data/bioplex/CVCL_0063.csv",
-        huri = f"work_folder{pn}/data/huri/intact_huri.csv"
+        cvcl_0063_bp=f"work_folder{pn}/data/bioplex/CVCL_0063.csv",
+        huri=f"work_folder{pn}/data/huri/intact_huri.csv"
     output:
-        compare_data = f"work_folder{pn}/analysis/GO/huri_vs_bioplex_annotation.csv"
+        compare_data=f"work_folder{pn}/analysis/GO/huri_vs_bioplex_annotation.csv",
+        summary_data=f"work_folder{pn}/analysis/GO/huri_vs_bioplex_shared_ji.csv"
     run:
         bp_df = pd.read_csv(input.cvcl_0063_bp,sep="\t")[["Bait Symbol", "Prey Symbol"]]
         bp_df.columns = ["gene_name_bait", "gene_name_prey"]
@@ -257,32 +258,36 @@ rule get_huri_mf_counts:
 
         go_dict = get_go_genes(all_genes)
 
+
         def flat_and_count(nested_list, method, role):
             n_ppis = len(nested_list)
             flat_list = [i for l in nested_list for i in l]
             count = Counter(flat_list)
-            mf_df = pd.DataFrame(count.items(), columns = ["mf_terms", "count"])
-            mf_df["mf_frequency"] = mf_df["count"]/n_ppis
+            mf_df = pd.DataFrame(count.items(),columns=["mf_terms", "count"])
+            mf_df["mf_frequency"] = mf_df["count"] / n_ppis
             mf_df[["method", "role"]] = [method, role]
 
             return mf_df
 
+
         def get_overlap_frequency(df, method):
-            df["shared_mf"] =df.apply(lambda x: x["mf_terms_bait"] & x["mf_terms_prey"], axis = 1)
+            df["shared_mf"] = df.apply(lambda x: x["mf_terms_bait"] & x["mf_terms_prey"],axis=1)
+            df["union_mf"] = df.apply(lambda x: x["mf_terms_bait"] | x["mf_terms_prey"],axis=1)
             flat_list = [i for l in df["shared_mf"].tolist() for i in l]
             count = Counter(flat_list)
-            mf_df = pd.DataFrame(count.items(), columns = ["mf_terms", "count"])
-            mf_df["mf_frequency"] = mf_df["count"]/df.shape[0]
+            mf_df = pd.DataFrame(count.items(),columns=["mf_terms", "count"])
+            mf_df["mf_frequency"] = mf_df["count"] / df.shape[0]
             mf_df[["method", "role"]] = [method, "Shared"]
-            return mf_df
+            return mf_df, df
+
 
         huri_df["mf_terms_bait"] = huri_df["gene_name_bait"].apply(lambda x: go_dict[x]["MF"])
         huri_df["mf_terms_prey"] = huri_df["gene_name_prey"].apply(lambda x: go_dict[x]["MF"])
         bp_df["mf_terms_bait"] = bp_df["gene_name_bait"].apply(lambda x: go_dict[x]["MF"])
         bp_df["mf_terms_prey"] = bp_df["gene_name_prey"].apply(lambda x: go_dict[x]["MF"])
 
-        huri_shared_mf_count = get_overlap_frequency(huri_df, "HuRi")
-        bp_shared_mf_count = get_overlap_frequency(bp_df,"Bioplex")
+        huri_shared_mf_count, huri_df = get_overlap_frequency(huri_df,"HuRi")
+        bp_shared_mf_count, bp_df = get_overlap_frequency(bp_df,"Bioplex")
 
         huri_bait_mf_count = flat_and_count(
             huri_df["mf_terms_bait"],
@@ -316,4 +321,27 @@ rule get_huri_mf_counts:
                 bp_prey_mf_count
             ]
         )
-        mf_frequency_df.to_csv(output.compare_data, sep="\t", index=None)
+        mf_frequency_df.to_csv(output.compare_data,sep="\t",index=None)
+
+
+        def get_ji(row):
+            if len(row["union_mf"]) != 0:
+                return len(row["shared_mf"]) / len(row["union_mf"])
+            else:
+                return None
+
+
+        huri_df["jaccard"] = huri_df.apply(get_ji,axis=1)
+        bp_df["jaccard"] = bp_df.apply(get_ji,axis=1)
+        without_mf_huri = sum((huri_df["mf_terms_bait"].apply(len) == 0) | (huri_df["mf_terms_prey"].apply(len) == 0))
+        without_mf_bp = sum((bp_df["mf_terms_bait"].apply(len) == 0) | (bp_df["mf_terms_prey"].apply(len) == 0))
+
+        with open(output.summary_data,"w") as w:
+            w.write(f"HuRi jaccard index: {huri_df["jaccard"].mean()}\n")
+            w.write(f"Bioplex jaccard index: {bp_df["jaccard"].mean()}\n")
+            w.write(f"HuRi mean union: {huri_df["union_mf"].apply(len).mean()}\n")
+            w.write(f"Bioplex mean union: {bp_df["union_mf"].apply(len).mean()}\n")
+            w.write(f"HuRi mean intersect: {huri_df["shared_mf"].apply(len).mean()}\n")
+            w.write(f"Bioplex mean intersect: {bp_df["shared_mf"].apply(len).mean()}\n")
+            w.write(f"HuRi no annotation: {without_mf_huri}/{huri_df.shape[0]}\n")
+            w.write(f"Bioplex no annotations: {without_mf_bp}/{bp_df.shape[0]}\n")
