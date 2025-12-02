@@ -62,20 +62,27 @@ expected_output += negatome_compare + matched_colocalisation_plot
 
 ## Sub workflows
 include: "src/FormatFiltering/FormatingFiltering.smk"
+
 include: "src/ExperimentalSearchSpace/experimental_search_space.smk"
+include: "src/ExperimentalSearchSpace/CountProteinPairs.smk"
+
 include: "src/Analysis/CellLine/cell_line_analysis.smk"
 include: "src/Analysis/DetectionMethod/detection_method.smk"
-include: "src/Analysis/Annotation/CoLocalisation.smk"
 include: "src/Analysis/ExperimentalNegatome/experimental_negatome.smk"
 include: "src/Analysis/AbundanceAwareDetection/MCMC_abundance.smk"
+
 include: "src/Analysis/Enrichment/GetDegree.smk"
 include: "src/Analysis/Enrichment/EnrichmentGODO.smk"
+
+include: "src/Analysis/Annotation/CoLocalisation.smk"
 include: "src/Analysis/Annotation/OverlapGO.smk"
 include: "src/Analysis/Annotation/OverlapDO.smk"
 include: "src/Analysis/Annotation/HydrophobicitySimilarity.smk"
+include: "src/Analysis/Annotation/InterfaceStatistics.smk"
+
 include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
 include: "src/Analysis/CompareLocalisationMethod/MethodLocalisation.smk"
-include: "src/ExperimentalSearchSpace/CountProteinPairs.smk"
+
 include: "src/Plotting/get_plots.smk"
 
 wildcard_constraints:
