@@ -53,11 +53,14 @@ negatome_compare = [
     f"work_folder{pn}/analysis/neg2compare/{data}.txt"
     for data in datasets
 ]
-
+negatome_entropy = [
+    f"work_folder{pn}/analysis/negatome/test_entropy_{data}_limit_{min_tests}.csv"
+    for min_tests in [3,4,5] for data in ["y2h", "ms"]
+]
 
 expected_output = pods
 expected_output += colocalisation_plot + go_jaccards_plot + hydro_delta_plot +  do_jaccards_plot
-expected_output += negatome_compare + matched_colocalisation_plot
+expected_output += negatome_compare + matched_colocalisation_plot + negatome_entropy
 
 
 ## Sub workflows
@@ -81,7 +84,9 @@ include: "src/Analysis/Annotation/HydrophobicitySimilarity.smk"
 include: "src/Analysis/Annotation/InterfaceStatistics.smk"
 
 include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
+include: "src/Analysis/NegatomeComparison/CompareSharedBaits.smk"
 include: "src/Analysis/CompareLocalisationMethod/MethodLocalisation.smk"
+
 
 include: "src/Plotting/get_plots.smk"
 
@@ -95,9 +100,9 @@ wildcard_constraints:
 rule all:
     input:
         expected_output,
-        f"work_folder{pn}/plots/degree/GO_enrichment.png",
-        f"work_folder{pn}/plots/localisation/HuRI_bioplex.png",
-        f"work_folder{pn}/plots/membrane/HuRI_bioplex.png"
+        #f"work_folder{pn}/plots/degree/GO_enrichment.png",
+        #f"work_folder{pn}/plots/localisation/HuRI_bioplex.png",
+        #f"work_folder{pn}/plots/membrane/HuRI_bioplex.png"
 
 
 

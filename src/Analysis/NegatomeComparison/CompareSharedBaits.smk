@@ -80,7 +80,7 @@ rule non_interaction_prey_entropy_entropy:
         pod=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv",
         bait_prey_degree=f"work_folder{pn}/formated/bait_prey_publications.csv"
     output:
-        entropy_annotated=f"work_folder{pn}/analysis/negatome/test_entropy{{data}}_limit_{{min_tests}}.csv"
+        entropy_annotated=f"work_folder{pn}/analysis/negatome/test_entropy_{{data}}_limit_{{min_tests}}.csv"
     run:
         df_pod = pd.read_csv(input.pod,sep="\t")
         df_pod_neg = df_pod[df_pod["n_observed"] == 0]
