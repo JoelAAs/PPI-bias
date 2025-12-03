@@ -84,7 +84,7 @@ rule non_interaction_prey_entropy_entropy:
     run:
         df_pod = pd.read_csv(input.pod,sep="\t")
         df_pod_neg = df_pod[df_pod["n_observed"] == 0]
-        df_pod_neg = df_pod_neg[df_pod_neg["n_tested"] >= int(wildcards.min_tested)]
+        df_pod_neg = df_pod_neg[df_pod_neg["n_tested"] >= int(wildcards.min_tests)]
 
         bait_prey_df = pd.read_csv(input.bait_prey_degree,sep="\t")
         bait_prey_df["pub_method"] = bait_prey_df.apply(
