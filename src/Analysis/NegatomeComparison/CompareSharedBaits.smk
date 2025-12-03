@@ -102,7 +102,7 @@ rule non_interaction_prey_entropy_entropy:
                 study_normilised_count = prey_bait_ss.groupby(
                     "pub_method")["gene_name_bait"].value_counts(normalize=True).groupby("gene_name_bait").sum()
 
-                prey_pub_entropy = entropy(norm_counts)
+                prey_pub_entropy = entropy(study_normilised_count)
                 protein_pair_prey_ss = protein_pair_pub_ss[protein_pair_pub_ss["gene_name_prey"] == prey].copy()
 
                 protein_pair_prey_ss["pair_entropy"] = prey_pub_entropy
