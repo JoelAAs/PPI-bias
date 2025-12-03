@@ -1,5 +1,7 @@
+from collections import Counter
 import pandas as pd
 import networkx as nx
+from scipy.stats import entropy
 
 rule get_bait_occurrence:
     input:
@@ -52,7 +54,7 @@ rule negative_data_vs_bait_degree:
         pod=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv",
         bait_bait_degree=f"work_folder{pn}/analysis/negatome/bait_bait_degree_{{data}}.csv"
     output:
-        neg_bait_degree = f"work_folder{pn}/analysis/negatome/neg_bait_bait_degree_{{data}}.csv"
+        neg_bait_degree=f"work_folder{pn}/analysis/negatome/neg_bait_bait_degree_{{data}}.csv"
     run:
         df_pod = pd.read_csv(input.pod,sep="\t")
         df_pod_neg = df_pod[df_pod["n_observed"] == 0]
@@ -65,9 +67,45 @@ rule negative_data_vs_bait_degree:
             negative_degree.append(ss_count)
             cols.append(f"negative_degree_{limit}")
 
-        negative_degree_df = pd.concat(negative_degree, axis = 1).fillna(0)
+        negative_degree_df = pd.concat(negative_degree,axis=1).fillna(0)
         negative_degree_df = negative_degree_df.reset_index()
         negative_degree_df.columns = cols
 
-        bait_negative_degree = negative_degree_df.merge(bait_bait_degree, on="gene", how="outer").fillna(0)
-        bait_negative_degree.to_csv(output.neg_bait_degree, sep="\t", index=False)
+        bait_negative_degree = negative_degree_df.merge(bait_bait_degree,on="gene",how="outer").fillna(0)
+        bait_negative_degree.to_csv(output.neg_bait_degree,sep="\t",index=False)
+
+
+rule non_interaction_prey_entropy_entropy:
+    input:
+        pod=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv",
+        bait_prey_degree=f"work_folder{pn}/formated/bait_prey_publications.csv"
+    output:
+        entropy_annotated=f"work_folder{pn}/analysis/negatome/test_entropy{{data}}_limit_{{min_tests}}.csv"
+    run:
+        df_pod = pd.read_csv(input.pod,sep="\t")
+        df_pod_neg = df_pod[df_pod["n_observed"] == 0]
+        df_pod_neg = df_pod_neg[df_pod_neg["n_tested"] >= int(wildcards.min_tested)]
+
+        bait_prey_df = pd.read_csv(input.bait_prey_degree,sep="\t")
+        bait_prey_df["pub_method"] = bait_prey_df.apply(
+            lambda x: "_".join([str(x["pubmed_id"]), x["detection_method"]]),axis=1)
+
+        write_header = True
+        for pids_all in df_pod_neg["pubmed_id"].unique():
+            protein_pair_pub_ss = df_pod_neg[df_pod_neg["pubmed_id"] == pids_all]
+            pids = pids_all.split(";")
+            bait_prey_studies = bait_prey_df[bait_prey_df["pub_method"].isin(pids)]
+
+            for prey in protein_pair_pub_ss["gene_name_prey"].unique():
+                bait_count = Counter(bait_prey_studies[bait_prey_studies["gene_name_prey"] == prey]["gene_name_bait"])
+                prey_pub_entropy = entropy(list(bait_count.values()))
+                protein_pair_prey_ss = protein_pair_pub_ss[protein_pair_pub_ss["gene_name_prey"] == prey].copy()
+
+                protein_pair_prey_ss["pair_entropy"] = prey_pub_entropy
+                if write_header:
+                    protein_pair_prey_ss.to_csv(output.entropy_annotated,sep="\t",index=False)
+                    write_header=False
+                else:
+                    protein_pair_prey_ss.to_csv(output.entropy_annotated, sep="\t", mode="a", index=False,header=False)
+
+
