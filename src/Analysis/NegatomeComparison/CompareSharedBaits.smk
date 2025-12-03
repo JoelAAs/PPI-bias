@@ -97,15 +97,17 @@ rule non_interaction_prey_entropy_entropy:
             bait_prey_studies = bait_prey_df[bait_prey_df["pub_method"].isin(pids)]
 
             for prey in protein_pair_pub_ss["gene_name_prey"].unique():
-                bait_count = Counter(bait_prey_studies[bait_prey_studies["gene_name_prey"] == prey]["gene_name_bait"])
-                prey_pub_entropy = entropy(list(bait_count.values()))
+                prey_bait_ss = bait_prey_studies[
+                    bait_prey_studies["gene_name_prey"] == prey][["gene_name_bait", "pub_method"]]
+                study_normilised_count = prey_bait_ss.groupby(
+                    "pub_method")["gene_name_bait"].value_counts(normalize=True).groupby("gene_name_bait").sum()
+
+                prey_pub_entropy = entropy(norm_counts)
                 protein_pair_prey_ss = protein_pair_pub_ss[protein_pair_pub_ss["gene_name_prey"] == prey].copy()
 
                 protein_pair_prey_ss["pair_entropy"] = prey_pub_entropy
                 if write_header:
                     protein_pair_prey_ss.to_csv(output.entropy_annotated,sep="\t",index=False)
-                    write_header=False
+                    write_header = False
                 else:
-                    protein_pair_prey_ss.to_csv(output.entropy_annotated, sep="\t", mode="a", index=False,header=False)
-
-
+                    protein_pair_prey_ss.to_csv(output.entropy_annotated,sep="\t",mode="a",index=False,header=False)
