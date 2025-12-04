@@ -102,10 +102,12 @@ rule non_interaction_prey_entropy_entropy:
                 study_normilised_count = prey_bait_ss.groupby(
                     "pub_method")["gene_name_bait"].value_counts(normalize=True).groupby("gene_name_bait").sum()
 
+                max_bait_probability = study_normilised_count.max()/study_normilised_count.sum()
                 prey_pub_entropy = entropy(study_normilised_count)
                 protein_pair_prey_ss = protein_pair_pub_ss[protein_pair_pub_ss["gene_name_prey"] == prey].copy()
 
                 protein_pair_prey_ss["pair_entropy"] = prey_pub_entropy
+                protein_pair_prey_ss["max_bait_probability"] = max_bait_probability
                 if write_header:
                     protein_pair_prey_ss.to_csv(output.entropy_annotated,sep="\t",index=False)
                     write_header = False
