@@ -21,44 +21,45 @@ rule get_enrichment:
             {output.do_enrichment_prey}
         """
 
-def input_enrichments(wc, types, limits, ont):
+def input_enrichments(wc, types, c_limits, c_ont):
     # should be ordered in config
-    data = wc.data
+    c_data = wc.data
     expected_input = []
-    for type in types:
-        if type == "HCI":
-            c_limit = limits[0]
+    for c_type in types:
+        print(types)
+        if c_type == "HCI":
+            c_limit = c_limits[0]
         else:
-            c_limit = limits[1]
+            c_limit = c_limits[1]
         expected_input += expand(
             "work_folder{pn}/degree/enrichment/{data}_{type}_{limit}_{source}_{ont}.csv",
             pn=pn,
-            data=data,
-            type=type,
+            data=c_data,
+            type=c_type,
             limit=c_limit,
             source=["bait", "prey"],
-            ont=ont
+            ont=c_ont
         )
         expected_input += expand(
             "work_folder{pn}/degree/enrichment/{data}_summed_{source}_{ont}.csv",
             pn=pn,
-            data=data,
+            data=c_data,
             source=["bait", "prey"],
-            ont=ont
+            ont=c_ont
         )
         expected_input += expand(
             "work_folder{pn}/degree/enrichment/{data}_summed_{source}_{ont}.csv",
             pn=pn,
-            data=data,
+            data=c_data,
             source=["bait", "prey"],
-            ont=ont
+            ont=c_ont
         )
         expected_input += expand(
             "work_folder{pn}/degree/enrichment/{data}_naive_{source}_{ont}.csv",
             pn=pn,
-            data=data,
+            data=c_data,
             source=["bait", "prey"],
-            ont=ont
+            ont=c_ont
         )
         return expected_input
 

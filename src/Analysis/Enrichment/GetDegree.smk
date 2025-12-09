@@ -103,7 +103,7 @@ rule get_degree_dist_hippie:
         )
         hippie_degree.to_csv(output.degree,sep="\t",index=False)
 
-rule flat_degree_dist:
+rule get_degree_values:
     """
     Get degree distribution for flat POD
     """
