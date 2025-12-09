@@ -104,7 +104,7 @@ rule flat_degree_dist:
     """
     params:
         hci_limits=config["hci_limits"],
-        hcni_tests=config["hcni_testes"]
+        hcni_tested=config["hcni_tested"]
     input:
         pod_file=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
     output:
@@ -126,5 +126,5 @@ rule flat_degree_dist:
         for hci_filename, hci_limit in zip(output.hci_threshold,params.hci_limits):
             threshold_degree(df,hci_limit).to_csv(hci_filename,sep="\t",index=False)
 
-        for hcni_filename, hcni_limit in zip(output.hcni_tests,params.hci_limits):
+        for hcni_filename, hcni_limit in zip(output.hcni_tests,params.hcni_tested):
             threshold_degree(df,0.2).to_csv(hcni_limit,sep="\t",index=False)
