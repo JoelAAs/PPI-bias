@@ -114,7 +114,7 @@ rule flat_degree_dist:
         pod_file=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
     output:
         summed_probability=f"work_folder{pn}/degree/{{data}}_summed.csv",
-        naive_degree = f"work_folder{pn}/degree/{{data}}_all_interactions.csv",
+        naive_degree = f"work_folder{pn}/degree/{{data}}_naive.csv",
         hci_threshold=expand(
             "work_folder{pn}/degree/{{data}}_HCI_{hci_limit}.csv",
             hci_limit=config["hci_limits"],pn=pn),
@@ -132,17 +132,11 @@ rule flat_degree_dist:
         full_degree["degree_prey"] = full_degree["lower_prey_degree"]
         full_degree.to_csv(output.summed_probability,sep="\t",index=False)
         for hci_filename, hci_limit in zip(output.hci_threshold,params.hci_limits):
-            print(hci_limit)
-            print(type(hci_limit))
             df_hci = threshold_degree(df,hci_limit)
             df_hci.to_csv(hci_filename,sep="\t",index=False)
 
         for hcni_filename, hcni_limit in zip(output.hcni_tests,params.hcni_tested):
-            print(hcni_limit)
-            print(type(hcni_limit))
             df_hcni = threshold_degree(df,hcni_limit,mode="non_interaction")
             df_hcni.to_csv(hcni_filename,sep="\t",index=False)
 
         threshold_degree(df,0,mode="all").to_csv(output.naive_degree,sep="\t",index=False)
-
-

@@ -75,7 +75,6 @@ include: "src/Analysis/ExperimentalNegatome/experimental_negatome.smk"
 include: "src/Analysis/AbundanceAwareDetection/MCMC_abundance.smk"
 
 include: "src/Analysis/Enrichment/GetDegree.smk"
-include: "src/Analysis/Enrichment/EnrichmentGODO.smk"
 include: "src/Analysis/Enrichment/EnrichmentAnalysisGeneSet.smk"
 
 include: "src/Analysis/Annotation/CoLocalisation.smk"

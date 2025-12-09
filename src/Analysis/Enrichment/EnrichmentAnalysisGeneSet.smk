@@ -1,5 +1,7 @@
 import pandas as pd
-
+from IPython.core.pylabtools import retina_figure
+from openpyxl.styles.builtins import output
+from snakemake.io import expand
 rule get_enrichment:
     params:
         script = "src/Analysis/Enrichment/enrichment_degree.R"
@@ -20,6 +22,83 @@ rule get_enrichment:
             {output.do_enrichment_bait} \
             {output.do_enrichment_prey}
         """
+
+def input_enrichments(wc, types, limits, ont):
+    # should be ordered in config
+    data = wc.data
+    expected_input = []
+    for type in types:
+        if type == "HCI":
+            c_limit = limits[0]
+        else:
+            c_limit = limits[1]
+        expected_input += expand(
+            "work_folder{pn}/degree/enrichment/{data}_{type}_{limit}_{source}_{ont}.csv",
+            pn=pn,
+            data=data,
+            type=type,
+            limit=c_limit,
+            source=["bait", "prey"],
+            ont=ont
+        )
+        expected_input += expand(
+            "work_folder{pn}/degree/enrichment/{data}_summed_{source}_{ont}.csv",
+            pn=pn,
+            data=data,
+            source=["bait", "prey"],
+            ont=ont
+        )
+        expected_input += expand(
+            "work_folder{pn}/degree/enrichment/{data}_summed_{source}_{ont}.csv",
+            pn=pn,
+            data=data,
+            source=["bait", "prey"],
+            ont=ont
+        )
+        expected_input += expand(
+            "work_folder{pn}/degree/enrichment/{data}_naive_{source}_{ont}.csv",
+            pn=pn,
+            data=data,
+            source=["bait", "prey"],
+            ont=ont
+        )
+        return expected_input
+
+rule n_enriched_per_method:
+    params:
+        hci_limits = config["hci_limits"],
+        hcni_tested = config["hcni_tested"]
+    input:
+        all_degree_enrichments = lambda wc: input_enrichments(
+            wc, ["HCI","HCNI"], [config["hci_limits"], config["hcni_tested"]], ["go","do"])
+    output:
+        n_enrichments = "work_folder{pn}/degree/enrichment/significant_ontologies/{{data}}.csv"
+    run:
+        with open(output.n_enrichments, "w") as w:
+            w.write("data\ttype\tsource\tlimit\tont\tn_enrichments\n")
+            for c_enrichment in input.all_degree_enrichments:
+                n_enrich = sum(1 for _ in open(c_enrichment, "r")) - 1
+                base_name = c_enrichment.split("/")[-1]
+                variables = base_name.split("_")
+                ont = variables[-1].removesuffix(".csv")
+                source = variables[-2]
+                data = variables[0]
+                type = variables[1]
+                if type == "summed":
+                    type = "HCI"
+                    limit = "Expected"
+                elif type=="naive":
+                    type="HCI"
+                    limit="None"
+                else:
+                    limit = variables[2]
+
+                w.write(f"{data}\t{type}\t{source}\t{limit}\t{ont}\t{n_enrich}\n")
+
+
+
+
+
 
 
 #
