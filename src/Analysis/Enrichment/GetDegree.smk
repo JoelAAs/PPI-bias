@@ -55,10 +55,10 @@ def fill_na(df, params_bait, params_prey):
 
 
 def threshold_degree(df, t, mode="interaction"):
-    modes = ["interaction", "non-interaction", "all"]
+    modes = ["interaction", "non_interaction", "all"]
     if mode not in modes:
         raise ValueError(f"Unknown mode: {mode}")
-    if mode == "non-interaction":
+    if mode == "non_interaction":
         df_t = df[df["lower_bound_pod"] > t]
     elif mode == "interaction":
         df_t = df[(df["n_observed"] == 0) & (df["n_tested"] >= t)]
@@ -135,4 +135,8 @@ rule flat_degree_dist:
             threshold_degree(df,hci_limit).to_csv(hci_filename,sep="\t",index=False)
 
         for hcni_filename, hcni_limit in zip(output.hcni_tests,params.hcni_tested):
-            threshold_degree(df,hcni_limit,non_interaction=True).to_csv(hcni_filename,sep="\t",index=False)
+            threshold_degree(df,hcni_limit,mode="non_interaction").to_csv(hcni_filename,sep="\t",index=False)
+
+        threshold_degree(df,0,mode="all").to_csv(naive_degree,sep="\t",index=False)
+
+
