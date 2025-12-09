@@ -111,7 +111,7 @@ rule flat_degree_dist:
         summed_probability=f"work_folder{pn}/degree/{{data}}_summed.csv",
         hci_threshold=expand(
             "work_folder{pn}/degree/{{data}}_HCI_{hci_limit}.csv",
-            hci_limt=config["hci_limits"],pn=pn),
+            hci_limit=config["hci_limits"],pn=pn),
         hcni_tests=expand(
             "work_folder{pn}/degree/{{data}}_HCNI_{hcni_tested}.csv",
             hcni_tested=config["hcni_tested"],pn=pn)
