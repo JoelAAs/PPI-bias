@@ -125,8 +125,8 @@ df_degree %>% get_enrich_go(n_genes, "degree_prey") %>% filter(qvalue < 0.05) ->
 df_degree %>% get_enrich_do(n_genes, "degree_bait") %>% filter(qvalue < 0.05) -> do_degree_bait
 df_degree %>% get_enrich_do(n_genes, "degree_prey") %>% filter(qvalue < 0.05) -> do_degree_prey
 
-write.table(go_degree_bait,go_enrichmentt_bait,sep="\t", row_name=F)
+write.table(go_degree_bait,go_enrichment_bait,sep="\t", row_name=F)
 write.table(go_degree_prey,go_enrichment_prey,sep="\t", row_name=F)
-write.table(do_degree_bait,do_enrichmentt_bait,sep="\t", row_name=F)
+write.table(do_degree_bait,do_enrichment_bait,sep="\t", row_name=F)
 write.table(do_degree_prey,do_enrichment_prey,sep="\t", row_name=F)
 
