@@ -26,7 +26,7 @@ def input_enrichments(wc, types, c_limits, c_ont):
     c_data = wc.data
     expected_input = []
     for c_type in types:
-        if c_type == "HCI":
+        if c_type != "HCI":
             c_limit = c_limits[0]
         else:
             c_limit = c_limits[1]
@@ -68,7 +68,7 @@ rule n_enriched_per_method:
         hcni_tested = config["hcni_tested"]
     input:
         all_degree_enrichments = lambda wc: input_enrichments(
-            wc, ["HCI","HCNI"], [config["hci_limits"], config["hcni_tested"]], ["go","do"])
+            wc, ["HCI", "delta", "HCNI"], [config["hci_limits"], config["hcni_tested"]], ["go","do"])
     output:
         n_enrichments = f"work_folder{pn}/degree/enrichment/significant_ontologies/{{data}}.csv"
     run:

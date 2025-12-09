@@ -160,3 +160,23 @@ rule get_intact_bait_prey_degree:
         },axis=1)
         t_degree = df_bait_degree.merge(df_prey_degree,on="gene_name",how="outer").fillna(0)
         t_degree.to_csv(output.intact_degree,sep="\t",index=False)
+
+rule get_delta_degree:
+    input:
+        naive_degree = f"work_folder{pn}/degree/{{data}}_naive.csv",
+        hci_threshold=expand(
+            "work_folder{pn}/degree/{{data}}_HCI_{hci_limit}.csv",
+            hci_limit=config["hci_limits"],pn=pn)
+    output:
+        delta_degree = expand(
+            "work_folder{pn}/degree/{{data}}_delta_{hci_limit}.csv",
+            hci_limit=config["hci_limits"],pn=pn)
+    run:
+        naive_df = pd.read_csv(input.naive_degree, sep = "\t")
+        for hci_degree_file, delta_output in zip(input.hci_threshold, output.delta_degree):
+            df_degree = pd.read_csv(hci_degree_file, sep="\t")
+            delta_df = naive_df.merge(df_degree, on="gene_name",
+                suffixes=("_naive", "_hci"), how="outer").fillna(0)
+            delta_df["degree_bait"] = delta_df["degree_bait_naive"] -  delta_df["degree_bait_hci"]
+            delta_df["degree_prey"] = delta_df["degree_prey_naive"] -  delta_df["degree_prey_hci"]
+            delta_df.output(delta_output, sep="\t", index=False)
