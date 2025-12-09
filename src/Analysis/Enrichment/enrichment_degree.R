@@ -108,32 +108,15 @@ get_norm_degree_delta <- function(df1, df2, merged_df, target_col, col_name, mis
 
 args <- commandArgs(trailingOnly = TRUE)
 
-hippie_degree      <- args[1]
-summed_probability <- args[2]
-threshold_1        <- args[3]
-threshold_2        <- args[4]
-distribution_plot  <- args[5]
-go_enrichment      <- args[6]
-do_enrichment      <- args[7]
-do_delta           <- args[8]
-top_delta_genes    <- args[9]
-doid_vs_degree     <- args[10]
+degree_file <- args[1]
+output_file <- args[2]
 
-df_hp = read.table(hippie_degree, sep ="\t", header=T) %>% 
-  map_entrez() %>% filter(!is.na(entrez_id))
-df_sp = read.table(summed_probability, sep ="\t", header=T) %>% 
-  map_entrez() %>% filter(!is.na(entrez_id))
-df_t1 = read.table(threshold_1, sep ="\t", header=T) %>% 
-  map_entrez() %>% filter(!is.na(entrez_id))
-df_t2 = read.table(threshold_2, sep ="\t", header=T) %>% 
+df_hp = read.table(degree_file, sep ="\t", header=T) %>%
   map_entrez() %>% filter(!is.na(entrez_id))
 
 normalise <- function(x) x/max(x) 
 
 df_hp$norm_degree <- normalise(df_hp$degree)
-df_sp$norm_degree <- normalise(df_sp$mean_bait_degree)
-df_t1$norm_degree <- normalise(df_t1$degree_bait)
-df_t2$norm_degree <- normalise(df_t2$degree_bait)
 
 df_hp$dataset <- "HIPPIE"
 df_sp$dataset <- "SP"

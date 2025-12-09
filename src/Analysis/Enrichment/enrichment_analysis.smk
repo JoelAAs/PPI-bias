@@ -1,8 +1,7 @@
 import pandas as pd
 
 rule get_bait_list:
-    # TODO: evaluate id this is used or useful
-
+    # TODO: evaluate if this is used or useful
     params:
         other_ms_methods = [
             "MI-0006",
@@ -73,4 +72,19 @@ rule bait_enrichment:
             {output.venn_plot_doid} \
             {output.venn_plot_bait} \
             {params.n_top_baits} 
+        """
+
+
+rule get_DO_enrichment:
+    params:
+        script = ""
+    input:
+        degree = f"work_folder{pn}/degree/{{data}}_{{set}}_{{limit}}.csv"
+    output:
+        enrichments = f"work_folder{pn}/degree/{{data}}_{{set}}_{{limit}}.csv",
+    shell:
+        """
+        Rscript {params.script} \
+            {input.degree} \
+            {output.enrichments}
         """

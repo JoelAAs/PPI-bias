@@ -1,6 +1,7 @@
 import pandas as pd
 from scipy.stats import beta
 
+
 def get_degree(df, bait=True):
     pseudo_n = 1
     df["ratio"] = df["n_observed"] / df["n_tested"]
@@ -53,8 +54,12 @@ def fill_na(df, params_bait, params_prey):
     return df
 
 
-def threshold_degree(df, t):
-    df_t = df[df["lower_bound_pod"] > t]
+def threshold_degree(df, t, non_interaction=False):
+    if non_interaction:
+        df_t = df[df["lower_bound_pod"] > t]
+    else:
+        df_t = df[(df["n_observed"] == 0) & (df["n_tested"] > t)]
+
     df_bait_degree = df_t.groupby("gene_name_bait",as_index=False).size()
     df_bait_degree = df_bait_degree.rename({
         "gene_name_bait": "gene_name",
@@ -77,7 +82,7 @@ rule get_degree_dist_hippie:
     input:
         hippie="data/HIPPIE-current.mitab.txt"
     output:
-            degree=f"work_folder{pn}/degree/full_hippie.csv"
+        degree=f"work_folder{pn}/degree/full_hippie.csv"
     run:
         df_hippie = pd.read_csv(input.hippie,sep="\t")
         gene_cols = ["Gene Name Interactor A", "Gene Name Interactor B"]
@@ -89,7 +94,7 @@ rule get_degree_dist_hippie:
         df_hippie["interaction_id"] = df_hippie[gene_cols].apply(lambda x: "-".join(sorted(x)),axis=1)
         df_hippie_long = pd.melt(df_hippie,id_vars=["interaction_id"],value_vars=gene_cols,value_name="gene_name")
         hippie_degree = df_hippie_long.groupby("gene_name",as_index=False)["interaction_id"].nunique().rename(
-            {"interaction_id": "degree"}, axis=1
+            {"interaction_id": "degree"},axis=1
         )
         hippie_degree.to_csv(output.degree,sep="\t",index=False)
 
@@ -97,23 +102,29 @@ rule flat_degree_dist:
     """
     Get degree distribution for flat POD
     """
+    params:
+        hci_limits=config["hci_limits"],
+        hcni_tests=config["hcni_testes"]
     input:
-        flat_probability=f"work_folder{pn}/analysis/POD/POD_flat.csv"
+        pod_file=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
     output:
-        summed_probability=f"work_folder{pn}/degree/flat_summed.csv",
-        threshold_1=f"work_folder{pn}/degree/flat_min.1.csv",
-        threshold_2=f"work_folder{pn}/degree/flat_min.2.csv"
+        summed_probability=f"work_folder{pn}/degree/{{data}}_summed.csv",
+        hci_threshold=expand(
+            "work_folder{pn}/degree/{{data}}_HCI_{hci_limit}.csv",
+            hci_limt=config["hci_limits"],pn=pn),
+        hcni_tests=expand(
+            "work_folder{pn}/degree/{{data}}_HCNI_{hcni_tested}.csv",
+            hcni_tested=config["hcni_tested"],pn=pn)
     run:
-        df = pd.read_csv(input.flat_probability,sep="\t")
+        df = pd.read_csv(input.pod_file,sep="\t")
 
         bait_degree, params_bait = get_degree(df)
         prey_degree, params_prey = get_degree(df,False)
         full_degree = bait_degree.merge(prey_degree,on="gene_name",how="outer")
         full_degree = fill_na(full_degree,params_bait,params_prey)
-
         full_degree.to_csv(output.summed_probability,sep="\t",index=False)
+        for hci_filename, hci_limit in zip(output.hci_threshold,params.hci_limits):
+            threshold_degree(df,hci_limit).to_csv(hci_filename,sep="\t",index=False)
 
-        threshold_degree(df,0.1).to_csv(output.threshold_1,sep="\t",index=False)
-        threshold_degree(df,0.2).to_csv(output.threshold_2,sep="\t",index=False)
-
-
+        for hcni_filename, hcni_limit in zip(output.hcni_tests,params.hci_limits):
+            threshold_degree(df,0.2).to_csv(hcni_limit,sep="\t",index=False)
