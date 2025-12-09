@@ -58,9 +58,9 @@ def threshold_degree(df, t, mode="interaction"):
     modes = ["interaction", "non_interaction", "all"]
     if mode not in modes:
         raise ValueError(f"Unknown mode: {mode}")
-    if mode == "non_interaction":
+    if mode == "interaction":
         df_t = df[df["lower_bound_pod"] > t]
-    elif mode == "interaction":
+    elif mode == "non_interaction":
         df_t = df[(df["n_observed"] == 0) & (df["n_tested"] >= t)]
     else:
         df_t = df[df["n_observed"] != 0]
@@ -132,10 +132,16 @@ rule flat_degree_dist:
         full_degree["degree_prey"] = full_degree["lower_prey_degree"]
         full_degree.to_csv(output.summed_probability,sep="\t",index=False)
         for hci_filename, hci_limit in zip(output.hci_threshold,params.hci_limits):
-            threshold_degree(df,hci_limit).to_csv(hci_filename,sep="\t",index=False)
+            print(hci_limit)
+            print(type(hci_limit))
+            df_hci = threshold_degree(df,hci_limit)
+            df_hci.to_csv(hci_filename,sep="\t",index=False)
 
         for hcni_filename, hcni_limit in zip(output.hcni_tests,params.hcni_tested):
-            threshold_degree(df,hcni_limit,mode="non_interaction").to_csv(hcni_filename,sep="\t",index=False)
+            print(hcni_limit)
+            print(type(hcni_limit))
+            df_hcni = threshold_degree(df,hcni_limit,mode="non_interaction")
+            df_hcni.to_csv(hcni_filename,sep="\t",index=False)
 
         threshold_degree(df,0,mode="all").to_csv(output.naive_degree,sep="\t",index=False)
 
