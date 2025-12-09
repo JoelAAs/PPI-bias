@@ -26,10 +26,10 @@ def input_enrichments(wc, types, c_limits, c_ont):
     c_data = wc.data
     expected_input = []
     for c_type in types:
-        if c_type != "HCI":
-            c_limit = c_limits[0]
-        else:
+        if c_type == "HCNI":
             c_limit = c_limits[1]
+        else:
+            c_limit = c_limits[0]
         expected_input += expand(
             "work_folder{pn}/degree/enrichment/{data}_{type}_{limit}_{source}_{ont}.csv",
             pn=pn,
