@@ -6,8 +6,8 @@ rule get_enrichment:
     input:
         degree = f"work_folder{pn}/degree/{{data_set_limit}}.csv"
     output:
-        go_enrichment_bait = f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_bait_do.csv",
-        go_enrichment_prey = f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_prey_do.csv",
+        go_enrichment_bait = f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_bait_go.csv",
+        go_enrichment_prey = f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_prey_go.csv",
         do_enrichment_bait = f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_bait_do.csv",
         do_enrichment_prey = f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_prey_do.csv"
     conda: "do_enrichment"
@@ -21,7 +21,7 @@ rule get_enrichment:
             {output.do_enrichment_prey}
         """
 
-            
+
 #
 # rule get_bait_list:
 #     # TODO: evaluate if this is used or useful
