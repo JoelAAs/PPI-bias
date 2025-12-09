@@ -140,3 +140,23 @@ rule get_degree_values:
             df_hcni.to_csv(hcni_filename,sep="\t",index=False)
 
         threshold_degree(df,0,mode="all").to_csv(output.naive_degree,sep="\t",index=False)
+
+rule get_intact_bait_prey_degree:
+    input:
+        intact_bp = "work_folder/per_gene/formated/bait_prey_publications.csv"
+    output:
+        intact_degree = f"work_folder{pn}/degree/intact.csv"
+    run:
+        df_intact = pd.read_csv(input.intact_bp, sep="\t")
+        df_bait_degree = df_intact.groupby("gene_name_bait",as_index=False).size()
+        df_bait_degree = df_bait_degree.rename({
+            "gene_name_bait": "gene_name",
+            "size": "degree_bait"
+        },axis=1)
+        df_prey_degree = df_intact.groupby("gene_name_prey",as_index=False).size()
+        df_prey_degree = df_prey_degree.rename({
+            "gene_name_prey": "gene_name",
+            "size": "degree_prey"
+        },axis=1)
+        t_degree = df_bait_degree.merge(df_prey_degree,on="gene_name",how="outer").fillna(0)
+

@@ -20,6 +20,7 @@ hci_limits:
   - 0.1
   - 0.2
 hcni_tested:
+  - 3
   - 4
   - 5
 

@@ -93,10 +93,27 @@ rule n_enriched_per_method:
 
                 w.write(f"{data}\t{type}\t{source}\t{limit}\t{ont}\t{n_enrich}\n")
 
-
-
-
-
+rule n_enriched_intact:
+    input:
+        intact_enrichments = expand(
+            f"work_folder{pn}/degree/enrichment/intact_{type}_{ont}.csv",
+            type=["bait","prey"], ont = ["do", "go"]
+        )
+    output:
+        n_enrichments=f"work_folder{pn}/degree/enrichment/significant_ontologies/intact.csv"
+    run:
+        with open(output.n_enrichments,"w") as w:
+            w.write("data\ttype\tsource\tlimit\tont\tn_enrichments\n")
+            for c_enrichment in input.intact_enrichments:
+                n_enrich = sum(1 for _ in open(c_enrichment,"r")) - 1
+                base_name = c_enrichment.split("/")[-1]
+                variables = base_name.split("_")
+                ont = variables[-1].removesuffix(".csv")
+                source = variables[-2]
+                data = "Intact"
+                type = "HCI"
+                limit = "None"
+                w.write(f"{data}\t{type}\t{source}\t{limit}\t{ont}\t{n_enrich}\n")
 
 
 #
