@@ -81,10 +81,10 @@ rule get_DO_enrichment:
     input:
         degree = f"work_folder{pn}/degree/{{data_set_limit}}.csv"
     output:
-        go_enrichment_bait = f"work_folder{pn}/degree/{{data_set_limit}}_bait_do.csv",
-        go_enrichment_prey = f"work_folder{pn}/degree/{{data_set_limit}}_prey_do.csv",
-        do_enrichment_bait = f"work_folder{pn}/degree/{{data_set_limit}}_bait_do.csv",
-        do_enrichment_prey = f"work_folder{pn}/degree/{{data_set_limit}}_prey_do.csv"
+        go_enrichment_bait = f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_bait_do.csv",
+        go_enrichment_prey = f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_prey_do.csv",
+        do_enrichment_bait = f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_bait_do.csv",
+        do_enrichment_prey = f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_prey_do.csv"
     conda: "do_enrichment"
     shell:
         """
