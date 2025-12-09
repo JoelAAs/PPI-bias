@@ -1,6 +1,4 @@
 import pandas as pd
-from IPython.core.pylabtools import retina_figure
-from openpyxl.styles.builtins import output
 from snakemake.io import expand
 rule get_enrichment:
     params:
