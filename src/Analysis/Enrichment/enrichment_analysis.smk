@@ -77,14 +77,21 @@ rule bait_enrichment:
 
 rule get_DO_enrichment:
     params:
-        script = ""
+        script = "src/Analysis/Enrichment/enrichment_degree.R"
     input:
-        degree = f"work_folder{pn}/degree/{{data}}_{{set}}_{{limit}}.csv"
+        degree = f"work_folder{pn}/degree/{{data_set_limit}}.csv"
     output:
-        enrichments = f"work_folder{pn}/degree/{{data}}_{{set}}_{{limit}}.csv",
+        go_enrichment_bait = f"work_folder{pn}/degree/{{data_set_limit}}_bait_do.csv",
+        go_enrichment_prey = f"work_folder{pn}/degree/{{data_set_limit}}_prey_do.csv",
+        do_enrichment_bait = f"work_folder{pn}/degree/{{data_set_limit}}_bait_do.csv",
+        do_enrichment_prey = f"work_folder{pn}/degree/{{data_set_limit}}_prey_do.csv"
+    conda: "do_enrichment"
     shell:
         """
         Rscript {params.script} \
             {input.degree} \
-            {output.enrichments}
+            {output.go_enrichment_bait} \
+            {output.go_enrichment_prey} \
+            {output.do_enrichment_bait} \
+            {output.do_enrichment_prey}
         """

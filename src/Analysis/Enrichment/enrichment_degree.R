@@ -66,7 +66,7 @@ get_enrich_do  <- function(df, n, val_column="norm_degree") {
   df %>% 
     slice_max(!!sym(val_column), n=n) %>%
     pull(entrez_id) -> genes
-  clusterProfiler::enrichDO(genes, qvalueCutoff = 1, pvalueCutoff = 1) %>% 
+  clusterProfiler::enrichDO(genes, qvalueCutoff = 1, pvalueCutoff = 1)@result %>%
     return()
 }
 
@@ -109,334 +109,27 @@ get_norm_degree_delta <- function(df1, df2, merged_df, target_col, col_name, mis
 args <- commandArgs(trailingOnly = TRUE)
 
 degree_file <- args[1]
-output_file <- args[2]
-
-df_hp = read.table(degree_file, sep ="\t", header=T) %>%
+go_enrichment_bait  <- args[2]
+go_enrichment_prey  <- args[3]
+do_enrichment_bait  <- args[4]
+do_enrichment_prey  <- args[5]
+df_degree = read.table(degree_file, sep ="\t", header=T) %>%
   map_entrez() %>% filter(!is.na(entrez_id))
 
 normalise <- function(x) x/max(x) 
 
-df_hp$norm_degree <- normalise(df_hp$degree)
-
-df_hp$dataset <- "HIPPIE"
-df_sp$dataset <- "SP"
-df_t1$dataset <- "T0.1"
-df_t2$dataset <- "T0.2"
-
-
-a = 0.4
-degree_dist <- ggplot(
-  df_hp,
-  aes(x=log(norm_degree))
-) + geom_density(aes(fill="HIPPIE"), alpha=a) +
-  geom_density(data=df_sp, aes(fill="SP"), alpha=a) +
-  geom_density(data=df_t1, aes(fill="T0.1"), alpha=a) +
-  geom_density(data=df_t2, aes(fill="T0.2"), alpha=a) +
-  theme_bw()+
-  labs(
-    fill="Dataset",
-    x="Log(Normalised Degree)",
-    y="Density"
-  )
-
-ggsave(distribution_plot, degree_dist,
-       width= 4,
-       dpi=300)
-
-## GO degree
+df_degree$norm_degree <- normalise(df_hp$degree)
 n_genes = 50
-df_hp %>% get_enrich_go(n_genes) -> go_hp
-go_hp$dataset <- "HIPPIE"
-df_sp %>% get_enrich_go(n_genes) -> go_sp
-go_sp$dataset <- "SP"
-df_t1 %>% get_enrich_go(n_genes) -> go_t1
-go_t1$dataset <- "T0.1"
-df_t2 %>% get_enrich_go(n_genes) -> go_t2
-go_t2$dataset <- "T0.2"
-
-n_id = 10
-go_hp %>% get_top_id(n_id) -> go_selected_hp
-go_sp %>% get_top_id(n_id) -> go_selected_sp
-go_t1 %>% get_top_id(n_id) -> go_selected_t1
-go_t2 %>% get_top_id(n_id) -> go_selected_t2
-
-
-df_go <- bind_rows(go_hp, go_sp, go_t1, go_t2)
-df_go %>%  filter(
-  ID %in% c(
-    go_selected_hp,
-    go_selected_sp,
-    go_selected_t1,
-    go_selected_t2)
-  ) -> df_go_top
-
-go_plot <- dplot_go(df_go_top) + theme_bw() + 
-  labs(
-    x="Dataset",
-    y="DO terms",
-    shape="q < 0.05"
-  ) +
-  theme(axis.text.x = element_text(angle = -90))
-ggsave(go_enrichment,
-       height = 5,
-       width = 8,
-       go_plot, dpi=300)
+## GO degree
+df_degree %>% get_enrich_go(n_genes, "degree_bait") %>% filter(qvalue < 0.05) -> go_degree_bait
+df_degree %>% get_enrich_go(n_genes, "degree_prey") %>% filter(qvalue < 0.05) -> go_degree_prey
 
 ## DO degree
-n_genes = 50
-df_hp %>% get_enrich_do(n_genes) -> do_hp
-do_hp@result$dataset <- "HIPPIE"
-df_sp %>% get_enrich_do(n_genes) -> do_sp
-do_sp@result$dataset <- "SP"
-df_t1 %>% get_enrich_do(n_genes) -> do_t1
-do_t1@result$dataset <- "T0.1"
-df_t2 %>% get_enrich_do(n_genes) -> do_t2
-do_t2@result$dataset <- "T0.2"
+df_degree %>% get_enrich_do(n_genes, "degree_bait") %>% filter(qvalue < 0.05) -> do_degree_bait
+df_degree %>% get_enrich_do(n_genes, "degree_prey") %>% filter(qvalue < 0.05) -> do_degree_prey
 
-n_id = 10
-do_hp@result %>% get_top_id(n_id) -> do_selected_hp
-do_sp@result %>% get_top_id(n_id) -> do_selected_sp
-do_t1@result %>% get_top_id(n_id) -> do_selected_t1
-do_t2@result %>% get_top_id(n_id) -> do_selected_t2
-
-
-df_do <- bind_rows(
-    do_hp@result,
-    do_sp@result,
-    do_t1@result,
-    do_t2@result
-    )
-df_do %>%  filter(
-  ID %in% c(
-    do_selected_hp,
-    do_selected_sp,
-    do_selected_t1,
-    do_selected_t2)
-  ) -> df_do_top
-
-do_plot <- dplot_do(df_do_top) + theme_bw() + 
-  labs(
-    x="Dataset",
-    y="DO terms",
-    color="q < 0.05"
-  ) +
-  theme(axis.text.x = element_text(angle = -90))
-ggsave(do_enrichment,
-       do_plot,
-       height = 3.2,
-       dpi=300)
-
-
-## Degree Difference
-delta_degree <- df_hp[, c("gene_name", "norm_degree")]
-delta_degree = get_norm_degree_delta(df_hp, df_sp, delta_degree, "norm_degree", "delta_degree_hp_sp")
-delta_degree = get_norm_degree_delta(df_hp, df_t1, delta_degree, "norm_degree", "delta_degree_hp_t1")
-delta_degree = get_norm_degree_delta(df_hp, df_t2, delta_degree, "norm_degree", "delta_degree_hp_t2")
-
-delta_degree <- delta_degree %>% map_entrez()
-
-n_genes = 50
-delta_degree %>% get_enrich_do(n_genes, "delta_degree_hp_sp") -> do_delta_sp
-do_delta_sp@result$dataset <- "SP"
-delta_degree %>% get_enrich_do(n_genes, "delta_degree_hp_t1") -> do_delta_t1
-do_delta_t1@result$dataset <- "T0.1"
-delta_degree %>% get_enrich_do(n_genes, "delta_degree_hp_t2") -> do_delta_t2
-do_delta_t2@result$dataset <- "T0.2"
-
-n_id = 10
-do_delta_sp@result %>% get_top_id(n_id) -> do_delta_selected_sp
-do_delta_t1@result %>% get_top_id(n_id) -> do_delta_selected_t1
-do_delta_t2@result %>% get_top_id(n_id) -> do_delta_selected_t2
-
-df_do_delta <- bind_rows(
-    do_delta_sp@result,
-    do_delta_t1@result,
-    do_delta_t2@result)
-
-df_do_delta %>% filter(
-  ID %in% c(
-    do_delta_selected_sp,
-    do_delta_selected_t1,
-    do_delta_selected_t2)
-  ) -> df_do_delta_top
-
-do_delta_plot <- dplot_do(df_do_delta_top, color="qvalue") + theme_bw() + 
-  labs(
-    x="Dataset",
-    y="DO terms"
-  ) +
-  theme(axis.text.x = element_text(angle = -90))
-ggsave(do_delta,
-       do_delta_plot,
-       height=3,
-       width = 5,
-       dpi=300)
-
-
-n_doid_gene_sp <- data.frame(entrez_id = do_delta_sp@gene)
-n_doid_gene_t1 <- data.frame(entrez_id = do_delta_t1@gene)
-n_doid_gene_t2 <- data.frame(entrez_id = do_delta_t2@gene)
-
-n_doid_gene_sp$dataset <- "SP"
-n_doid_gene_t1$dataset <- "T0.1"
-n_doid_gene_t2$dataset <- "T0.2"
-
-n_doid_gene_sp$top_50  <- n_doid_gene_sp$entrez_id %in% do_sp@gene  
-n_doid_gene_t1$top_50  <- n_doid_gene_t1$entrez_id %in% do_t1@gene  
-n_doid_gene_t2$top_50  <- n_doid_gene_t2$entrez_id %in% do_t2@gene  
-
-df_top_delta_doid <- do.call(
-  rbind,
-  list(
-    n_doid_gene_sp,
-    n_doid_gene_t1,
-    n_doid_gene_t2)
-  )
-
-res <- select(
-    x = HDO.db,
-    keys = unique(df_top_delta_doid$entrez_id), keytype = "gene",
-    columns = c("doid"))
-
-res %>% group_by(gene) %>%
-    summarise(n_doid=length(unique(doid))) %>%
-    ungroup() -> n_doids
-
-n_doids$entrez_id <- n_doids$gene
-n_doids$gene <- NULL  
-
-df_top_delta_doid <- merge(df_top_delta_doid, n_doids, on="entrez_id", all.x=T, )
-df_top_delta_doid[is.na(df_top_delta_doid$n_doid), "n_doid"] <- 0
-df_top_delta_doid <- merge(df_top_delta_doid, df_hp, on="entrez_id", all.x=T)
-
-df_top_delta_doid$gene_name <- mapIds(org.Hs.eg.db, keys=df_top_delta_doid$entrez_id, column="SYMBOL", keytype="ENTREZID", multiVals="first")
-df_top_delta_doid <- df_top_delta_doid %>%
-  mutate(gene_name = fct_reorder(gene_name, -n_doid))
-
-
-delta_gene_plot <- ggplot(
-  df_top_delta_doid, 
-  aes(
-    x = gene_name,
-    color = dataset,
-    y = log10(n_doid+1),
-    shape = top_50)) +
-  geom_point() +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1),
-        legend.position = "none") +
-  labs(x = "Gene Name", y = "Dataset", fill = "n_doid") + 
-  labs(
-    y="Log10(N DO-terms +1)",
-    x="Gene name"
-  ) + facet_wrap(dataset ~., nrow=3) 
-
-ggsave(top_delta_genes,
-       delta_gene_plot,
-       width=7,
-       height = 4,
-       dpi = 300)
-
-### Get disease-degree
-selected_cols <- c("gene_name", "entrez_id",  "norm_degree")
-
-df_all_degree_long <- bind_rows(
-    df_hp[, selected_cols],
-    df_sp[, selected_cols],
-    df_t1[, selected_cols],
-    df_t2[, selected_cols]
-) %>% filter(!is.na(entrez_id))
-
-df_all_degree_wide_1 <- merge(
-  df_hp[, selected_cols],
-  df_sp[, selected_cols],
-  by = c("gene_name", "entrez_id"),
-  suffixes=c("_hippe", "_sp"),
-  all=T)
-
-
-df_all_degree_wide_2 <- merge(
-  df_t1[, selected_cols],
-  df_t2[, selected_cols],
-  by = c("gene_name", "entrez_id"),
-  suffixes=c("_t1", "_t2"),
-  all=T)
-
-df_all_degree_wide <- merge(
-  df_all_degree_wide_1,
-  df_all_degree_wide_2,
-  by = c("gene_name", "entrez_id"),
-  suffixes=c("_t1", "_t2"),
-  all=T)
-
-df_all_degree_wide$norm_degree_t1[is.na(df_all_degree_wide$norm_degree_t1)] <- 0
-df_all_degree_wide$norm_degree_t2[is.na(df_all_degree_wide$norm_degree_t2)] <- 0
-
-
-full_do <- select(
-  x = HDO.db,
-  keys = unique(df_all_degree_wide$entrez_id), keytype = "gene",
-  columns = c("doid"))
-
-full_do %>% group_by(gene) %>%
-  summarise(n_doid=length(unique(doid))) %>%
-  ungroup() -> n_doids
-
-n_doids$entrez_id <- n_doids$gene
-n_doids$gene <- NULL  
-
-df_all_degree_wide <- merge(df_all_degree_wide, n_doids, on="entrez_id", all.x=T)
-df_all_degree_wide[is.na(df_all_degree_wide$n_doid), "n_doid"] <- 0
-
-df_all_degree_long <- melt(
-  df_all_degree_wide,
-  id.vars = c("entrez_id", "gene_name", "n_doid"),
-  variable.name = "dataset",
-  value.name = "norm_degree")
-
-df_all_degree_long <- df_all_degree_long %>%
-  group_by(dataset) %>%
-  mutate(
-    rank_norm_degree = rank(norm_degree),
-    rank_n_doid = rank(n_doid)
-  ) %>%
-  ungroup()
-
-df_all_degree_long %>%  
-  group_by(dataset) %>% 
-  summarise(
-    r = cor(norm_degree, n_doid, method="spearman", use = "complete.obs")
-  ) %>% 
-  ungroup() -> do_ro
-
-deg_vs_doid_plot <- ggplot(
-  df_all_degree_long,
-  aes(
-    x=norm_degree,
-    y=log10(n_doid+1),
-    color=dataset
-    )) +
-  geom_point() +
-  facet_wrap(dataset ~.,
-             labeller = labeller(
-               dataset =
-                 c("norm_degree_hippe" = "HIPPIE",
-                   "norm_degree_sp" = "SP",
-                   "norm_degree_t1" = "T0.1",
-                   "norm_degree_t2" = "T0.2"))) +
-  geom_text(data=do_ro, aes(x=0.89, y=2.5, label=paste("rho:", round(r,3))), color="black") + 
-  theme_bw() +
-  labs(
-    x="Normalised Degree",
-    y="Log10(N doid + 1)"
-  ) +
-  theme(legend.position = "none")
-
-
-ggsave(doid_vs_degree,
-       deg_vs_doid_plot,
-       width=6,
-       height = 6,
-       dpi = 300)
-
+write.table(go_degree_bait,go_enrichmentt_bait,sep="\t", row_name=F)
+write.table(go_degree_prey,go_enrichment_prey,sep="\t", row_name=F)
+write.table(do_degree_bait,do_enrichmentt_bait,sep="\t", row_name=F)
+write.table(do_degree_prey,do_enrichment_prey,sep="\t", row_name=F)
 

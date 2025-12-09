@@ -54,11 +54,16 @@ def fill_na(df, params_bait, params_prey):
     return df
 
 
-def threshold_degree(df, t, non_interaction=False):
-    if non_interaction:
+def threshold_degree(df, t, mode="interaction"):
+    modes = ["interaction", "non-interaction", "all"]
+    if mode not in modes:
+        raise ValueError(f"Unknown mode: {mode}")
+    if mode == "non-interaction":
         df_t = df[df["lower_bound_pod"] > t]
+    elif mode == "interaction":
+        df_t = df[(df["n_observed"] == 0) & (df["n_tested"] >= t)]
     else:
-        df_t = df[(df["n_observed"] == 0) & (df["n_tested"] > t)]
+        df_t = df[df["n_observed"] != 0]
 
     df_bait_degree = df_t.groupby("gene_name_bait",as_index=False).size()
     df_bait_degree = df_bait_degree.rename({
@@ -109,6 +114,7 @@ rule flat_degree_dist:
         pod_file=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
     output:
         summed_probability=f"work_folder{pn}/degree/{{data}}_summed.csv",
+        naive_degree = f"work_folder{pn}/degree/{{data}}_all_interactions.csv",
         hci_threshold=expand(
             "work_folder{pn}/degree/{{data}}_HCI_{hci_limit}.csv",
             hci_limit=config["hci_limits"],pn=pn),
@@ -122,6 +128,8 @@ rule flat_degree_dist:
         prey_degree, params_prey = get_degree(df,False)
         full_degree = bait_degree.merge(prey_degree,on="gene_name",how="outer")
         full_degree = fill_na(full_degree,params_bait,params_prey)
+        full_degree["degree_bait"] = full_degree["lower_bait_degree"]
+        full_degree["degree_prey"] = full_degree["lower_prey_degree"]
         full_degree.to_csv(output.summed_probability,sep="\t",index=False)
         for hci_filename, hci_limit in zip(output.hci_threshold,params.hci_limits):
             threshold_degree(df,hci_limit).to_csv(hci_filename,sep="\t",index=False)
