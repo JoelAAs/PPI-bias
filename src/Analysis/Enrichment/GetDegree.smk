@@ -137,6 +137,6 @@ rule flat_degree_dist:
         for hcni_filename, hcni_limit in zip(output.hcni_tests,params.hcni_tested):
             threshold_degree(df,hcni_limit,mode="non_interaction").to_csv(hcni_filename,sep="\t",index=False)
 
-        threshold_degree(df,0,mode="all").to_csv(naive_degree,sep="\t",index=False)
+        threshold_degree(df,0,mode="all").to_csv(output.naive_degree,sep="\t",index=False)
 
 
