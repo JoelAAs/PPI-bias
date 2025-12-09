@@ -96,8 +96,8 @@ rule n_enriched_per_method:
 rule n_enriched_intact:
     input:
         intact_enrichments = expand(
-            f"work_folder{pn}/degree/enrichment/intact_{type}_{ont}.csv",
-            type=["bait","prey"], ont = ["do", "go"]
+            "work_folder{pn}/degree/enrichment/intact_{type}_{ont}.csv",
+            pn=pn, type=["bait","prey"], ont = ["do", "go"]
         )
     output:
         n_enrichments=f"work_folder{pn}/degree/enrichment/significant_ontologies/intact.csv"
