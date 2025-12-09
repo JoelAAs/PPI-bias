@@ -26,7 +26,6 @@ def input_enrichments(wc, types, c_limits, c_ont):
     c_data = wc.data
     expected_input = []
     for c_type in types:
-        print(types)
         if c_type == "HCI":
             c_limit = c_limits[0]
         else:
@@ -40,28 +39,28 @@ def input_enrichments(wc, types, c_limits, c_ont):
             source=["bait", "prey"],
             ont=c_ont
         )
-        expected_input += expand(
-            "work_folder{pn}/degree/enrichment/{data}_summed_{source}_{ont}.csv",
-            pn=pn,
-            data=c_data,
-            source=["bait", "prey"],
-            ont=c_ont
-        )
-        expected_input += expand(
-            "work_folder{pn}/degree/enrichment/{data}_summed_{source}_{ont}.csv",
-            pn=pn,
-            data=c_data,
-            source=["bait", "prey"],
-            ont=c_ont
-        )
-        expected_input += expand(
-            "work_folder{pn}/degree/enrichment/{data}_naive_{source}_{ont}.csv",
-            pn=pn,
-            data=c_data,
-            source=["bait", "prey"],
-            ont=c_ont
-        )
-        return expected_input
+    expected_input += expand(
+        "work_folder{pn}/degree/enrichment/{data}_summed_{source}_{ont}.csv",
+        pn=pn,
+        data=c_data,
+        source=["bait", "prey"],
+        ont=c_ont
+    )
+    expected_input += expand(
+        "work_folder{pn}/degree/enrichment/{data}_summed_{source}_{ont}.csv",
+        pn=pn,
+        data=c_data,
+        source=["bait", "prey"],
+        ont=c_ont
+    )
+    expected_input += expand(
+        "work_folder{pn}/degree/enrichment/{data}_naive_{source}_{ont}.csv",
+        pn=pn,
+        data=c_data,
+        source=["bait", "prey"],
+        ont=c_ont
+    )
+    return expected_input
 
 rule n_enriched_per_method:
     params:
