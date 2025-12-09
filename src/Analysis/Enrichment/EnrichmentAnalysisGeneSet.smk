@@ -70,7 +70,7 @@ rule n_enriched_per_method:
         all_degree_enrichments = lambda wc: input_enrichments(
             wc, ["HCI","HCNI"], [config["hci_limits"], config["hcni_tested"]], ["go","do"])
     output:
-        n_enrichments = "work_folder{pn}/degree/enrichment/significant_ontologies/{{data}}.csv"
+        n_enrichments = f"work_folder{pn}/degree/enrichment/significant_ontologies/{{data}}.csv"
     run:
         with open(output.n_enrichments, "w") as w:
             w.write("data\ttype\tsource\tlimit\tont\tn_enrichments\n")
