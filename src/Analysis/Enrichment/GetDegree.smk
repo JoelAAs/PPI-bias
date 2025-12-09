@@ -159,4 +159,4 @@ rule get_intact_bait_prey_degree:
             "size": "degree_prey"
         },axis=1)
         t_degree = df_bait_degree.merge(df_prey_degree,on="gene_name",how="outer").fillna(0)
-
+        t_degree.to_csv(output.intact_degree,sep="\t",index=False)
