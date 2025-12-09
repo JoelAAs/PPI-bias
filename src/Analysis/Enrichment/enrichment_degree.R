@@ -116,9 +116,6 @@ do_enrichment_prey  <- args[5]
 df_degree = read.table(degree_file, sep ="\t", header=T) %>%
   map_entrez() %>% filter(!is.na(entrez_id))
 
-normalise <- function(x) x/max(x) 
-
-df_degree$norm_degree <- normalise(df_hp$degree)
 n_genes = 50
 ## GO degree
 df_degree %>% get_enrich_go(n_genes, "degree_bait") %>% filter(qvalue < 0.05) -> go_degree_bait
