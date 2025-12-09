@@ -179,4 +179,4 @@ rule get_delta_degree:
                 suffixes=("_naive", "_hci"), how="outer").fillna(0)
             delta_df["degree_bait"] = delta_df["degree_bait_naive"] -  delta_df["degree_bait_hci"]
             delta_df["degree_prey"] = delta_df["degree_prey_naive"] -  delta_df["degree_prey_hci"]
-            delta_df.output(delta_output, sep="\t", index=False)
+            delta_df.to_csv(delta_output, sep="\t", index=False)
