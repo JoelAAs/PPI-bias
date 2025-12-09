@@ -100,7 +100,7 @@ rule n_enriched_intact:
             pn=pn, type=["bait","prey"], ont = ["do", "go"]
         )
     output:
-        n_enrichments=f"work_folder{pn}/degree/enrichment/significant_ontologies/intact.csv"
+        n_enrichments=f"work_folder{pn}/degree/enrichment/intact_significant_ontologies/intact.csv"
     run:
         with open(output.n_enrichments,"w") as w:
             w.write("data\ttype\tsource\tlimit\tont\tn_enrichments\n")
