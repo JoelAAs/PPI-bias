@@ -5,7 +5,7 @@ from scipy.stats import entropy
 
 rule get_bait_occurrence:
     input:
-        pod=""
+        pod=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
     output:
         edge_list_shared=f"work_folder{pn}/analysis/negatome/bait_shared_studies_{{data}}.csv"
     run:

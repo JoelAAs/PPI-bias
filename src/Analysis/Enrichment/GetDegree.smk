@@ -143,7 +143,7 @@ rule get_degree_values:
 
 rule get_intact_bait_prey_degree:
     input:
-        intact_bp = "work_folder/per_gene/formated/bait_prey_publications.csv"
+        intact_bp = "work_folder{pn}/formated/bait_prey_publications.csv"
     output:
         intact_degree = f"work_folder{pn}/degree/intact.csv"
     run:

@@ -1,5 +1,7 @@
 import pandas as pd
 from snakemake.io import expand
+import numpy as np
+
 rule get_enrichment:
     params:
         script = "src/Analysis/Enrichment/enrichment_degree.R"
@@ -20,6 +22,7 @@ rule get_enrichment:
             {output.do_enrichment_bait} \
             {output.do_enrichment_prey}
         """
+
 
 def input_enrichments(wc, types, c_limits, c_ont):
     # should be ordered in config
@@ -47,13 +50,6 @@ def input_enrichments(wc, types, c_limits, c_ont):
         ont=c_ont
     )
     expected_input += expand(
-        "work_folder{pn}/degree/enrichment/{data}_summed_{source}_{ont}.csv",
-        pn=pn,
-        data=c_data,
-        source=["bait", "prey"],
-        ont=c_ont
-    )
-    expected_input += expand(
         "work_folder{pn}/degree/enrichment/{data}_naive_{source}_{ont}.csv",
         pn=pn,
         data=c_data,
@@ -61,6 +57,7 @@ def input_enrichments(wc, types, c_limits, c_ont):
         ont=c_ont
     )
     return expected_input
+
 
 rule n_enriched_per_method:
     params:
@@ -93,6 +90,7 @@ rule n_enriched_per_method:
 
                 w.write(f"{data}\t{type}\t{source}\t{limit}\t{ont}\t{n_enrich}\n")
 
+
 rule n_enriched_intact:
     input:
         intact_enrichments = expand(
@@ -116,7 +114,59 @@ rule n_enriched_intact:
                 w.write(f"{data}\t{type}\t{source}\t{limit}\t{ont}\t{n_enrich}\n")
 
 
-#
+rule n_doids_gene_degree:
+    input:
+        degree = f"work_folder{pn}/degree/{{data_set_limit}}.csv"
+    output:
+        doid_degree = f"work_folder{pn}/degree/doid/{{data_set_limit}}_doid.csv"
+    params:
+        script = "src/Analysis/Enrichment/enrichment_degree.R"
+    shell:
+        """
+        Rscript {params.script} \
+            {input.degree} \
+            {output.doid_degree}
+        """
+
+def
+
+
+rule todo:
+    params:
+        permut = 100000,
+        n_max = 50,
+        hci_limits = config["hci_limits"]
+    input:
+        hci_degree = expand(
+            "work_folder{pn}/degree/doid/{{data}}_HCNI_{hci_limit}_doid.csv", #TODO
+            pn=pn, hci_limit=config["hci_limit"]),
+        naive_degree = f"work_folder{pn}/degree/doid/{{data}}_naive_doid.csv" # TODO
+    output:
+        doid_test = f"work_folder{pn}/degree/doid/{{data}}_tested.csv"
+    run:
+        df_naive_degree = pd.read_csv(input.naive_degree, sep="\t")
+        with open(output.doid_test,"w") as w:
+            w.write(f"data\tlimit\tsource\thci_mean\tnaive_mean\tpermut-p\n_permutations\n")
+            for degree_type in ["bait", "prey"]:
+                top_naive = df_naive_degree.nlargest(params.permut,f"degree_{degree_type}")
+                naive_mean = top_naive["n_doid"].mean()
+                naive_permute = np.array([
+                    top_naive .sample(round(params.n_max*0.9))["n_doid"].mean()
+                     for _ in range(params.permut)])
+                permutate_naive_mean = naive_permute.mean()
+                for hci_limit_file, c_hci_limit in zip(input.hci_degree, params.hci_limits):
+                    df_hci_degree = pd.read_csv(input.naive_degree,sep="\t")
+                    top_hci = df_hci_degree.nlargest(params.permut,f"degree_{degree_type}")
+                    hci_mean = top_hci["n_doid"].mean()
+                    n_extreme = sum(
+                        np.abs(hci_mean-permutate_naive_mean) < np.abs(naive_permute-permutate_naive_mean))
+                    p = n_extreme/params.permut
+                    w.write(f"{wildcards.data}\t{c_hci_limit}\t{degree_type}\t{hci_mean}\t{naive_mean}\t{p}\t{params.permut}\n")
+
+
+
+
+
 # rule get_bait_list:
 #     # TODO: evaluate if this is used or useful
 #     params:
