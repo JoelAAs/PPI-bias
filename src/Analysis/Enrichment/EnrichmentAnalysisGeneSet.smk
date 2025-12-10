@@ -130,9 +130,6 @@ rule n_doids_gene_degree:
         """
 
 
-def test_against_naive()
-
-
 rule todo:
     params:
         permut = 100000,
@@ -144,8 +141,8 @@ rule todo:
             "work_folder{pn}/degree/doid/{{data}}_HCI_{hci_limit}_doid.csv",
             pn=pn, hci_limit=config["hci_limits"]),
         hcni_degree= expand(
-            "work_folder{pn}/degree/doid/{{data}}_HCNI_{hci_limit}_doid.csv",
-            pn=pn,hci_limit=config["hcni_tested"]),
+            "work_folder{pn}/degree/doid/{{data}}_HCNI_{hcni_limit}_doid.csv",
+            pn=pn,hcni_limit=config["hcni_tested"]),
 
         naive_degree = f"work_folder{pn}/degree/doid/{{data}}_naive_doid.csv"
     output:
