@@ -130,16 +130,24 @@ rule n_doids_gene_degree:
         """
 
 
+def test_against_naive()
+
+
 rule todo:
     params:
         permut = 100000,
-        n_max = 50,
-        hci_limits = config["hci_limits"]
+        n_max = 100,
+        hci_limits = config["hci_limits"],
+        hcni_limits = config["hcni_tested"]
     input:
         hci_degree = expand(
-            "work_folder{pn}/degree/doid/{{data}}_HCI_{hci_limit}_doid.csv", #TODO
+            "work_folder{pn}/degree/doid/{{data}}_HCI_{hci_limit}_doid.csv",
             pn=pn, hci_limit=config["hci_limits"]),
-        naive_degree = f"work_folder{pn}/degree/doid/{{data}}_naive_doid.csv" # TODO
+        hcni_degree= expand(
+            "work_folder{pn}/degree/doid/{{data}}_HCNI_{hci_limit}_doid.csv",
+            pn=pn,hci_limit=config["hcni_tested"]),
+
+        naive_degree = f"work_folder{pn}/degree/doid/{{data}}_naive_doid.csv"
     output:
         doid_test = f"work_folder{pn}/degree/doid/{{data}}_tested.csv"
     run:
@@ -154,14 +162,22 @@ rule todo:
                      for _ in range(params.permut)])
                 permutate_naive_mean = naive_permute.mean()
                 for hci_limit_file, c_hci_limit in zip(input.hci_degree, params.hci_limits):
-                    df_hci_degree = pd.read_csv(input.hci_limit_file,sep="\t")
-                    top_hci = df_hci_degree.nlargest(params.permut,f"degree_{degree_type}")
+                    df_hci_degree = pd.read_csv(hci_limit_file,sep="\t")
+                    top_hci = df_hci_degree.nlargest(params.n_max,f"degree_{degree_type}")
                     hci_mean = top_hci["n_doid"].mean()
                     n_extreme = sum(
                         np.abs(hci_mean-permutate_naive_mean) < np.abs(naive_permute-permutate_naive_mean))
                     p = n_extreme/params.permut
-                    w.write(f"{wildcards.data}\t{c_hci_limit}\t{degree_type}\t{hci_mean}\t{naive_mean}\t{p}\t{params.permut}\n")
-
+                    w.write(f"{wildcards.data}\tHCI\t{c_hci_limit}\t{degree_type}\t{hci_mean}\t{naive_mean}\t{p}\t{params.permut}\n")
+                #DRY...
+                for hcni_limit_file, c_hcni_limit in zip(input.hcni_degree, params.hcni_limits):
+                    df_hci_degree = pd.read_csv(hcni_limit_file,sep="\t")
+                    top_hcni = df_hci_degree.nlargest(params.n_max,f"degree_{degree_type}")
+                    hcni_mean = top_hcni["n_doid"].mean()
+                    n_extreme = sum(
+                        np.abs(hcni_mean-permutate_naive_mean) < np.abs(naive_permute-permutate_naive_mean))
+                    p = n_extreme/params.permut
+                    w.write(f"{wildcards.data}\tHCNI\t{c_hcni_limit}\t{degree_type}\t{hci_mean}\t{naive_mean}\t{p}\t{params.permut}\n")
 
 
 
