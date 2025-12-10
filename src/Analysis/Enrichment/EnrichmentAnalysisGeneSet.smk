@@ -174,7 +174,7 @@ rule test_top_degree_against_naive:
         }
 
         with open(output.doid_test,"w") as w:
-            w.write(f"data\tlimit\tsource\thci_mean\tnaive_mean\tpermut-p\n_permutations\n")
+            w.write(f"data\ttype\tlimit\tsource\thci_mean\tnaive_mean\tpermutation_p\n_permutations\n")
             for degree_type in ["bait", "prey"]:
                 for hci_file, hci_limit in zip(input.hci_degree, params.hci_limits):
                     hci_mean, p_permuted, c_naive_mean =  extreme_value_permutation_test(
