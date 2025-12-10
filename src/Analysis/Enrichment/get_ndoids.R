@@ -34,6 +34,6 @@ full %>%
     group_by(gene_name) %>%
     summarize(n_doid = n()) -> n_doid
 
-doid_degree <- merge(degree_df, full, by="gene_name")
+doid_degree <- merge(degree_df, n_doid, by="gene_name")
 write.table(doid_degree,annotated_degree,sep="\t", row.names = FALSE)
 
