@@ -154,7 +154,7 @@ rule todo:
                      for _ in range(params.permut)])
                 permutate_naive_mean = naive_permute.mean()
                 for hci_limit_file, c_hci_limit in zip(input.hci_degree, params.hci_limits):
-                    df_hci_degree = pd.read_csv(input.naive_degree,sep="\t")
+                    df_hci_degree = pd.read_csv(input.hci_limit_file,sep="\t")
                     top_hci = df_hci_degree.nlargest(params.permut,f"degree_{degree_type}")
                     hci_mean = top_hci["n_doid"].mean()
                     n_extreme = sum(
