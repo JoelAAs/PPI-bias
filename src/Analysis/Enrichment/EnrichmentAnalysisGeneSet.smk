@@ -120,7 +120,7 @@ rule n_doids_gene_degree:
     output:
         doid_degree = f"work_folder{pn}/degree/doid/{{data_set_limit}}_doid.csv"
     params:
-        script = "src/Analysis/Enrichment/enrichment_degree.R"
+        script = "src/Analysis/Enrichment/get_ndoids.R"
     conda: "do_enrichment"
     shell:
         """
@@ -137,8 +137,8 @@ rule todo:
         hci_limits = config["hci_limits"]
     input:
         hci_degree = expand(
-            "work_folder{pn}/degree/doid/{{data}}_HCNI_{hci_limit}_doid.csv", #TODO
-            pn=pn, hci_limit=config["hci_limit"]),
+            "work_folder{pn}/degree/doid/{{data}}_HCI_{hci_limit}_doid.csv", #TODO
+            pn=pn, hci_limit=config["hci_limits"]),
         naive_degree = f"work_folder{pn}/degree/doid/{{data}}_naive_doid.csv" # TODO
     output:
         doid_test = f"work_folder{pn}/degree/doid/{{data}}_tested.csv"
