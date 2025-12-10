@@ -128,8 +128,6 @@ rule n_doids_gene_degree:
             {output.doid_degree}
         """
 
-def
-
 
 rule todo:
     params:
