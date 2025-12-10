@@ -121,6 +121,7 @@ rule n_doids_gene_degree:
         doid_degree = f"work_folder{pn}/degree/doid/{{data_set_limit}}_doid.csv"
     params:
         script = "src/Analysis/Enrichment/enrichment_degree.R"
+    conda: "do_enrichment"
     shell:
         """
         Rscript {params.script} \
