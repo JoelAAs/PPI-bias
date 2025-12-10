@@ -1,4 +1,5 @@
 import pandas as pd
+from IPython.core.pylabtools import retina_figure
 from snakemake.io import expand
 import numpy as np
 
@@ -129,11 +130,25 @@ rule n_doids_gene_degree:
             {output.doid_degree}
         """
 
+def extreme_value_permutation_test(degree_str, input_doid_degree_file, permutation_naive, n_top_genes):
+    naive_mean = permutation_naive.mean()
+    df_degree = pd.read_csv(input_doid_degree_file,sep="\t")
+    top_degrees = df_degree.nlargest(n_top_genes,f"degree_{degree_str}")
+    mean_n_doids = top_degrees["n_doid"].mean()
+    delta_mean = np.abs(mean_n_doids - naive_mean)
 
-rule todo:
+    n_extreme = np.sum(
+        np.abs(permutation_naive-naive_mean) > delta_mean
+    )
+    p = n_extreme/len(permutation_naive)
+    return mean_n_doids, p, naive_mean
+
+
+
+rule test_top_degree_against_naive:
     params:
-        permut = 100000,
-        n_max = 100,
+        permutations = 1000000, # probabiliy should make sure that same permutation isn't picked
+        n_top_genes = 50,
         hci_limits = config["hci_limits"],
         hcni_limits = config["hcni_tested"]
     input:
@@ -149,32 +164,29 @@ rule todo:
         doid_test = f"work_folder{pn}/degree/doid/{{data}}_tested.csv"
     run:
         df_naive_degree = pd.read_csv(input.naive_degree, sep="\t")
+        top_naive_bait = df_naive_degree.nlargest(params.n_top_genes,f"degree_bait")
+        top_naive_prey = df_naive_degree.nlargest(params.n_top_genes,f"degree_prey")
+        naive_permute_dict = {
+            "bait": np.array([top_naive_bait.sample(round(params.n_top_genes * 0.9))["n_doid"].mean()
+            for _ in range(params.permutations)]),
+            "prey": np.array([top_naive_prey.sample(round(params.n_top_genes * 0.9))["n_doid"].mean()
+            for _ in range(params.permutations)]),
+        }
+
         with open(output.doid_test,"w") as w:
             w.write(f"data\tlimit\tsource\thci_mean\tnaive_mean\tpermut-p\n_permutations\n")
             for degree_type in ["bait", "prey"]:
-                top_naive = df_naive_degree.nlargest(params.permut,f"degree_{degree_type}")
-                naive_mean = top_naive["n_doid"].mean()
-                naive_permute = np.array([
-                    top_naive .sample(round(params.n_max*0.9))["n_doid"].mean()
-                     for _ in range(params.permut)])
-                permutate_naive_mean = naive_permute.mean()
-                for hci_limit_file, c_hci_limit in zip(input.hci_degree, params.hci_limits):
-                    df_hci_degree = pd.read_csv(hci_limit_file,sep="\t")
-                    top_hci = df_hci_degree.nlargest(params.n_max,f"degree_{degree_type}")
-                    hci_mean = top_hci["n_doid"].mean()
-                    n_extreme = sum(
-                        np.abs(hci_mean-permutate_naive_mean) < np.abs(naive_permute-permutate_naive_mean))
-                    p = n_extreme/params.permut
-                    w.write(f"{wildcards.data}\tHCI\t{c_hci_limit}\t{degree_type}\t{hci_mean}\t{naive_mean}\t{p}\t{params.permut}\n")
-                #DRY...
-                for hcni_limit_file, c_hcni_limit in zip(input.hcni_degree, params.hcni_limits):
-                    df_hci_degree = pd.read_csv(hcni_limit_file,sep="\t")
-                    top_hcni = df_hci_degree.nlargest(params.n_max,f"degree_{degree_type}")
-                    hcni_mean = top_hcni["n_doid"].mean()
-                    n_extreme = sum(
-                        np.abs(hcni_mean-permutate_naive_mean) < np.abs(naive_permute-permutate_naive_mean))
-                    p = n_extreme/params.permut
-                    w.write(f"{wildcards.data}\tHCNI\t{c_hcni_limit}\t{degree_type}\t{hci_mean}\t{naive_mean}\t{p}\t{params.permut}\n")
+                for hci_file, hci_limit in zip(input.hci_degree, params.hci_limits):
+                    hci_mean, p_permuted, c_naive_mean =  extreme_value_permutation_test(
+                        degree_type, hci_file, naive_permute_dict[degree_type], params.n_top_genes)
+                    w.write(f"{wildcards.data}\tHCI\t{hci_limit}\t{degree_type}\t"
+                            f"{hci_mean}\t{c_naive_mean}\t{p_permuted}\t{params.permutations}\n")
+
+                for hcni_file, hcni_limit in zip(input.hcni_degree, params.hcni_limits):
+                    hcni_mean, p_permuted, c_naive_mean =  extreme_value_permutation_test(
+                        degree_type, hcni_file, naive_permute_dict[degree_type], params.n_top_genes)
+                    w.write(f"{wildcards.data}\tHCNI\t{hcni_limit}\t{degree_type}\t"
+                            f"{hcni_mean}\t{c_naive_mean}\t{p_permuted}\t{params.permutations}\n")
 
 
 
