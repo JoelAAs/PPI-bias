@@ -14,34 +14,14 @@ df_entropy <- bind_rows(df_entropy_ms, df_entropy_y2h)
 entropy_plot <- ggplot(df_entropy,
   aes(
     x=as.factor(n_tested),
-    y=pair_entropy,
+    y=2^pair_entropy- n_tested,
     fill=method
   )) +
   geom_boxplot() +
   theme_bw() +
   labs(
     x="Times protein pair tested",
-    y="Secondary bait entropy",
-    fill="Detection method"
-  ) +
-  scale_fill_manual(
-    values = c("darkorange", "blue")
-  ) +
-theme(
-  legend.position = "bottom"
-)
-
-max_prob_plot <- ggplot(df_entropy,
-                       aes(
-                         x=as.factor(n_tested),
-                         y=max_bait_probability,
-                         fill=method
-                       )) +
-  geom_boxplot() +
-  theme_bw() +
-  labs(
-    x="Times protein pair tested",
-    y="Max bait protability",
+    y=expression(paste(2^H, "- total tests")),
     fill="Detection method"
   ) +
   scale_fill_manual(
@@ -49,7 +29,29 @@ max_prob_plot <- ggplot(df_entropy,
   ) +
   theme(
     legend.position = "bottom"
-  )
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed")
+
+max_prob_plot <- ggplot(df_entropy,
+                       aes(
+                         x=as.factor(n_tested),
+                         y=max_bait_probability - 1/n_tested,
+                         fill=method
+                       )) +
+  geom_boxplot() +
+  theme_bw() +
+  labs(
+    x="Times protein pair tested",
+    y=expression(paste(P(b[i])[max], "-",  1/N[Tests])),
+    fill="Detection method"
+  ) +
+  scale_fill_manual(
+    values = c("darkorange", "blue")
+  ) +
+  theme(
+    legend.position = "bottom"
+  ) +
+  geom_hline(yintercept = 0, linetype="dashed")
 
 
 ggsave("work_folder/per_gene/plotting/negatome/pair_testing_entropy.png",
