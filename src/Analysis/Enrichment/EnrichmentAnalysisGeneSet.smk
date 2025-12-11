@@ -159,7 +159,8 @@ rule test_top_degree_against_naive:
             "work_folder{pn}/degree/doid/{{data}}_HCNI_{hcni_limit}_doid.csv",
             pn=pn,hcni_limit=config["hcni_tested"]),
 
-        naive_degree = f"work_folder{pn}/degree/doid/{{data}}_naive_doid.csv"
+        naive_degree = f"work_folder{pn}/degree/doid/{{data}}_naive_doid.csv",
+        summed_degree = f"work_folder{pn}/degree/{{data}}_summed.csv"
     output:
         doid_test = f"work_folder{pn}/degree/doid/{{data}}_tested.csv"
     run:
@@ -174,7 +175,7 @@ rule test_top_degree_against_naive:
         }
 
         with open(output.doid_test,"w") as w:
-            w.write(f"data\ttype\tlimit\tsource\thci_mean\tnaive_mean\tpermutation_p\n_permutations\n")
+            w.write(f"data\ttype\tlimit\tsource\tdoid_mean\tnaive_doid_mean\tpermutation_p\tn_permutations\n")
             for degree_type in ["bait", "prey"]:
                 for hci_file, hci_limit in zip(input.hci_degree, params.hci_limits):
                     hci_mean, p_permuted, c_naive_mean =  extreme_value_permutation_test(
@@ -188,7 +189,10 @@ rule test_top_degree_against_naive:
                     w.write(f"{wildcards.data}\tHCNI\t{hcni_limit}\t{degree_type}\t"
                             f"{hcni_mean}\t{c_naive_mean}\t{p_permuted}\t{params.permutations}\n")
 
-
+                summed_mean, p_permuted, c_naive_mean = extreme_value_permutation_test(
+                    degree_type,input.summed_degree,naive_permute_dict[degree_type],params.n_top_genes)
+                w.write(f"{wildcards.data}\tHCI\texpected\t{degree_type}\t"
+                        f"{hcni_mean}\t{c_naive_mean}\t{p_permuted}\t{params.permutations}\n")
 
 
 # rule get_bait_list:
