@@ -45,6 +45,9 @@ degree_df_doid %>%
     summarize(
         doid_frequency = n()/n_top
     ) -> doid_count
+doid_count %>%
+    add_row(doid="None", doid_frequency = (n_top - length(unique(degree_df_doid$gene_name)))/n_top
+) -> doid_count
 
 write.table(doid_count,doid_count_file,sep="\t", row.names = FALSE)
 write.table(degree_df_doid,doid_annotation_file,sep="\t", row.names = FALSE)

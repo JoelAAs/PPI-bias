@@ -165,8 +165,8 @@ rule test_top_degree_against_naive:
         doid_test = f"work_folder{pn}/degree/doid/{{data}}_tested.csv"
     run:
         df_naive_degree = pd.read_csv(input.naive_degree, sep="\t")
-        top_naive_bait = df_naive_degree.nlargest(params.n_top_genes,f"degree_bait")
-        top_naive_prey = df_naive_degree.nlargest(params.n_top_genes,f"degree_prey")
+        top_naive_bait = df_naive_degree.nlargest(params.n_top_genes,"degree_bait")
+        top_naive_prey = df_naive_degree.nlargest(params.n_top_genes,"degree_prey")
         # TODO: permutation not bootstrap
         naive_permute_dict = {
             "bait": np.array([top_naive_bait.sample(round(params.n_top_genes * 0.9))["n_doid"].mean()
