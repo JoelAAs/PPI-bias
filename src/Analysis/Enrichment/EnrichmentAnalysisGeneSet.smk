@@ -160,13 +160,14 @@ rule test_top_degree_against_naive:
             pn=pn,hcni_limit=config["hcni_tested"]),
 
         naive_degree = f"work_folder{pn}/degree/doid/{{data}}_naive_doid.csv",
-        summed_degree = f"work_folder{pn}/degree/{{data}}_summed.csv"
+        summed_degree = f"work_folder{pn}/degree/doid/{{data}}_summed.csv"
     output:
         doid_test = f"work_folder{pn}/degree/doid/{{data}}_tested.csv"
     run:
         df_naive_degree = pd.read_csv(input.naive_degree, sep="\t")
         top_naive_bait = df_naive_degree.nlargest(params.n_top_genes,f"degree_bait")
         top_naive_prey = df_naive_degree.nlargest(params.n_top_genes,f"degree_prey")
+        # TODO: permutation not bootstrap
         naive_permute_dict = {
             "bait": np.array([top_naive_bait.sample(round(params.n_top_genes * 0.9))["n_doid"].mean()
             for _ in range(params.permutations)]),
@@ -192,7 +193,37 @@ rule test_top_degree_against_naive:
                 summed_mean, p_permuted, c_naive_mean = extreme_value_permutation_test(
                     degree_type,input.summed_degree,naive_permute_dict[degree_type],params.n_top_genes)
                 w.write(f"{wildcards.data}\tHCI\texpected\t{degree_type}\t"
-                        f"{hcni_mean}\t{c_naive_mean}\t{p_permuted}\t{params.permutations}\n")
+                        f"{summed_mean}\t{c_naive_mean}\t{p_permuted}\t{params.permutations}\n")
+
+
+rule top_degree_get_doids:
+    params:
+        n_top_genes=50,
+        script = "src/Analysis/Enrichment/get_doid_frequency.R"
+    input:
+        degree = f"work_folder{pn}/degree/{{data_set_limit}}.csv"
+    output:
+        doid_freq = expand("work_folder{pn}/degree/doid/freq/{{data_set_limit}}_count_{source}.csv",
+            pn=pn, source=["bait", "prey"]),
+        doid_annotated = expand("work_folder{pn}/degree/doid/freq/{{data_set_limit}}_annotated_{source}.csv",
+            pn=pn, source=["bait", "prey"])
+    conda: "do_enrichment"
+    shell:
+        """
+        Rscript {params.script} \
+            {input.degree} \
+            {params.n_top_genes} \
+            degree_bait \
+            {output.doid_freq[0]} \
+            {output.doid_annotated[0]} 
+            
+        Rscript {params.script} \
+            {input.degree} \
+            {params.n_top_genes} \
+            degree_prey \
+            {output.doid_freq[1]} \
+            {output.doid_annotated[1]} 
+        """
 
 
 # rule get_bait_list:
