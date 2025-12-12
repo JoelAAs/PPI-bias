@@ -258,7 +258,7 @@ rule permute_naive_distribution:
         naive_degree = f"work_folder{pn}/degree/{{data}}_naive.csv",
     output:
         go_frequency = expand(
-            "work_folder{pn}/degree/GO/{{data}}_count_naive_{source}.csv",
+            "work_folder{pn}/degree/GO/{{data}}_count_naive_{source}.csv.gz",
             pn=pn, source=["bait", "prey"]
         )
     run:
@@ -284,7 +284,7 @@ rule permute_naive_distribution:
                 per_df = go_frequency_df[cols].set_index("go_term")["go_frequency"]
                 per_dfs.append(per_df.rename(f"go_frequency_{i}"))
             main_df = pd.concat(per_dfs, axis = 1).fillna(0).reset_index()
-            main_df.to_csv(output_permut, sep="\t", index=False)
+            main_df.to_csv(output_permut, compression='gzip', sep="\t", index=False)
 
 # rule get_bait_list:
 #     # TODO: evaluate if this is used or useful
