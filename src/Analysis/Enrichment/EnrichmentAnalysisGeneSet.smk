@@ -258,7 +258,7 @@ rule permute_naive_distribution:
         naive_degree = f"work_folder{pn}/degree/{{data}}_naive.csv",
     output:
         go_frequency = expand(
-            "work_folder{pn}/degree/GO/{{data}}_naive_count_{source}.csv",
+            "work_folder{pn}/degree/GO/{{data}}_count_naive_{source}.csv",
             pn=pn, source=["bait", "prey"]
         )
     run:
