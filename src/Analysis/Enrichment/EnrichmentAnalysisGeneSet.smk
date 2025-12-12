@@ -283,7 +283,7 @@ rule permute_naive_distribution:
 
                 per_df = go_frequency_df[cols].set_index("go_term")["go_frequency"]
                 per_dfs.append(per_df.rename(f"go_frequency_{i}"))
-            main_df = pd.concat(per_dfs).fillna(0)
+            main_df = pd.concat(per_dfs, axis = 1).fillna(0).reset_index()
             main_df.to_csv(output_permut, sep="\t", index=False)
 
 # rule get_bait_list:
