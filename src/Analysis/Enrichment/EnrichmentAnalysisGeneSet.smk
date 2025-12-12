@@ -1,7 +1,11 @@
+import random
+
 import pandas as pd
-from IPython.core.pylabtools import retina_figure
 from snakemake.io import expand
 import numpy as np
+from itertools import combinations
+from random import randrange
+from src.Analysis.Enrichment.go_annotation_support import get_go_genes, get_go_frequency
 
 rule get_enrichment:
     params:
@@ -147,7 +151,7 @@ def extreme_value_permutation_test(degree_str, input_doid_degree_file, permutati
 
 rule test_top_degree_against_naive:
     params:
-        permutations = 1000000, # probabiliy should make sure that same permutation isn't picked
+        permutations = 1000000, # probability should make sure that same permutation isn't picked
         n_top_genes = 50,
         hci_limits = config["hci_limits"],
         hcni_limits = config["hcni_tested"]
@@ -225,6 +229,62 @@ rule top_degree_get_doids:
             {output.doid_annotated[1]} 
         """
 
+
+
+rule get_go_annotation:
+    params:
+        n_top_genes = 50
+    input:
+        degree = f"work_folder{pn}/degree/{{data_set_limit}}.csv"
+    output:
+        go_frequency = expand(
+            "work_folder{pn}/degree/GO/{{data_set_limit}}_count_{source}.csv",
+            pn=pn, source=["bait", "prey"]
+        )
+    run:
+        degree_df = pd.read_csv(input.degree, sep="\t")
+        for source, output_file in zip(["bait", "prey"], output.go_frequency):
+            top = degree_df.nlargest(params.n_top_genes,f"degree_{source}")
+            go_dict = get_go_genes(top["gene_name"])
+            go_frequency_df = get_go_frequency(go_dict)
+            go_frequency_df.to_csv(output_file, sep="\t", index=False)
+
+
+rule permute_naive_distribution:
+    params:
+        n_top_genes = 50,
+        permutations = 100000
+    input:
+        naive_degree = f"work_folder{pn}/degree/{{data}}_naive.csv",
+    output:
+        go_frequency = expand(
+            "work_folder{pn}/degree/GO/{{data}}_naive_count_{source}.csv",
+            pn=pn, source=["bait", "prey"]
+        )
+    run:
+        degree_df = pd.read_csv(input.naive_degree, sep="\t")
+        for source, output_permut in zip(["bait", "prey"], output.go_frequency):
+            top = degree_df.nlargest(params.n_top_genes,f"degree_{source}")
+            go_dict = get_go_genes(top["gene_name"])
+            genes = np.array(list(go_dict.keys()))
+            leave_out_fraction = round(params.n_top_genes*.1)
+            n_gene_permutations = params.n_top_genes-leave_out_fraction
+            index_permutations = list(combinations(range(params.n_top_genes), n_gene_permutations))
+            cols = ["go_term", "go_frequency"]
+            random_indexes = list(range(len(index_permutations)))
+            random.shuffle(random_indexes)
+            random_indexes = random_indexes[:params.permutations]
+            for i, idx in enumerate(random_indexes):
+                random_index = index_permutations[idx]
+                go_frequency_df = get_go_frequency(
+                    {g: go_dict[g] for g in genes[list(random_index)]}
+                )
+                if i == 0:
+                    main_df = go_frequency_df[cols].set_index("go_term")
+                else:
+                    main_df[f"go_frequency_{i}"] = go_frequency_df.set_index(
+                        "go_term")["go_frequency"].reindex(main_df.index, fill_value=0).values
+            main_df.to_csv(output_permut, sep="\t", index=False)
 
 # rule get_bait_list:
 #     # TODO: evaluate if this is used or useful
