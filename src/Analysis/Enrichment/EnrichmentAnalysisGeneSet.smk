@@ -3,20 +3,20 @@ import random
 import pandas as pd
 from snakemake.io import expand
 import numpy as np
-from itertools import combinations
-from random import randrange
+from scipy.stats import fisher_exact
 from src.Analysis.Enrichment.go_annotation_support import get_go_genes, get_go_frequency
+from src.Analysis.ProteomeComparison.paxdb_vs_hela import p_values
 
 rule get_enrichment:
     params:
-        script = "src/Analysis/Enrichment/enrichment_degree.R"
+        script="src/Analysis/Enrichment/enrichment_degree.R"
     input:
-        degree = f"work_folder{pn}/degree/{{data_set_limit}}.csv"
+        degree=f"work_folder{pn}/degree/{{data_set_limit}}.csv"
     output:
-        go_enrichment_bait = f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_bait_go.csv",
-        go_enrichment_prey = f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_prey_go.csv",
-        do_enrichment_bait = f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_bait_do.csv",
-        do_enrichment_prey = f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_prey_do.csv"
+        go_enrichment_bait=f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_bait_go.csv",
+        go_enrichment_prey=f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_prey_go.csv",
+        do_enrichment_bait=f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_bait_do.csv",
+        do_enrichment_prey=f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_prey_do.csv"
     conda: "do_enrichment"
     shell:
         """
@@ -66,18 +66,18 @@ def input_enrichments(wc, types, c_limits, c_ont):
 
 rule n_enriched_per_method:
     params:
-        hci_limits = config["hci_limits"],
-        hcni_tested = config["hcni_tested"]
+        hci_limits=config["hci_limits"],
+        hcni_tested=config["hcni_tested"]
     input:
-        all_degree_enrichments = lambda wc: input_enrichments(
-            wc, ["HCI", "delta", "HCNI"], [config["hci_limits"], config["hcni_tested"]], ["go","do"])
+        all_degree_enrichments=lambda wc: input_enrichments(
+            wc,["HCI", "delta", "HCNI"],[config["hci_limits"], config["hcni_tested"]],["go", "do"])
     output:
-        n_enrichments = f"work_folder{pn}/degree/enrichment/significant_ontologies/{{data}}.csv"
+        n_enrichments=f"work_folder{pn}/degree/enrichment/significant_ontologies/{{data}}.csv"
     run:
-        with open(output.n_enrichments, "w") as w:
+        with open(output.n_enrichments,"w") as w:
             w.write("data\ttype\tsource\tlimit\tont\tn_enrichments\n")
             for c_enrichment in input.all_degree_enrichments:
-                n_enrich = sum(1 for _ in open(c_enrichment, "r")) - 1
+                n_enrich = sum(1 for _ in open(c_enrichment,"r")) - 1
                 base_name = c_enrichment.split("/")[-1]
                 variables = base_name.split("_")
                 ont = variables[-1].removesuffix(".csv")
@@ -87,9 +87,9 @@ rule n_enriched_per_method:
                 if type == "summed":
                     type = "HCI"
                     limit = "Expected"
-                elif type=="naive":
-                    type="HCI"
-                    limit="None"
+                elif type == "naive":
+                    type = "HCI"
+                    limit = "None"
                 else:
                     limit = variables[2]
 
@@ -98,9 +98,9 @@ rule n_enriched_per_method:
 
 rule n_enriched_intact:
     input:
-        intact_enrichments = expand(
+        intact_enrichments=expand(
             "work_folder{pn}/degree/enrichment/intact_{type}_{ont}.csv",
-            pn=pn, type=["bait","prey"], ont = ["do", "go"]
+            pn=pn,type=["bait", "prey"],ont=["do", "go"]
         )
     output:
         n_enrichments=f"work_folder{pn}/degree/enrichment/intact_significant_ontologies/intact.csv"
@@ -121,11 +121,11 @@ rule n_enriched_intact:
 
 rule n_doids_gene_degree:
     input:
-        degree = f"work_folder{pn}/degree/{{data_set_limit}}.csv"
+        degree=f"work_folder{pn}/degree/{{data_set_limit}}.csv"
     output:
-        doid_degree = f"work_folder{pn}/degree/doid/{{data_set_limit}}_doid.csv"
+        doid_degree=f"work_folder{pn}/degree/doid/{{data_set_limit}}_doid.csv"
     params:
-        script = "src/Analysis/Enrichment/get_ndoids.R"
+        script="src/Analysis/Enrichment/get_ndoids.R"
     conda: "do_enrichment"
     shell:
         """
@@ -133,6 +133,7 @@ rule n_doids_gene_degree:
             {input.degree} \
             {output.doid_degree}
         """
+
 
 def extreme_value_permutation_test(degree_str, input_doid_degree_file, permutation_naive, n_top_genes):
     naive_mean = permutation_naive.mean()
@@ -142,55 +143,54 @@ def extreme_value_permutation_test(degree_str, input_doid_degree_file, permutati
     delta_mean = np.abs(mean_n_doids - naive_mean)
 
     n_extreme = np.sum(
-        np.abs(permutation_naive-naive_mean) > delta_mean
+        np.abs(permutation_naive - naive_mean) > delta_mean
     )
-    p = n_extreme/len(permutation_naive)
+    p = n_extreme / len(permutation_naive)
     return mean_n_doids, p, naive_mean
-
 
 
 rule test_top_degree_against_naive:
     params:
-        permutations = 1000000, # probability should make sure that same permutation isn't picked
-        n_top_genes = 50,
-        hci_limits = config["hci_limits"],
-        hcni_limits = config["hcni_tested"]
+        permutations=1000000,# probability should make sure that same permutation isn't picked
+        n_top_genes=50,
+        hci_limits=config["hci_limits"],
+        hcni_limits=config["hcni_tested"]
     input:
-        hci_degree = expand(
+        hci_degree=expand(
             "work_folder{pn}/degree/doid/{{data}}_HCI_{hci_limit}_doid.csv",
-            pn=pn, hci_limit=config["hci_limits"]),
-        hcni_degree= expand(
+            pn=pn,hci_limit=config["hci_limits"]),
+        hcni_degree=expand(
             "work_folder{pn}/degree/doid/{{data}}_HCNI_{hcni_limit}_doid.csv",
             pn=pn,hcni_limit=config["hcni_tested"]),
 
-        naive_degree = f"work_folder{pn}/degree/doid/{{data}}_naive_doid.csv",
-        summed_degree = f"work_folder{pn}/degree/doid/{{data}}_summed.csv"
+        naive_degree=f"work_folder{pn}/degree/doid/{{data}}_naive_doid.csv",
+        summed_degree=f"work_folder{pn}/degree/doid/{{data}}_summed.csv"
     output:
-        doid_test = f"work_folder{pn}/degree/doid/{{data}}_tested.csv"
+        doid_test=f"work_folder{pn}/degree/doid/{{data}}_tested.csv"
     run:
-        df_naive_degree = pd.read_csv(input.naive_degree, sep="\t")
+        df_naive_degree = pd.read_csv(input.naive_degree,sep="\t")
         top_naive_bait = df_naive_degree.nlargest(params.n_top_genes,"degree_bait")
         top_naive_prey = df_naive_degree.nlargest(params.n_top_genes,"degree_prey")
-        # TODO: permutation not bootstrap
+        # TODO: permutation not bootstrap, also the distribution may not be symmetric then doesnt work
         naive_permute_dict = {
             "bait": np.array([top_naive_bait.sample(round(params.n_top_genes * 0.9))["n_doid"].mean()
-            for _ in range(params.permutations)]),
+                              for _ in range(params.permutations)]),
             "prey": np.array([top_naive_prey.sample(round(params.n_top_genes * 0.9))["n_doid"].mean()
-            for _ in range(params.permutations)]),
+                              for _ in range(params.permutations)]),
         }
 
         with open(output.doid_test,"w") as w:
             w.write(f"data\ttype\tlimit\tsource\tdoid_mean\tnaive_doid_mean\tpermutation_p\tn_permutations\n")
             for degree_type in ["bait", "prey"]:
-                for hci_file, hci_limit in zip(input.hci_degree, params.hci_limits):
-                    hci_mean, p_permuted, c_naive_mean =  extreme_value_permutation_test(
-                        degree_type, hci_file, naive_permute_dict[degree_type], params.n_top_genes)
+                for hci_file, hci_limit in zip(input.hci_degree,params.hci_limits):
+                    hci_mean, p_permuted, c_naive_mean = extreme_value_permutation_test(
+                        degree_type,hci_file,naive_permute_dict[degree_type],params.n_top_genes)
                     w.write(f"{wildcards.data}\tHCI\t{hci_limit}\t{degree_type}\t"
                             f"{hci_mean}\t{c_naive_mean}\t{p_permuted}\t{params.permutations}\n")
 
-                for hcni_file, hcni_limit in zip(input.hcni_degree, params.hcni_limits):
-                    hcni_mean, p_permuted, c_naive_mean =  extreme_value_permutation_test(
-                        degree_type, hcni_file, naive_permute_dict[degree_type], params.n_top_genes)
+                for hcni_file, hcni_limit in zip(input.hcni_degree,params.hcni_limits):
+                    hcni_mean, p_permuted, c_naive_mean = extreme_value_permutation_test(
+                        degree_type,hcni_file,naive_permute_dict[degree_type],params.n_top_genes)
                     w.write(f"{wildcards.data}\tHCNI\t{hcni_limit}\t{degree_type}\t"
                             f"{hcni_mean}\t{c_naive_mean}\t{p_permuted}\t{params.permutations}\n")
 
@@ -203,14 +203,14 @@ rule test_top_degree_against_naive:
 rule top_degree_get_doids:
     params:
         n_top_genes=50,
-        script = "src/Analysis/Enrichment/get_doid_frequency.R"
+        script="src/Analysis/Enrichment/get_doid_frequency.R"
     input:
-        degree = f"work_folder{pn}/degree/{{data_set_limit}}.csv"
+        degree=f"work_folder{pn}/degree/{{data_set_limit}}.csv"
     output:
-        doid_freq = expand("work_folder{pn}/degree/doid/freq/{{data_set_limit}}_count_{source}.csv",
-            pn=pn, source=["bait", "prey"]),
-        doid_annotated = expand("work_folder{pn}/degree/doid/freq/{{data_set_limit}}_annotated_{source}.csv",
-            pn=pn, source=["bait", "prey"])
+        doid_freq=expand("work_folder{pn}/degree/doid/freq/{{data_set_limit}}_count_{source}.csv",
+            pn=pn,source=["bait", "prey"]),
+        doid_annotated=expand("work_folder{pn}/degree/doid/freq/{{data_set_limit}}_annotated_{source}.csv",
+            pn=pn,source=["bait", "prey"])
     conda: "do_enrichment"
     shell:
         """
@@ -230,132 +230,99 @@ rule top_degree_get_doids:
         """
 
 
-
 rule get_go_annotation:
     params:
-        n_top_genes = 50
+        n_top_genes=50
     input:
-        degree = f"work_folder{pn}/degree/{{data_set_limit}}.csv"
+        degree=f"work_folder{pn}/degree/{{data_set_limit}}.csv"
     output:
-        go_frequency = expand(
+        go_frequency=expand(
             "work_folder{pn}/degree/GO/{{data_set_limit}}_count_{source}.csv",
-            pn=pn, source=["bait", "prey"]
+            pn=pn,source=["bait", "prey"]
         )
     run:
-        degree_df = pd.read_csv(input.degree, sep="\t")
-        for source, output_file in zip(["bait", "prey"], output.go_frequency):
+        degree_df = pd.read_csv(input.degree,sep="\t")
+        for source, output_file in zip(["bait", "prey"],output.go_frequency):
             top = degree_df.nlargest(params.n_top_genes,f"degree_{source}")
             go_dict = get_go_genes(top["gene_name"])
             go_frequency_df = get_go_frequency(go_dict)
-            go_frequency_df.to_csv(output_file, sep="\t", index=False)
+            go_frequency_df.to_csv(output_file,sep="\t",index=False)
 
 
-rule permute_naive_distribution:
-    params:
-        n_top_genes = 50,
-        permutations = 100000
-    input:
-        naive_degree = f"work_folder{pn}/degree/{{data}}_naive.csv",
-    output:
-        go_frequency = expand(
-            "work_folder{pn}/degree/GO/{{data}}_count_naive_{source}.csv.gz",
-            pn=pn, source=["bait", "prey"]
+def test_go_binomial(go_file, naive_df, gos, n_tested):
+    go_df = pd.read_csv(go_file,sep="\t")
+    go_df = go_df.set_index("go_terms")
+    ors = []
+    p_values = []
+    all_naive_obs = []
+    all_set_obs = []
+    gos = list(gos)
+    for selected_go_term in gos:
+        if selected_go_term in go_df.index:
+            go_obs = go_df.loc[selected_go_term]["go_occurrence"]
+        else:
+            go_obs = 0
+        if selected_go_term in naive_df.index:
+            naive_obs = naive_df.loc[selected_go_term]["go_occurrence"]
+        else:
+            naive_obs = 0
+
+        c_table = np.array(
+            [[go_obs, n_tested - go_obs],
+             [naive_obs, n_tested - naive_obs]]
         )
+        odds_ratio, p = fisher_exact(c_table,alternative='two-sided')
+        ors.append(odds_ratio)
+        p_values.append(p)
+        all_naive_obs.append(naive_obs)
+        all_set_obs.append(go_obs)
+
+    return [gos, ors, p_values, all_naive_obs, all_set_obs]
+
+rule test_go_terms:
+    params:
+        n_tested_genes=50,
+        min_observed=0.1,
+        hci_limit=config["hci_limits"],
+        hcni_tested=config["hcni_tested"]
+    input:
+        naive_go_frequency_df=f"work_folder{pn}/degree/GO/{{data}}_naive_count_{{source}}.csv.gz",
+        hci_observations=expand(
+            f"work_folder{pn}/degree/GO/{{data}}_HCI_{limit}_count_{{source}}.csv",
+            pn=pn,limit=config["hci_limit"]),
+        hcni_observations=expand(
+            f"work_folder{pn}/degree/GO/{{data}}_HCNI_{limit}_count_{{source}}.csv",
+            pn=pn,limit=config["hcni_tested"])
+    output:
+        test_csv = f"work_folder{pn}/degree/GO/tested/{{data}}_{{source}}.csv"
     run:
-        degree_df = pd.read_csv(input.naive_degree, sep="\t")
-        for source, output_permut in zip(["bait", "prey"], output.go_frequency):
-            top = degree_df.nlargest(params.n_top_genes,f"degree_{source}")
-            go_dict = get_go_genes(top["gene_name"])
-            genes = np.array(list(go_dict.keys()))
-            leave_out_fraction = round(params.n_top_genes*.1)
-            n_gene_permutations = params.n_top_genes-leave_out_fraction
-            index_permutations = list(combinations(range(params.n_top_genes), n_gene_permutations))
-            cols = ["go_term", "go_frequency"]
-            random_indexes = list(range(len(index_permutations)))
-            random.shuffle(random_indexes)
-            random_indexes = random_indexes[:params.permutations]
-            per_dfs = []
-            for i, idx in enumerate(random_indexes):
-                random_index = index_permutations[idx]
-                go_frequency_df = get_go_frequency(
-                    {g: go_dict[g] for g in genes[list(random_index)]}
-                )
+        naive_go_frequency_df = pd.read_csv(
+            input.naive_go_frequency_df,sep="\t"
+        )
+        naive_go_frequency_df = naive_go_frequency_df.set_index("go_term")
+        go_to_keep = set(naive_go_frequency_df[naive_go_frequency_df["go_frequency"] > params.min_observed]["go_term"])
+        for alt_obs in input.hci_observations + input.hcni_observations:
+            alt_obs_df = pd.read_csv(alt_obs,sep="\t")
+            go_to_keep |= set(alt_obs_df[alt_obs_df["go_frequency"] > params.min_observed]["go_term"])
 
-                per_df = go_frequency_df[cols].set_index("go_term")["go_frequency"]
-                per_dfs.append(per_df.rename(f"go_frequency_{i}"))
-            main_df = pd.concat(per_dfs, axis = 1).fillna(0).reset_index()
-            main_df.to_csv(output_permut, compression='gzip', sep="\t", index=False)
+        go_set_zips = list(zip(
+            input.hci_observations,params.hci_limit,["HCI"] * len(params.hci_limit)
+        )) +  list(zip(
+            input.hcni_observations,params.hcni_tested,["HCNI"] * len(params.hcni_tested)
+        ))
+        data_cols = ["go_term", "or", "p_value", "naive_obs", "set_obs"]
+        id_cols = ["data","type" "limit", "source"]
+        with open(output.test_csv, "w") as w:
+            w.write("\t".join(id_cols + data_cols))
 
-# rule get_bait_list:
-#     # TODO: evaluate if this is used or useful
-#     params:
-#         other_ms_methods = [
-#             "MI-0006",
-#             "MI-0007",
-#             "MI-0096",
-#             "MI-0004",
-#             "MI-0019"
-#         ],
-#         biotin_id = "MI-1314"
-#     input:
-#         intact = "data/bait_prey_publications.csv",
-#         localisation_annotations = "data/gene_attribute_edges.txt",
-#         uniprot_gene_name = "data/uniprot_to_gene_name.csv"
-#     output:
-#         bioid_baits="work_folder_{project}/enrichment_analysis/bait_lists/bioid_baits.csv",
-#         ms_baits="work_folder_{project}/enrichment_analysis/bait_lists/ms_baits.csv",
-#         shared_balanced="work_folder_{project}/enrichment_analysis/bait_lists/shared_baits.csv"
-#     run:
-#         intact_df = pd.read_csv(input.intact, sep="\t")
-#
-#         gene_name_to_uniprot = pd.read_csv(input.uniprot_gene_name,sep="\t")
-#         intact_df = intact_df.merge(gene_name_to_uniprot, left_on="bait",right_on="uniprot_id")
-#
-#         bioid_ss = intact_df[intact_df["detection_method"] == params.biotin_id]
-#         ms_ss = intact_df[intact_df["detection_method"].isin(params.other_ms_methods)]
-#
-#         bioid_ss["gene_name"].to_csv(output.bioid_baits, sep="\t", index=False)
-#         ms_ss["gene_name"].to_csv(output.ms_baits,sep="\t",index=False)
-#
-#         bioid_bait_list = bioid_ss["gene_name"].tolist()
-#         ms_bait_list = ms_ss["gene_name"].tolist()
-#
-#         shared_baits = set(bioid_bait_list) & set(ms_bait_list)
-#         with open(output.shared_balanced, "w") as w:
-#             w.write("gene_name\tbioid_data\n")
-#             for bait_list, bioid_bool in zip([ms_bait_list, bioid_bait_list], [0,1]):
-#                 for bait in bait_list:
-#                     if bait in shared_baits:
-#                         w.write(
-#                             f"{bait}\t{bioid_bool}\n")
-#
-#
-# rule bait_enrichment:
-#     # TODO: evaluate id this is used or useful
-#     params:
-#         n_top_baits = 100
-#     input:
-#         bioid_baits = "work_folder_{project}/enrichment_analysis/bait_lists/bioid_baits.csv",
-#         ms_baits = "work_folder_{project}/enrichment_analysis/bait_lists/ms_baits.csv"
-#     output:
-#         bioid_bait_enrichment_go_output = "work_folder_{project}/enrichment_analysis/enrichment/bait_enrichment_GO_bioid.csv",
-#         bioid_bait_enrichment_do_output = "work_folder_{project}/enrichment_analysis/enrichment/bait_enrichment_DO_bioid.csv",
-#         ms_bait_enrichment_go_output = "work_folder_{project}/enrichment_analysis/enrichment/bait_enrichment_GO_ms.csv",
-#         ms_bait_enrichment_do_output = "work_folder_{project}/enrichment_analysis/enrichment/bait_enrichment_DO_ms.csv",
-#         venn_plot_go = "work_folder_{project}/enrichment_analysis/plots/venn_diagram_goid.png",
-#         venn_plot_doid = "work_folder_{project}/enrichment_analysis/plots/venn_diagram_doid.png",
-#         venn_plot_bait= "work_folder_{project}/enrichment_analysis/plots/venn_diagram_bait.png"
-#     shell:
-#         """
-#         Rscript src/enrichment_analysis.R \
-#             {input.bioid_baits} \
-#             {input.ms_baits} \
-#             {output.bioid_bait_enrichment_go_output} \
-#             {output.bioid_bait_enrichment_do_output} \
-#             {output.ms_bait_enrichment_go_output} \
-#             {output.ms_bait_enrichment_do_output} \
-#             {output.venn_plot_go} \
-#             {output.venn_plot_doid} \
-#             {output.venn_plot_bait} \
-#             {params.n_top_baits}
-#         """
+        for go_terms_file, limit, type_set in go_set_zips:
+            go_results = test_go_binomial(go_terms_file, naive_go_frequency_df, go_to_keep, params.n_tested_genes)
+
+            go_df = pd.DataFrame(go_results, columns=data_cols)
+            go_df[id_cols] = [
+                [f"{wildcards.data}"]*len(go_to_keep),
+                [f"{type_set}"] * len(go_to_keep),
+                [f"{limit}"] * len(go_to_keep),
+                [f"{wildcards.source}"] * len(go_to_keep)
+            ]
+            go_df[id_cols + data_cols].to_csv(output.test_csv, sep="\t", mode="a", header=False, index=False)
