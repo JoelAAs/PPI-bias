@@ -281,8 +281,8 @@ rule test_go_terms:
     params:
         n_tested_genes=50,
         min_observed=0.2,
-        hci_limit=config["hci_limits"],
-        hcni_tested=config["hcni_tested"]
+        hci_limit=[.2,],
+        hcni_tested=[4,] # as it's what I chose for DOID comparison
     input:
         naive_go_frequency_df=f"work_folder{pn}/degree/GO/{{data}}_naive_count_{{source}}.csv",
         hci_observations=expand(
