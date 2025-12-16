@@ -5,7 +5,6 @@ from snakemake.io import expand
 import numpy as np
 from scipy.stats import fisher_exact
 from src.Analysis.Enrichment.go_annotation_support import get_go_genes, get_go_frequency
-from src.Analysis.ProteomeComparison.paxdb_vs_hela import p_values
 
 rule get_enrichment:
     params:
@@ -251,12 +250,8 @@ rule get_go_annotation:
 
 def test_go_binomial(go_file, naive_df, gos, n_tested):
     go_df = pd.read_csv(go_file,sep="\t")
-    go_df = go_df.set_index("go_terms")
-    ors = []
-    p_values = []
-    all_naive_obs = []
-    all_set_obs = []
-    gos = list(gos)
+    go_df = go_df.set_index("go_term")
+    rows = []
     for selected_go_term in gos:
         if selected_go_term in go_df.index:
             go_obs = go_df.loc[selected_go_term]["go_occurrence"]
@@ -272,12 +267,15 @@ def test_go_binomial(go_file, naive_df, gos, n_tested):
              [naive_obs, n_tested - naive_obs]]
         )
         odds_ratio, p = fisher_exact(c_table,alternative='two-sided')
-        ors.append(odds_ratio)
-        p_values.append(p)
-        all_naive_obs.append(naive_obs)
-        all_set_obs.append(go_obs)
+        rows.append([
+            selected_go_term,
+            odds_ratio,
+            p,
+            naive_obs,
+            go_obs
+        ])
 
-    return [gos, ors, p_values, all_naive_obs, all_set_obs]
+    return rows
 
 rule test_go_terms:
     params:
@@ -286,12 +284,12 @@ rule test_go_terms:
         hci_limit=config["hci_limits"],
         hcni_tested=config["hcni_tested"]
     input:
-        naive_go_frequency_df=f"work_folder{pn}/degree/GO/{{data}}_naive_count_{{source}}.csv.gz",
+        naive_go_frequency_df=f"work_folder{pn}/degree/GO/{{data}}_naive_count_{{source}}.csv",
         hci_observations=expand(
-            f"work_folder{pn}/degree/GO/{{data}}_HCI_{limit}_count_{{source}}.csv",
-            pn=pn,limit=config["hci_limit"]),
+            "work_folder{pn}/degree/GO/{{data}}_HCI_{limit}_count_{{source}}.csv",
+            pn=pn, limit=config["hci_limits"]),
         hcni_observations=expand(
-            f"work_folder{pn}/degree/GO/{{data}}_HCNI_{limit}_count_{{source}}.csv",
+            "work_folder{pn}/degree/GO/{{data}}_HCNI_{limit}_count_{{source}}.csv",
             pn=pn,limit=config["hcni_tested"])
     output:
         test_csv = f"work_folder{pn}/degree/GO/tested/{{data}}_{{source}}.csv"
@@ -300,7 +298,7 @@ rule test_go_terms:
             input.naive_go_frequency_df,sep="\t"
         )
         naive_go_frequency_df = naive_go_frequency_df.set_index("go_term")
-        go_to_keep = set(naive_go_frequency_df[naive_go_frequency_df["go_frequency"] > params.min_observed]["go_term"])
+        go_to_keep = set(naive_go_frequency_df[naive_go_frequency_df["go_frequency"] > params.min_observed].index)
         for alt_obs in input.hci_observations + input.hcni_observations:
             alt_obs_df = pd.read_csv(alt_obs,sep="\t")
             go_to_keep |= set(alt_obs_df[alt_obs_df["go_frequency"] > params.min_observed]["go_term"])
