@@ -309,7 +309,7 @@ rule test_go_terms:
             input.hcni_observations,params.hcni_tested,["HCNI"] * len(params.hcni_tested)
         ))
         data_cols = ["go_term", "or", "p_value", "naive_obs", "set_obs"]
-        id_cols = ["data","type" "limit", "source"]
+        id_cols = ["data","type", "limit", "source"]
         with open(output.test_csv, "w") as w:
             w.write("\t".join(id_cols + data_cols))
 
@@ -317,10 +317,10 @@ rule test_go_terms:
             go_results = test_go_binomial(go_terms_file, naive_go_frequency_df, go_to_keep, params.n_tested_genes)
 
             go_df = pd.DataFrame(go_results, columns=data_cols)
-            go_df[id_cols] = [
+            go_df[id_cols] = np.array([
                 [f"{wildcards.data}"]*len(go_to_keep),
-                [f"{type_set}"] * len(go_to_keep),
-                [f"{limit}"] * len(go_to_keep),
+                [type_set] * len(go_to_keep),
+                [limit] * len(go_to_keep),
                 [f"{wildcards.source}"] * len(go_to_keep)
-            ]
+            ]).transpose()
             go_df[id_cols + data_cols].to_csv(output.test_csv, sep="\t", mode="a", header=False, index=False)
