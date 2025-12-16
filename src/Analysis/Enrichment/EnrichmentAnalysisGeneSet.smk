@@ -280,7 +280,7 @@ def test_go_binomial(go_file, naive_df, gos, n_tested):
 rule test_go_terms:
     params:
         n_tested_genes=50,
-        min_observed=0.1,
+        min_observed=0.2,
         hci_limit=config["hci_limits"],
         hcni_tested=config["hcni_tested"]
     input:
@@ -298,7 +298,7 @@ rule test_go_terms:
             input.naive_go_frequency_df,sep="\t"
         )
         naive_go_frequency_df = naive_go_frequency_df.set_index("go_term")
-        go_to_keep = set(naive_go_frequency_df[naive_go_frequency_df["go_frequency"] > params.min_observed].index)
+        go_to_keep = set()
         for alt_obs in input.hci_observations + input.hcni_observations:
             alt_obs_df = pd.read_csv(alt_obs,sep="\t")
             go_to_keep |= set(alt_obs_df[alt_obs_df["go_frequency"] > params.min_observed]["go_term"])
@@ -311,7 +311,7 @@ rule test_go_terms:
         data_cols = ["go_term", "or", "p_value", "naive_obs", "set_obs"]
         id_cols = ["data","type", "limit", "source"]
         with open(output.test_csv, "w") as w:
-            w.write("\t".join(id_cols + data_cols))
+            w.write("\t".join(id_cols + data_cols) + "\n")
 
         for go_terms_file, limit, type_set in go_set_zips:
             go_results = test_go_binomial(go_terms_file, naive_go_frequency_df, go_to_keep, params.n_tested_genes)
