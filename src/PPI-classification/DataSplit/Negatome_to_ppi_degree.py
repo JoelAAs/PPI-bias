@@ -1,10 +1,9 @@
-
+import datetime
 import numpy as np
 import pandas as pd
 from numba import njit
 
 
-@njit
 def draw_and_update(bp_matrix, row_target, column_target, n_draws):
     all_row_index = np.zeros(n_draws)
     all_column_index = np.zeros(n_draws)
@@ -32,7 +31,8 @@ def draw_and_update(bp_matrix, row_target, column_target, n_draws):
         flat_idx = np.searchsorted(cum_probs, r, side='right')
 
         # flat_idx = np.random.choice(range(len(flat_prob)), p=flat_prob / flat_prob.sum()) # too slow
-        row_idx, col_idx = np.unravel_index(flat_idx, possible_choice_matrix.shape)
+        row_idx = int(flat_idx/possible_choice_matrix.shape[1])
+        col_idx = flat_idx - row_idx*possible_choice_matrix.shape[1]
         row_sum[row_idx] -= 1
         column_sum[col_idx] -= 1
 
@@ -70,7 +70,7 @@ def subset_negative_set(negative_bait_prey_df, positive_bait_prey_df):
 
     target_row_frequency = pos_bp_matrix.sum(axis=1) / pos_bp_matrix.sum()
     target_col_frequency = pos_bp_matrix.sum(axis=0) / pos_bp_matrix.sum()
-
+    print("starting picking")
     with open("test.csv", "w") as w:
         w.write(f"bait\tprey\trow_error\tcol_error\n")
         n = 1000
@@ -80,8 +80,7 @@ def subset_negative_set(negative_bait_prey_df, positive_bait_prey_df):
             s = datetime.datetime.now()
             batch_bait_idx_dropped, batch_prey_idx_dropped, batch_row_error, batch_col_error, neg_bp_matrix = draw_and_update(
                 neg_bp_matrix, target_row_frequency, target_col_frequency, n)
-
-            for bait_idx_dropped, prey_idx_dropped, row_error, col_error in zip(
+            for bait_idx_dropped, prey_idx_dropped, row_error, col_error in zip(*
                     [batch_bait_idx_dropped, batch_prey_idx_dropped, batch_row_error, batch_col_error]):
                 w.write(f"{idx_bait[bait_idx_dropped]}\t{idx_prey[prey_idx_dropped]}\t{row_error}\t{col_error}\n")
             e = datetime.datetime.now()

@@ -280,7 +280,7 @@ def test_go_binomial(go_file, naive_df, gos, n_tested):
 rule test_go_terms:
     params:
         n_tested_genes=50,
-        min_observed=0.2,
+        min_observed=0.16,
         hci_limit=[.2,],
         hcni_tested=[4,] # as it's what I chose for DOID comparison
     input:
