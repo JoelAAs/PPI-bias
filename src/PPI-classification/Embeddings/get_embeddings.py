@@ -63,9 +63,11 @@ def get_all_mean_embeddings(fasta_file, chosen_model, chunk_size, n_cores):
         return binned
 
     tokenizer, model = download_setup_model(chosen_model)
+    print("ESM model setup finished")
+    ray.init(num_cpus=n_cores)
 
     workers = [RayEmbeddWorker.remote(model, tokenizer) for _ in range(n_cores)]
-
+    print("Ray workers recruited")
     seq_bins = binit(sequences, chunk_size)
     work_queue = []
     for i, seqs in enumerate(seq_bins):
@@ -74,6 +76,7 @@ def get_all_mean_embeddings(fasta_file, chosen_model, chunk_size, n_cores):
 
     embeddings = ray.get(work_queue)
     embeddings = torch.cat(embeddings, dim=0)
+    ray.shutdown()
 
     return embeddings, genes
 
@@ -89,9 +92,7 @@ if __name__ == '__main__':
 
     chuck_size = 100
     n_cores = 10
-    ray.init(num_cpus=n_cores)
     mean_embeddings, genes = get_all_mean_embeddings(fasta_filename, model_name, chuck_size, n_cores)
-    ray.shutdown()
     df_embeddings = pd.DataFrame(mean_embeddings)
     df_embeddings["gene_name"] = genes
     df_embeddings.to_csv(output_csv, sep="\t", index=False)
