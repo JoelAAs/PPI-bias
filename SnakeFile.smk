@@ -87,6 +87,7 @@ include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
 include: "src/Analysis/NegatomeComparison/CompareSharedBaits.smk"
 include: "src/Analysis/CompareLocalisationMethod/MethodLocalisation.smk"
 
+include: "src/PPI-classification/Embeddings/Embeddings.smk"
 
 include: "src/Plotting/get_plots.smk"
 
@@ -99,7 +100,8 @@ wildcard_constraints:
 
 rule all:
     input:
-        expected_output,
+        f"work_folder{pn}/embeddings/canonical_embedding.csv.gz"
+        #expected_output,
         #f"work_folder{pn}/plots/degree/GO_enrichment.png",
         #f"work_folder{pn}/plots/localisation/HuRI_bioplex.png",
         #f"work_folder{pn}/plots/membrane/HuRI_bioplex.png"
