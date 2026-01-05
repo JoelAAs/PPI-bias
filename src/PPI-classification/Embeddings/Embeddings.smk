@@ -49,7 +49,7 @@ rule get_esm_embeddings:
     shell:
         """
         python {params.script_location} \
-        --prey_tested {input.fasta} \
+        --protein_fasta {input.fasta} \
         --model_name {params.model} \
         --embedding_csv {output.embeddings_csv}
         """
