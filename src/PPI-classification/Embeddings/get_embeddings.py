@@ -79,7 +79,7 @@ if __name__ == '__main__':
 
     chuck_size = 1000
     n_cores = 20
-    mean_embeddings, genes = get_mean_embeddings(fasta_filename, model_name, chuck_size, n_cores)
+    mean_embeddings, genes = get_all_mean_embeddings(fasta_filename, model_name, chuck_size, n_cores)
     df_embeddings = pd.DataFrame(mean_embeddings)
     df_embeddings["gene_name"] = genes
     df_embeddings.to_csv(output_csv, sep="\t", index=False)
