@@ -24,6 +24,7 @@ hcni_tested:
   - 4
   - 5
 
+embedding_model: "facebook/esm2_t33_650M_UR50D"
 localisation_file: "data/localisation/subcellular_location.tsv"
 
 selected_cell_lines:
