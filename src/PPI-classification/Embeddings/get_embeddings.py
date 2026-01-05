@@ -42,11 +42,11 @@ def get_mean_embeddings(fasta_file, chosen_model):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Get mean embeddings from protein fasta")
-    parser.add_argument("--prey_tested", required=True, help="Path to input protein fasta")
+    parser.add_argument("--protein_fasta", required=True, help="Path to input protein fasta")
     parser.add_argument("--model_name", required=True, help="Name of embedding model (huggingface)")
     parser.add_argument("--embedding_csv", required=True, help="Path to output csv file")
     args = parser.parse_args()
-    fasta_filename = args.prey_tested
+    fasta_filename = args.protein_fasta
     model_name = args.model_name
     output_csv = args.embedding_csv
 

@@ -1,8 +1,6 @@
 import datetime
 import numpy as np
 import pandas as pd
-from numba import njit
-
 
 def draw_and_update(bp_matrix, row_target, column_target, n_draws):
     all_row_index = np.zeros(n_draws)
