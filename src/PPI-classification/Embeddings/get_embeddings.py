@@ -9,8 +9,8 @@ import argparse
 @ray.remote(num_cpus=1)
 class RayEmbeddWorker:
     def __init__(self, in_model, in_tokeniser):
-        self.model = ray.get(in_model)
-        self.tokeniser = ray.get(in_tokeniser)
+        self.model = in_model
+        self.tokeniser = in_tokeniser
 
     def get_mean_embeddings(self, sequences):
         m1 = datetime.datetime.now()
@@ -64,10 +64,7 @@ def get_all_mean_embeddings(fasta_file, chosen_model, chunk_size, n_cores):
 
     tokenizer, model = download_setup_model(chosen_model)
 
-    model_ref = ray.put(model)
-    tokenizer_ref = ray.put(tokenizer)
-
-    workers = [RayEmbeddWorker.remote(model_ref, tokenizer_ref) for _ in range(n_cores)]
+    workers = [RayEmbeddWorker.remote(model, tokenizer) for _ in range(n_cores)]
 
     seq_bins = binit(sequences, chunk_size)
     work_queue = []
