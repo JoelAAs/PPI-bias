@@ -1,3 +1,7 @@
+import datetime
+import multiprocessing as mp
+from functools import partial
+import os
 import pandas as pd
 import torch
 from transformers import AutoModel, AutoTokenizer
@@ -20,25 +24,48 @@ def read_fasta(fasta_filename):
 
 
 def download_setup_model(model_name):
+    #torch.set_num_threads(1)
+    #os.environ['OMP_NUM_THREADS'] = '1'
+    global tokenizer, model
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModel.from_pretrained(model_name, dtype=torch.float16).eval()
-    return tokenizer, model
 
 
-def get_mean_embeddings(fasta_file, chosen_model):
-    tokenizer, model = download_setup_model(chosen_model)
-    gene_name_seq_dict = read_fasta(fasta_file)
-    sequences = list(gene_name_seq_dict.values())
-    genes = list(gene_name_seq_dict.keys())
+def get_mean_embeddings(sequences):
+    global tokenizer, model
+    m1 = datetime.datetime.now()
     inputs = tokenizer(sequences, return_tensors="pt", padding=True)
+    m2 = datetime.datetime.now()
+    print(f"Tokenise input: {m2 - m1}")
     with torch.no_grad():
         outputs = model(**inputs)
         embeddings = outputs.last_hidden_state
-
     mean_embeddings = embeddings.mean(dim=1)
-    return mean_embeddings, genes
+    e = datetime.datetime.now()
+    print(f"Embedding_time: {e - m2}")
 
+    return mean_embeddings
 
+def get_all_mean_embeddings(fasta_file, chosen_model, chunk_size, n_cores):
+    gene_name_seq_dict = read_fasta(fasta_file)
+    sequences = list(gene_name_seq_dict.values())
+    genes = list(gene_name_seq_dict.keys())
+
+    def binit(x, n):
+        binned = []
+        while  n < len(x):
+            binned.append(x[:n])
+            x = x[n:]
+
+        if len(x):
+            binned.append(x)
+        return binned
+
+    seq_bins = binit(sequences, chunk_size)
+    with mp.Pool(n_cores, initializer=download_setup_model, initargs=(chosen_model,)) as pool:
+        embeddings = pool.map(get_mean_embeddings, seq_bins)
+    embeddings = torch.cat(embeddings, dim=0)
+    return embeddings, genes
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Get mean embeddings from protein fasta")
@@ -50,7 +77,9 @@ if __name__ == '__main__':
     model_name = args.model_name
     output_csv = args.embedding_csv
 
-    mean_embeddings, genes = get_mean_embeddings(fasta_filename, model_name)
+    chuck_size = 1000
+    n_cores = 20
+    mean_embeddings, genes = get_mean_embeddings(fasta_filename, model_name, chuck_size, n_cores)
     df_embeddings = pd.DataFrame(mean_embeddings)
     df_embeddings["gene_name"] = genes
     df_embeddings.to_csv(output_csv, sep="\t", index=False)
