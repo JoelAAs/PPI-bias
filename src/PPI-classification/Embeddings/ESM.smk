@@ -36,3 +36,15 @@ rule get_all_canonical_sequences:
                     get_sp_uniprot_gene_name(gene_name)
                 )
 
+rule get_esm_embeddings:
+    params:
+        model = config["embedding_model"],
+        script_location = "src/PPI-classification/embeddings/ESM.py"
+    input:
+        fasta = f"work_folder{pn}/embeddings/gene_name_sp.fasta"
+    output:
+        ""  # TODO: find out wat format is best
+    shell:
+        """
+        python {params.script_location} {input.fasta} {params.model}
+        """
