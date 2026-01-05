@@ -1,13 +1,31 @@
 import datetime
-import multiprocessing as mp
-from functools import partial
-import os
+import ray
 import pandas as pd
 import torch
 from transformers import AutoModel, AutoTokenizer
 import re
 import argparse
 
+class RayEmbeddWorker:
+    def __init__(self, in_model, in_tokeniser):
+        self.model = ray.get(in_model)
+        self.tokeniser = ray.get(in_tokeniser)
+
+    def get_mean_embeddings(self, sequences):
+        m1 = datetime.datetime.now()
+        inputs = self.tokenizer(sequences, return_tensors="pt", padding=True)
+        m2 = datetime.datetime.now()
+        print(f"Tokenise input: {m2 - m1}")
+        with torch.no_grad():
+            outputs = self.model(**inputs)
+            embeddings = outputs.last_hidden_state
+        mean_embeddings = embeddings.mean(dim=1)
+        e = datetime.datetime.now()
+        print(f"Embedding_time: {e - m2}")
+
+        return mean_embeddings
+
+@ray.remote(num_cpus=1)
 def read_fasta(fasta_filename):
     gene_name_seq_dict = dict()
     with open(fasta_filename) as f:
@@ -24,27 +42,12 @@ def read_fasta(fasta_filename):
 
 
 def download_setup_model(model_name):
-    #torch.set_num_threads(1)
-    #os.environ['OMP_NUM_THREADS'] = '1'
-    global tokenizer, model
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModel.from_pretrained(model_name, dtype=torch.float16).eval()
+    return tokenizer, model
 
 
-def get_mean_embeddings(sequences):
-    global tokenizer, model
-    m1 = datetime.datetime.now()
-    inputs = tokenizer(sequences, return_tensors="pt", padding=True)
-    m2 = datetime.datetime.now()
-    print(f"Tokenise input: {m2 - m1}")
-    with torch.no_grad():
-        outputs = model(**inputs)
-        embeddings = outputs.last_hidden_state
-    mean_embeddings = embeddings.mean(dim=1)
-    e = datetime.datetime.now()
-    print(f"Embedding_time: {e - m2}")
 
-    return mean_embeddings
 
 def get_all_mean_embeddings(fasta_file, chosen_model, chunk_size, n_cores):
     gene_name_seq_dict = read_fasta(fasta_file)
@@ -61,10 +64,22 @@ def get_all_mean_embeddings(fasta_file, chosen_model, chunk_size, n_cores):
             binned.append(x)
         return binned
 
+    tokenizer, model = download_setup_model(chosen_model)
+
+    model_ref = ray.put(model)
+    tokenizer_ref = ray.put(tokenizer)
+
+    workers = [RayEmbeddWorker.remote(chosen_model) for _ in range(n_cores)]
+
     seq_bins = binit(sequences, chunk_size)
-    with mp.Pool(n_cores, initializer=download_setup_model, initargs=(chosen_model,)) as pool:
-        embeddings = pool.map(get_mean_embeddings, seq_bins)
+    work_queue = []
+    for i, seqs in enumerate(seq_bins):
+        chosen_worker = workers[i%len(workers)]
+        work_queue.append(chosen_worker.embed.remote(seqs))
+
+    embeddings = ray.get(work_queue)
     embeddings = torch.cat(embeddings, dim=0)
+
     return embeddings, genes
 
 if __name__ == '__main__':
