@@ -26,6 +26,7 @@ class RayEmbeddWorker:
 
         return mean_embeddings
 
+
 def read_fasta(fasta_filename):
     gene_name_seq_dict = dict()
     with open(fasta_filename) as f:
@@ -45,9 +46,6 @@ def download_setup_model(model_name):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModel.from_pretrained(model_name, dtype=torch.float16).eval()
     return tokenizer, model
-
-
-
 
 def get_all_mean_embeddings(fasta_file, chosen_model, chunk_size, n_cores):
     gene_name_seq_dict = read_fasta(fasta_file)
@@ -69,13 +67,13 @@ def get_all_mean_embeddings(fasta_file, chosen_model, chunk_size, n_cores):
     model_ref = ray.put(model)
     tokenizer_ref = ray.put(tokenizer)
 
-    workers = [RayEmbeddWorker.remote(chosen_model, model_ref, tokenizer_ref) for _ in range(n_cores)]
+    workers = [RayEmbeddWorker.remote(model_ref, tokenizer_ref) for _ in range(n_cores)]
 
     seq_bins = binit(sequences, chunk_size)
     work_queue = []
     for i, seqs in enumerate(seq_bins):
         chosen_worker = workers[i%len(workers)]
-        work_queue.append(chosen_worker.embed.remote(seqs))
+        work_queue.append(chosen_worker.get_mean_embeddings.remote(seqs))
 
     embeddings = ray.get(work_queue)
     embeddings = torch.cat(embeddings, dim=0)
