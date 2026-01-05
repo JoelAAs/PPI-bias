@@ -6,6 +6,7 @@ from transformers import AutoModel, AutoTokenizer
 import re
 import argparse
 
+@ray.remote(num_cpus=1)
 class RayEmbeddWorker:
     def __init__(self, in_model, in_tokeniser):
         self.model = ray.get(in_model)
@@ -25,7 +26,6 @@ class RayEmbeddWorker:
 
         return mean_embeddings
 
-@ray.remote(num_cpus=1)
 def read_fasta(fasta_filename):
     gene_name_seq_dict = dict()
     with open(fasta_filename) as f:
@@ -92,9 +92,11 @@ if __name__ == '__main__':
     model_name = args.model_name
     output_csv = args.embedding_csv
 
-    chuck_size = 1000
-    n_cores = 20
+    chuck_size = 100
+    n_cores = 10
+    ray.init(num_cpus=n_cores)
     mean_embeddings, genes = get_all_mean_embeddings(fasta_filename, model_name, chuck_size, n_cores)
+    ray.shutdown()
     df_embeddings = pd.DataFrame(mean_embeddings)
     df_embeddings["gene_name"] = genes
     df_embeddings.to_csv(output_csv, sep="\t", index=False)
