@@ -8,9 +8,9 @@ import argparse
 
 @ray.remote(num_cpus=1)
 class RayEmbeddWorker:
-    def __init__(self, in_model, in_tokeniser):
+    def __init__(self, in_model, in_tokenizer):
         self.model = in_model
-        self.tokeniser = in_tokeniser
+        self.tokenizer = in_tokenizer
 
     def get_mean_embeddings(self, sequences):
         m1 = datetime.datetime.now()
