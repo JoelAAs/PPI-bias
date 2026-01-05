@@ -39,12 +39,14 @@ rule get_all_canonical_sequences:
 rule get_esm_embeddings:
     params:
         model = config["embedding_model"],
-        script_location = "src/PPI-classification/embeddings/ESM.py"
+        script_location = "src/PPI-classification/embeddings/get_embeddings.py"
     input:
         fasta = f"work_folder{pn}/embeddings/gene_name_sp.fasta"
     output:
-        ""  # TODO: find out wat format is best
+        embeddings_csv = f"work_folder{pn}/embeddings/canonical_embedding.csv.gz"
+    conda:
+        "huggingface"
     shell:
         """
-        python {params.script_location} {input.fasta} {params.model}
+        python {params.script_location} {input.fasta} {params.model} {output.embeddings_csv}
         """
