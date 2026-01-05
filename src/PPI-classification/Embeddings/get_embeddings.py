@@ -28,11 +28,11 @@ def download_setup_model(model_name):
 def get_mean_embeddings(fasta_file, chosen_model):
     tokenizer, model = download_setup_model(chosen_model)
     gene_name_seq_dict = read_fasta(fasta_file)
-    sequences = list(gene_name_seq_dict.values())[:2]
-    genes = list(gene_name_seq_dict.keys())[:2]
+    sequences = list(gene_name_seq_dict.values())
+    genes = list(gene_name_seq_dict.keys())
     inputs = tokenizer(sequences, return_tensors="pt", padding=True)
     with torch.no_grad():
-        outputs = model(*inputs)
+        outputs = model(**inputs)
         embeddings = outputs.last_hidden_state
 
     mean_embeddings = embeddings.mean(dim=1)
@@ -53,5 +53,5 @@ if __name__ == '__main__':
     mean_embeddings, genes = get_mean_embeddings(fasta_filename, model_name)
     df_embeddings = pd.DataFrame(mean_embeddings)
     df_embeddings["gene_name"] = genes
-    df_embeddings.to_csv(output_csv, sep="\t", idex=False)
+    df_embeddings.to_csv(output_csv, sep="\t", index=False)
 
