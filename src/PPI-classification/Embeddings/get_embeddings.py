@@ -69,7 +69,7 @@ def get_all_mean_embeddings(fasta_file, chosen_model, chunk_size, n_cores):
     model_ref = ray.put(model)
     tokenizer_ref = ray.put(tokenizer)
 
-    workers = [RayEmbeddWorker.remote(chosen_model) for _ in range(n_cores)]
+    workers = [RayEmbeddWorker.remote(chosen_model, model_ref, tokenizer_ref) for _ in range(n_cores)]
 
     seq_bins = binit(sequences, chunk_size)
     work_queue = []
