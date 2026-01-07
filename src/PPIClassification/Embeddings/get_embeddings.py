@@ -11,17 +11,16 @@ class RayEmbeddWorker:
     def __init__(self, chosen_model):
         self.tokenizer, self.model = self.download_setup_model(chosen_model)
 
-    def get_mean_embeddings(self, sequences):
+    def get_mean_embeddings(self, sequences, i, n):
         m1 = datetime.datetime.now()
         inputs = self.tokenizer(sequences, return_tensors="pt", padding=True)
         m2 = datetime.datetime.now()
-        print(f"Tokenise input: {m2 - m1}")
         with torch.no_grad():
             outputs = self.model(**inputs)
             embeddings = outputs.last_hidden_state
         mean_embeddings = embeddings.mean(dim=1)
         e = datetime.datetime.now()
-        print(f"Embedding_time: {e - m2}")
+        print(f"Embedding_time: {e - m2} for sequences {i-len(sequences)} - {i} / {n} ")
 
         return mean_embeddings
 
@@ -46,8 +45,6 @@ def read_fasta(fasta_filename):
     return gene_name_seq_dict
 
 
-
-
 def get_all_mean_embeddings(fasta_file, chosen_model, chunk_size, n_cores):
     gene_name_seq_dict = read_fasta(fasta_file)
     sequences = list(gene_name_seq_dict.values())
@@ -64,7 +61,6 @@ def get_all_mean_embeddings(fasta_file, chosen_model, chunk_size, n_cores):
         return binned
 
 
-    print("ESM model setup finished")
     ray.init(num_cpus=n_cores)
 
     workers = [RayEmbeddWorker.remote(chosen_model) for _ in range(n_cores)]
@@ -73,7 +69,7 @@ def get_all_mean_embeddings(fasta_file, chosen_model, chunk_size, n_cores):
     work_queue = []
     for i, seqs in enumerate(seq_bins):
         chosen_worker = workers[i%len(workers)]
-        work_queue.append(chosen_worker.get_mean_embeddings.remote(seqs))
+        work_queue.append(chosen_worker.get_mean_embeddings.remote(seqs, i*chunk_size, len(sequences)))
 
     embeddings = ray.get(work_queue)
     embeddings = torch.cat(embeddings, dim=0)
@@ -91,8 +87,8 @@ if __name__ == '__main__':
     model_name = args.model_name
     output_csv = args.embedding_csv
 
-    chuck_size = 10
-    n_cores = 1
+    chuck_size = 5
+    n_cores = 40
     mean_embeddings, genes = get_all_mean_embeddings(fasta_filename, model_name, chuck_size, n_cores)
     df_embeddings = pd.DataFrame(mean_embeddings)
     df_embeddings["gene_name"] = genes
