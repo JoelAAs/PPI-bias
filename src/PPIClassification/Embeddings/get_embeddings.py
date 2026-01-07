@@ -8,9 +8,8 @@ import argparse
 
 @ray.remote(num_cpus=1)
 class RayEmbeddWorker:
-    def __init__(self, in_model, in_tokenizer):
-        self.model = in_model
-        self.tokenizer = in_tokenizer
+    def __init__(self, chosen_model):
+        self.tokenizer, self.model = self.download_setup_model(chosen_model)
 
     def get_mean_embeddings(self, sequences):
         m1 = datetime.datetime.now()
@@ -26,6 +25,11 @@ class RayEmbeddWorker:
 
         return mean_embeddings
 
+    @staticmethod
+    def download_setup_model(chosen_model):
+        tokenizer = AutoTokenizer.from_pretrained(chosen_model)
+        model = AutoModel.from_pretrained(chosen_model, dtype=torch.float16).eval()
+        return tokenizer, model
 
 def read_fasta(fasta_filename):
     gene_name_seq_dict = dict()
@@ -42,10 +46,7 @@ def read_fasta(fasta_filename):
     return gene_name_seq_dict
 
 
-def download_setup_model(model_name):
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModel.from_pretrained(model_name, dtype=torch.float16).eval()
-    return tokenizer, model
+
 
 def get_all_mean_embeddings(fasta_file, chosen_model, chunk_size, n_cores):
     gene_name_seq_dict = read_fasta(fasta_file)
@@ -62,11 +63,11 @@ def get_all_mean_embeddings(fasta_file, chosen_model, chunk_size, n_cores):
             binned.append(x)
         return binned
 
-    tokenizer, model = download_setup_model(chosen_model)
+
     print("ESM model setup finished")
     ray.init(num_cpus=n_cores)
 
-    workers = [RayEmbeddWorker.remote(model, tokenizer) for _ in range(n_cores)]
+    workers = [RayEmbeddWorker.remote(chosen_model) for _ in range(n_cores)]
     print("Ray workers recruited")
     seq_bins = binit(sequences, chunk_size)
     work_queue = []

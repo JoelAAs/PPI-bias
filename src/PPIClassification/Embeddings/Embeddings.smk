@@ -39,7 +39,7 @@ rule get_all_canonical_sequences:
 rule get_esm_embeddings:
     params:
         model = config["embedding_model"],
-        script_location = "src/PPI-classification/Embeddings/get_embeddings.py"
+        script_location = "src/PPIClassification/Embeddings/get_embeddings.py"
     input:
         fasta = f"work_folder{pn}/embeddings/gene_name_sp.fasta"
     output:
