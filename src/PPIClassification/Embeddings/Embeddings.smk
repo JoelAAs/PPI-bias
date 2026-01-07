@@ -19,9 +19,14 @@ def get_sp_uniprot_gene_name(gene_name):
         raise RequestError(f"{gene_name} failed")
 
     fasta = response.text
-    fasta_lines = fasta.split("\n")
-    fasta_lines[0] += f"QGN: {gene_name}"
-    return "\n".join(fasta_lines)
+
+    if len(fasta) > 10:
+        fasta_lines = fasta.split("\n")
+        fasta_lines[0] += f"QGN: {gene_name}"
+
+        return "\n".join(fasta_lines)
+    else:
+        return f"> QGN: {gene_name}"
 
 
 rule get_all_canonical_sequences:
