@@ -5,12 +5,12 @@ rule blast_sequence_similarity:
     params:
         n_threads = 20
     input:
-        fasta = f"work_folder{pn}/embeddings/gene_name_sp.fasta"
+        fasta = f"work_folder{pn}/embeddings/gene_name_sp_dedub.fasta"
     output:
         similarity_tsv = f"work_folder{pn}/embeddings/all_vs_all.tsv"
     shell:
         """
-        makeblastdb -dbtype prot -in {input.fasta}
+        makeblastdb -dbtype prot -in {input.fasta} -parse_seqids -title "Gene Name SP DB"
         blastp -query gene_name_sp.fasta -db gene_name_sp.fasta \
         -outfmt "6 qseqid qtitle sseqid stitle evalue bitscore"  \
         -max_hsps 1 -num_threads {params.n_threads} -out all_vs_all.tsv
@@ -35,6 +35,9 @@ rule get_METIS_adjacency_list:
         ava_blast_df["from_length"] = ava_blast_df["from_gene"].apply(lambda x: len(gene_seq_dict.get(x,"")))
         ava_blast_df["to_length"] = ava_blast_df["to_gene"].apply(lambda x: len(gene_seq_dict.get(x,"")))
 
+        gene_length = ava_blast_df.pivot(
+            index="gene", columns=["from_length", "to_length"], values=["from_gene", "to_gene"]
+        )
 
 
 

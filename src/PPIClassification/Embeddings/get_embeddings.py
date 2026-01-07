@@ -12,7 +12,6 @@ class RayEmbeddWorker:
         self.tokenizer, self.model = self.download_setup_model(chosen_model)
 
     def get_mean_embeddings(self, sequences, i, n):
-        m1 = datetime.datetime.now()
         inputs = self.tokenizer(sequences, return_tensors="pt", padding=True)
         m2 = datetime.datetime.now()
         with torch.no_grad():

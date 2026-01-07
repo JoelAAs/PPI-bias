@@ -1,5 +1,8 @@
+import time
 import pandas as pd
 import re
+import requests
+
 
 def _find_pattern(cell, pattern, single=True):
     match = re.search(pattern, cell)
@@ -80,7 +83,7 @@ def reform_to_bait_prey(mitab_df):
 
 def get_gene_names(filename, output_file):
     """
-    Extracting uniprot-gene name from miTab interaction file
+    Primary gene name registered for accession id in uniprot, those without are discarded
     :param filename: Mitab file location
     :param output_file: uniprot - gene_name file location
     :return:
@@ -97,23 +100,56 @@ def get_gene_names(filename, output_file):
     intact_df["IDB"] = intact_df["ID(s) interactor B"].apply(
         _find_pattern, args=(r"uniprotkb:(.+)",))
 
-    gene_name_pattern = r"uniprotkb:([a-zA-Z0-9-]+)\(gene name\)"
-    intact_df["gene_name_a"] = intact_df["Alias(es) interactor A"].apply(
-        _find_pattern, args=(gene_name_pattern,))
-    intact_df["gene_name_b"] = intact_df["Alias(es) interactor B"].apply(
-        _find_pattern, args=(gene_name_pattern,))
 
-    name_dict = dict()
-    for i, row in intact_df.iterrows():
-        for uniprot_id, gene_name in zip(
-                [row["IDA"], row["IDB"]],
-                [row["gene_name_a"], row["gene_name_b"]]
-        ):
-            if uniprot_id and gene_name and uniprot_id not in name_dict:
-                name_dict[uniprot_id] = gene_name
+    all_ids = list(set(intact_df["IDB"]) | set(intact_df["IDA"]))
+    all_ids = [id for id in all_ids if id]
+
+    def binit(x, n):
+        for i in range(0,len(x), n):
+            yield x[i:i+n]
+
+    id_bins = binit(all_ids, 100)
 
     with open(output_file, "w") as w:
+        url = "https://rest.uniprot.org/uniprotkb/search"
+
         w.write("uniprot_id\tgene_name\n")
-        for uniprot_id, gene_name in name_dict.items():
-            w.write(f"{uniprot_id}\t{gene_name}\n")
+        for bin in id_bins:
+            params = {
+                "query": f"accession:{' OR '.join(bin)}",
+                "format": "tsv",
+                "fields": "accession,gene_primary",
+                "size":200
+            }
+            response = requests.get(url, params=params)
+            if response.ok:
+                lines = response.text.split("\n")
+
+                for line in lines[1:]:
+                    if line:
+                        w.write(line + "\n")
+
+            time.sleep(0.01)
+
+
+    gene_name_df = pd.read_csv(output_file, sep="\t")
+    gene_name_df = gene_name_df.drop_duplicates()
+    missing_queries = [a for a in all_ids if a not in gene_name_df.uniprot_id.values]
+    isoform_rows = []
+    for missing in missing_queries:
+        if "-" in missing:
+            p_id, isoform_n = missing.split("-")
+            gene = gene_name_df[gene_name_df["uniprot_id"] == p_id]["gene_name"]
+            if not gene.empty:
+                gene = gene.values[0]
+                isoform_rows.append({
+                    "uniprot_id": missing,
+                    "gene_name": f"{gene}-{isoform_n}"
+                })
+
+    combined_df = pd.concat([
+        gene_name_df,
+        pd.DataFrame(isoform_rows)
+    ], ignore_index=True)
+    combined_df.to_csv(output_file, sep="\t", index=False)
 

@@ -87,7 +87,7 @@ include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
 include: "src/Analysis/NegatomeComparison/CompareSharedBaits.smk"
 include: "src/Analysis/CompareLocalisationMethod/MethodLocalisation.smk"
 
-include: "src/PPI-classification/Embeddings/Embeddings.smk"
+include: "src/PPIClassification/Embeddings/Embeddings.smk"
 
 include: "src/Plotting/get_plots.smk"
 
