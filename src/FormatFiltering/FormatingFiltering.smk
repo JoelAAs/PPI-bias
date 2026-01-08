@@ -1,3 +1,5 @@
+import pandas as pd
+
 from formating import *
 
 ##### Rules
@@ -16,7 +18,7 @@ rule get_gene_name_uniprot:
     input:
         miTab = "work_folder/data/intact/human.txt"
     output:
-        uniprot = f"work_folder{pn}/intact/uniprot_to_gene_name.csv"
+        uniprot = f"work_folder{pn}/gene_names/uniprot_to_gene_name.csv"
     run:
         get_gene_names(input.miTab, output.uniprot)
 
@@ -27,13 +29,20 @@ rule format_miTab:
     """
     input:
         miTab = "work_folder/data/intact/human.txt",
-        gene_names = f"work_folder{pn}/intact/uniprot_to_gene_name.csv"
+        gene_names_unipriot = f"work_folder{pn}/gene_names/uniprot_to_gene_name.csv",
+        gene_names_swissprot= f"work_folder{pn}/gene_names/uniprot_to_sp.csv"
     output:
         formated = f"work_folder{pn}/formated/bait_prey_publications.csv"
     run:
-        mitab_df    = filter_mitab(input.miTab)
+        mitab_df     = filter_mitab(input.miTab)
         bait_prey_df = reform_to_bait_prey(mitab_df)
-        gene_name_df = pd.read_csv(input.gene_names, sep = "\t")
+        gene_name_uniprot_df = pd.read_csv(input.gene_names_unipriot, sep = "\t")
+        gene_name_swissprot_df = pd.read_csv(input.gene_names_swissprot, sep = "\t")
+        gene_name_df = gene_name_uniprot_df.merge(gene_name_swissprot_df,
+            left_on="gene_name", right_on="intact_gene_name"
+        )
+        gene_name_df = gene_name_df[["uniprot_id", "sp_gene_name"]]
+        gene_name_df.columns = ["uniprot_id", "gene_name"]
 
         bait_prey_df = bait_prey_df.merge(gene_name_df, left_on="uniprot_id_bait", right_on="uniprot_id")
         del bait_prey_df["uniprot_id"]
@@ -45,4 +54,3 @@ rule format_miTab:
             sep="\t",
             index = None
         )
-

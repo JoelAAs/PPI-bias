@@ -80,10 +80,29 @@ def reform_to_bait_prey(mitab_df):
 
     return bait_prey_df
 
+def get_canonical_isoform(accession_id):
+    url = f"https://rest.uniprot.org/uniprotkb/{accession_id}.json"
+    response = requests.get(url)
+    data = response.json()
+    isoform_n = ""
+    if "comment" in data:
+        data_comment = data["comment"]
+        for comment in data_comment:
+            if comment["commentType"] == "ALTERNATIVE PRODUCTS":
+                for isoform in comment["isoforms"]:
+                    if isoform["isoformSequenceStatus"] == "Displayed":
+                        isoform_n = isoform["name"]["value"]
+                        break
+
+    return isoform_n
+
+
+
 
 def get_gene_names(filename, output_file):
     """
-    Primary gene name registered for accession id in uniprot, those without are discarded
+    Primary gene name registered for accession id in uniprot, those with isofrom notation are checked if cannonical and
+        those without are discarded
     :param filename: Mitab file location
     :param output_file: uniprot - gene_name file location
     :return:
@@ -136,15 +155,21 @@ def get_gene_names(filename, output_file):
     gene_name_df = gene_name_df.drop_duplicates()
     missing_queries = [a for a in all_ids if a not in gene_name_df.uniprot_id.values]
     isoform_rows = []
+    cannonical_isofroms = dict()
     for missing in missing_queries:
         if "-" in missing:
             p_id, isoform_n = missing.split("-")
             gene = gene_name_df[gene_name_df["uniprot_id"] == p_id]["gene_name"]
+
             if not gene.empty:
+                if p_id not in cannonical_isofroms:
+                    cannonical_isofroms[p_id] = get_canonical_isoform(p_id)
+
                 gene = gene.values[0]
+                display_isoform = (f"-{isoform_n}" if isoform_n != cannonical_isofroms[p_id] else "")
                 isoform_rows.append({
                     "uniprot_id": missing,
-                    "gene_name": f"{gene}-{isoform_n}"
+                    "gene_name": f"{gene}{display_isoform}"
                 })
 
     combined_df = pd.concat([

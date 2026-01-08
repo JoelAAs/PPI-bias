@@ -42,6 +42,10 @@ def read_fasta(fasta_filename):
                 seq = ""
             else:
                 seq += line.strip()
+
+        if gene_name:
+            gene_name = gene_name.groups()[0]
+            gene_name_seq_dict[gene_name] = seq
     return gene_name_seq_dict
 
 

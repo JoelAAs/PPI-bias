@@ -21,8 +21,8 @@ def get_sp_uniprot_gene_name(gene_name):
     if len(fasta) < 5:
          return f"> QGN={gene_name}\n"
     else:
-        hits = fasta.split(">")
-        hit_keep = hits[1]
+        hits = re.split("[(?:^|\n)]>", fasta)  # Someone put > in their description
+        hit_keep = hits[0]
         for hit in hits:
             sp_match = re.search(r' GN=([^ ]+)',hit)
             if sp_match and sp_match.groups()[0] == gene_name:
@@ -30,24 +30,25 @@ def get_sp_uniprot_gene_name(gene_name):
                 break
 
         lines = hit_keep.split("\n")
-        lines[0] = ">" + lines[0] + f" QGN={gene_name}"
+        lines[0] = lines[0] + f" QGN={gene_name}"
 
         return "\n".join(lines)
 
 
 rule get_all_canonical_sequences:
     input:
-        intact = f"work_folder{pn}/formated/bait_prey_publications.csv"
+        intact_uniprot_genes = f"work_folder{pn}/gene_names/uniprot_to_gene_name.csv"
     output:
-        fasta = f"work_folder{pn}/embeddings/gene_name_sp.fasta"
+        fasta = f"work_folder{pn}/protein_sequences/gene_name_sp.fasta"
     run:
-        df_intact = pd.read_csv(
-            input.intact, sep="\t"
+        gene_name_uniprot_df = pd.read_csv(
+            input.intact_uniprot_genes, sep="\t"
         )
-        gene_names = set(df_intact["gene_name_prey"]) | set(df_intact["gene_name_prey"])
+        gene_names = set(gene_name_uniprot_df["gene_name"].unique())
+
         with open(output.fasta, "w") as w:
             start = datetime.datetime.now()
-            current_percent = 1
+            current_percent = 0
             for i, gene_name in enumerate(gene_names):
                 if i/len(gene_names) > current_percent/100:
                     current_percent += 1
@@ -63,12 +64,11 @@ rule get_all_canonical_sequences:
                 )
 
 rule swissprot_gn_to_intact_gn:
-    #TODO: This needs to be done in the beginning of intact. in Formating!
     input:
-        fasta = f"work_folder{pn}/embeddings/gene_name_sp.fasta"
+        fasta = f"work_folder{pn}/protein_sequences/gene_name_sp.fasta"
     output:
-        intact_to_sp = f"work_folder{pn}/embeddings/gn_sp2intact.csv",
-        fasta_dedup = f"work_folder{pn}/embeddings/gene_name_sp_dedub.fasta"
+        intact_to_sp = f"work_folder{pn}/gene_names/uniprot_to_sp.csv",
+        fasta_dedup = f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
     run:
         with open(output.intact_to_sp, "w") as w:
             w.write("sp_gene_name\tintact_gene_name\n")
@@ -77,10 +77,11 @@ rule swissprot_gn_to_intact_gn:
                     if line[0] == ">":
                         line = line.strip()
                         sp_match = re.search(r' GN=([^ ]+)', line)
-                        if sp_match:
+                        if sp_match: # drop non-matching
                             sp_match = sp_match.groups()[0]
                             intact_match = re.search(r' QGN=([^"]+)', line).groups()[0]
-                            w.write(f"{sp_match}\t{intact_match}\n")
+                            if ";" not in intact_match: # drop multi-genes
+                                w.write(f"{sp_match}\t{intact_match}\n")
 
         gene_names = pd.read_csv(output.intact_to_sp, sep="\t")
         gene_names["same"] = gene_names["sp_gene_name"] == gene_names["intact_gene_name"]
@@ -88,7 +89,7 @@ rule swissprot_gn_to_intact_gn:
         all_duplicated = duplicated_gene_names["sp_gene_name"].values
         sp_keep = duplicated_gene_names[duplicated_gene_names["same"]]["sp_gene_name"].values
         rest = duplicated_gene_names[~duplicated_gene_names["sp_gene_name"].isin(sp_keep)]
-        rest = rest[rest["sp_gene_name"].duplicated()]["intact_gene_name"].values
+        print(f"dropped {len(set(rest["sp_gene_name"]))} genes without clear gene annotation")
 
         with open(output.fasta_dedup, "w") as w:
             with open(input.fasta, "r") as f:
@@ -96,10 +97,12 @@ rule swissprot_gn_to_intact_gn:
                 for line in f:
                     line = line.strip()
                     if line[0] == ">":
-                        sp_match = re.search(r' GN=([^ ]+)',line).groups()[0]
+                        sp_match = re.search(r' GN=([^ ]+)',line)
                         intact_match = re.search(r' QGN=([^"]+)',line).groups()[0]
-                        if sp_match not in all_duplicated or intact_match in sp_keep or intact_match in rest:
-                            write_sequence = True
+                        if sp_match:
+                            sp_match = sp_match.groups()[0]
+                            if sp_match not in all_duplicated or intact_match in sp_keep:
+                                write_sequence = True
                         else:
                             write_sequence = False
                     if write_sequence:
@@ -113,7 +116,7 @@ rule get_esm_embeddings:
         model = config["embedding_model"],
         script_location = "src/PPIClassification/Embeddings/get_embeddings.py"
     input:
-        fasta = f"work_folder{pn}/embeddings/gene_name_sp.fasta"
+        fasta = f"work_folder{pn}/protein_sequences/gene_name_sp_dedup.fasta"
     output:
         embeddings_csv = f"work_folder{pn}/embeddings/canonical_embedding.csv.gz"
     conda:
