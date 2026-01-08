@@ -1,3 +1,4 @@
+import datetime
 import re
 
 import pandas as pd
@@ -48,8 +49,18 @@ rule get_all_canonical_sequences:
         )
         gene_names = set(df_intact["gene_name_prey"]) | set(df_intact["gene_name_prey"])
         with open(output.fasta, "w") as w:
+            start = datetime.datetime.now()
+            current_percent = 1
             for i, gene_name in enumerate(gene_names):
-                print(f"{i}/{len(gene_names)} done.")
+                if i/len(gene_names) > current_percent/100:
+                    current_percent += 1
+                    current_time = datetime.datetime.now()
+                    delta_time = current_time-start
+                    remaining_time = delta_time.seconds*(100-current_percent)/current_percent
+                    msg = f"{current_percent} % done. Time eclipsed {int(delta_time.seconds/60)} m, {delta_time.seconds % 60} s."
+                    msg += f" Est. remaining {int(remaining_time/60)} m, {remaining_time % 60} s"
+                    print(msg)
+
                 w.write(
                     get_sp_uniprot_gene_name(gene_name)
                 )
