@@ -1,10 +1,7 @@
 import datetime
 import re
-
 import pandas as pd
 import requests
-from urllib3.exceptions import RequestError
-import time
 
 def get_sp_uniprot_gene_name(gene_name):
     url = "https://rest.uniprot.org/uniprotkb/search"
@@ -57,8 +54,8 @@ rule get_all_canonical_sequences:
                     current_time = datetime.datetime.now()
                     delta_time = current_time-start
                     remaining_time = delta_time.seconds*(100-current_percent)/current_percent
-                    msg = f"{current_percent} % done. Time eclipsed {int(delta_time.seconds/60)} m, {delta_time.seconds % 60} s."
-                    msg += f" Est. remaining {int(remaining_time/60)} m, {remaining_time % 60} s"
+                    msg = f"{current_percent} % done. Time eclipsed {int(delta_time.seconds/60)} m, {round(delta_time.seconds % 60)} s."
+                    msg += f" Est. remaining {int(remaining_time/60)} m, {round(remaining_time % 60)} s"
                     print(msg)
 
                 w.write(
