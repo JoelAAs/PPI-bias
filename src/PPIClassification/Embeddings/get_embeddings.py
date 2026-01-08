@@ -36,8 +36,9 @@ def read_fasta(fasta_filename):
         for line in f:
             if line[0] == ">":
                 if gene_name:
+                    gene_name = gene_name.groups()[0]
                     gene_name_seq_dict[gene_name] = seq
-                gene_name = re.search(" GN=([A-Za-z/0-9-]+) ", line).groups()[0]
+                gene_name = re.search(" GN=([A-Za-z/0-9-]+) ", line)
                 seq = ""
             else:
                 seq += line.strip()
@@ -86,8 +87,8 @@ if __name__ == '__main__':
     model_name = args.model_name
     output_csv = args.embedding_csv
 
-    chuck_size = 5
-    n_cores = 40
+    chuck_size = 2
+    n_cores = 45
     mean_embeddings, genes = get_all_mean_embeddings(fasta_filename, model_name, chuck_size, n_cores)
     df_embeddings = pd.DataFrame(mean_embeddings)
     df_embeddings["gene_name"] = genes

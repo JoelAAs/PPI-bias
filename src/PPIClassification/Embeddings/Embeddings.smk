@@ -10,28 +10,29 @@ def get_sp_uniprot_gene_name(gene_name):
     params = {
         "query": f"gene:{gene_name} AND taxonomy_id:9606 AND reviewed:true",
         "format": "fasta",
-        "size":6
+        "size":3
     }
     response = requests.get(url, params=params)
-
+    if response.status_code == 429:
+        raise RuntimeError("Leave room to breath!")
     if not response.ok:
-        return f"> QGN: {gene_name} FAILED\n"
+        return f"> QGN={gene_name} FAILED\n"
 
     fasta = response.text
 
-    if len(fasta) < 10:
-         return f"> QGN: {gene_name}\n"
+    if len(fasta) < 5:
+         return f"> QGN={gene_name}\n"
     else:
-        hits = fasta.split("\t")
-        hit_keep = hits[0]
+        hits = fasta.split(">")
+        hit_keep = hits[1]
         for hit in hits:
-            sp_match = re.search(r'GN=([^ ]+)',line).groups()[0]
-            if sp_match == "gene_name":
+            sp_match = re.search(r' GN=([^ ]+)',hit)
+            if sp_match and sp_match.groups()[0] == gene_name:
                 hit_keep = hit
                 break
 
         lines = hit_keep.split("\n")
-        lines[0] = ">" + lines[0] + f" QGN: {gene_name}"
+        lines[0] = ">" + lines[0] + f" QGN={gene_name}"
 
         return "\n".join(lines)
 
@@ -49,7 +50,6 @@ rule get_all_canonical_sequences:
         with open(output.fasta, "w") as w:
             for i, gene_name in enumerate(gene_names):
                 print(f"{i}/{len(gene_names)} done.")
-                time.sleep(0.1)
                 w.write(
                     get_sp_uniprot_gene_name(gene_name)
                 )
@@ -68,10 +68,10 @@ rule swissprot_gn_to_intact_gn:
                 for line in f:
                     if line[0] == ">":
                         line = line.strip()
-                        sp_match = re.search(r'GN=([^ ]+)', line)
+                        sp_match = re.search(r' GN=([^ ]+)', line)
                         if sp_match:
                             sp_match = sp_match.groups()[0]
-                            intact_match = re.search(r'QGN: ([^"]+)', line).groups()[0]
+                            intact_match = re.search(r' QGN=([^"]+)', line).groups()[0]
                             w.write(f"{sp_match}\t{intact_match}\n")
 
         gene_names = pd.read_csv(output.intact_to_sp, sep="\t")
@@ -88,8 +88,8 @@ rule swissprot_gn_to_intact_gn:
                 for line in f:
                     line = line.strip()
                     if line[0] == ">":
-                        sp_match = re.search(r'GN=([^ ]+)',line).groups()[0]
-                        intact_match = re.search(r'QGN: ([^"]+)',line).groups()[0]
+                        sp_match = re.search(r' GN=([^ ]+)',line).groups()[0]
+                        intact_match = re.search(r' QGN=([^"]+)',line).groups()[0]
                         if sp_match not in all_duplicated or intact_match in sp_keep or intact_match in rest:
                             write_sequence = True
                         else:
