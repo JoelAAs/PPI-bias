@@ -10,23 +10,30 @@ def get_sp_uniprot_gene_name(gene_name):
     params = {
         "query": f"gene:{gene_name} AND taxonomy_id:9606 AND reviewed:true",
         "format": "fasta",
-        "size":1
+        "size":6
     }
     response = requests.get(url, params=params)
 
     if not response.ok:
-        print(response.status_code)
-        raise RequestError(f"{gene_name} failed")
+        return f"> QGN: {gene_name} FAILED\n"
 
     fasta = response.text
 
-    if len(fasta) > 10:
-        fasta_lines = fasta.split("\n")
-        fasta_lines[0] += f"QGN: {gene_name}"
-
-        return "\n".join(fasta_lines)
+    if len(fasta) < 10:
+         return f"> QGN: {gene_name}\n"
     else:
-        return f"> QGN: {gene_name}"
+        hits = fasta.split("\t")
+        hit_keep = hits[0]
+        for hit in hits:
+            sp_match = re.search(r'GN=([^ ]+)',line).groups()[0]
+            if sp_match == "gene_name":
+                hit_keep = hit
+                break
+
+        lines = hit_keep.split("\n")
+        lines[0] = ">" + lines[0] + f" QGN: {gene_name}"
+
+        return "\n".join(lines)
 
 
 rule get_all_canonical_sequences:
@@ -55,15 +62,17 @@ rule swissprot_gn_to_intact_gn:
         intact_to_sp = f"work_folder{pn}/embeddings/gn_sp2intact.csv",
         fasta_dedup = f"work_folder{pn}/embeddings/gene_name_sp_dedub.fasta"
     run:
-        with open(outut.intact_to_sp, "w") as w:
+        with open(output.intact_to_sp, "w") as w:
             w.write("sp_gene_name\tintact_gene_name\n")
             with open(input.fasta, "r") as f:
                 for line in f:
                     if line[0] == ">":
                         line = line.strip()
-                        sp_match = re.search(r'GN=([^ ]+)', line).groups()[0]
-                        intact_match = re.search(r'QGN: ([^"]+)', line).groups()[0]
-                        w.write(f"{sp_match}\t{intact_match}\n")
+                        sp_match = re.search(r'GN=([^ ]+)', line)
+                        if sp_match:
+                            sp_match = sp_match.groups()[0]
+                            intact_match = re.search(r'QGN: ([^"]+)', line).groups()[0]
+                            w.write(f"{sp_match}\t{intact_match}\n")
 
         gene_names = pd.read_csv(output.intact_to_sp, sep="\t")
         gene_names["same"] = gene_names["sp_gene_name"] == gene_names["intact_gene_name"]
