@@ -9,7 +9,7 @@ rule negatome_comparison:
         negatome2="data/PFAM-manual-stringent-negatome2.csv"
     input:
         pod_data=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv",
-        uniprot=f"work_folder{pn}/intact/uniprot_to_gene_name.csv"
+        uniprot=f"work_folder{pn}/gene_names/gene_names.csv"
     output:
         table=f"work_folder{pn}/analysis/neg2compare/{{data}}.txt"
     run:

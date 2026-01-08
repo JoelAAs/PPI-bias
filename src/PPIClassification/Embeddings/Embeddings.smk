@@ -116,7 +116,7 @@ rule get_esm_embeddings:
         model = config["embedding_model"],
         script_location = "src/PPIClassification/Embeddings/get_embeddings.py"
     input:
-        fasta = f"work_folder{pn}/protein_sequences/gene_name_sp_dedup.fasta"
+        fasta = f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
     output:
         embeddings_csv = f"work_folder{pn}/embeddings/canonical_embedding.csv.gz"
     conda:

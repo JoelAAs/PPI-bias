@@ -59,8 +59,8 @@ negatome_entropy = [
 ]
 
 expected_output = pods
-expected_output += colocalisation_plot + go_jaccards_plot + hydro_delta_plot +  do_jaccards_plot
-expected_output += negatome_compare + matched_colocalisation_plot + negatome_entropy
+#expected_output += colocalisation_plot + go_jaccards_plot + hydro_delta_plot +  do_jaccards_plot
+#expected_output += negatome_compare + matched_colocalisation_plot + negatome_entropy
 
 
 ## Sub workflows
@@ -100,8 +100,9 @@ wildcard_constraints:
 
 rule all:
     input:
-        f"work_folder{pn}/embeddings/canonical_embedding.csv.gz"
-        #expected_output,
+        expected_output,
+        f"work_folder{pn}/embeddings/gene_name_sp.fasta",
+        f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
         #f"work_folder{pn}/plots/degree/GO_enrichment.png",
         #f"work_folder{pn}/plots/localisation/HuRI_bioplex.png",
         #f"work_folder{pn}/plots/membrane/HuRI_bioplex.png"

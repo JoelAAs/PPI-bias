@@ -32,17 +32,21 @@ rule format_miTab:
         gene_names_unipriot = f"work_folder{pn}/gene_names/uniprot_to_gene_name.csv",
         gene_names_swissprot= f"work_folder{pn}/gene_names/uniprot_to_sp.csv"
     output:
-        formated = f"work_folder{pn}/formated/bait_prey_publications.csv"
+        formated = f"work_folder{pn}/formated/bait_prey_publications.csv",
+        gene_names = f"work_folder{pn}/gene_names/gene_names.csv"
     run:
         mitab_df     = filter_mitab(input.miTab)
         bait_prey_df = reform_to_bait_prey(mitab_df)
         gene_name_uniprot_df = pd.read_csv(input.gene_names_unipriot, sep = "\t")
         gene_name_swissprot_df = pd.read_csv(input.gene_names_swissprot, sep = "\t")
+
+
         gene_name_df = gene_name_uniprot_df.merge(gene_name_swissprot_df,
             left_on="gene_name", right_on="intact_gene_name"
         )
         gene_name_df = gene_name_df[["uniprot_id", "sp_gene_name"]]
         gene_name_df.columns = ["uniprot_id", "gene_name"]
+        gene_name_df.to_csv(output.gene_names, sep="\t", index=None)
 
         bait_prey_df = bait_prey_df.merge(gene_name_df, left_on="uniprot_id_bait", right_on="uniprot_id")
         del bait_prey_df["uniprot_id"]
