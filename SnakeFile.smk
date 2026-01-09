@@ -101,7 +101,6 @@ wildcard_constraints:
 rule all:
     input:
         expected_output,
-        f"work_folder{pn}/embeddings/gene_name_sp.fasta",
         f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
         #f"work_folder{pn}/plots/degree/GO_enrichment.png",
         #f"work_folder{pn}/plots/localisation/HuRI_bioplex.png",

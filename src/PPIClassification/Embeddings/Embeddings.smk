@@ -32,7 +32,7 @@ def get_sp_uniprot_gene_name(gene_name):
         lines = hit_keep.split("\n")
         lines[0] = lines[0] + f" QGN={gene_name}"
 
-        return "\n".join(lines)
+        return "\n".join(lines) + "\n"
 
 
 rule get_all_canonical_sequences:
