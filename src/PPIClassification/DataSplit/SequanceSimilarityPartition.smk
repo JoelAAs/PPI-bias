@@ -1,6 +1,6 @@
 import pandas as pd
 import re
-
+import networkx as nx
 
 #TODO DRY fix
 def read_fasta(fasta_filename):
@@ -45,13 +45,13 @@ rule get_METIS_adjacency_list:
         normalize=True
     input:
         similarity_tsv = f"work_folder{pn}/protein_sequences/similarity/all_vs_all.tsv",
-        aa_seq_fasta= f"work_folder{pn}/protein_sequences/gene_name_sp_dedup.fasta"
+        aa_seq_fasta= f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
     output:
-        similarity_edge_list =  f"work_folder{pn}/protein_sequences/similarity/avg_bitscore_all.fasta",
-
+        similarity_edge_list = f"work_folder{pn}/protein_sequences/similarity/avg_bitscore_all.fasta",
+        similarity_mentis = f"work_folder{pn}/protein_sequences/similarity/avg_bitscore.graph"
     run:
         gene_seq_dict = read_fasta(input.aa_seq_fasta)
-        #mean_length = round(sum([len(s) for s in gene_seq_dict.values()])/len(gene_seq_dict))
+        mean_length = round(sum([len(s) for s in gene_seq_dict.values()])/len(gene_seq_dict))
         ava_blast_df = pd.read_csv(input.similarity_tsv, header=None, sep="\t")
         ava_blast_df.columns = ["qseqid", "stitle", "evalue", "bitscore"]
         id_dict = {
@@ -65,10 +65,23 @@ rule get_METIS_adjacency_list:
         ava_blast_df["s_length"] = ava_blast_df["sgene"].apply(lambda x: len(gene_seq_dict.get(x,"")))
         ava_blast_df = ava_blast_df[ava_blast_df["qgene"] != ava_blast_df["sgene"]] # no loops
         ava_blast_df["bitscore_p_residue"] = ava_blast_df.apply(
-            lambda x: x["bitscore"]/min([x["q_length"], x["s_length"]]), axis=1)
+            lambda x: round(x["bitscore"]/min([x["q_length"], x["s_length"]]) * mean_length), axis=1)
         ava_blast_df["edge_id"] = ava_blast_df[["qgene", "sgene"]].apply(lambda x: "-".join(sorted(x)), axis = 1)
         ava_blast_df = ava_blast_df[~ava_blast_df["edge_id"].duplicated(keep="first")]
 
-        ava_blast_df[["qgene", "sgene", "bitscore_p_residue"]].to_csv(output.similarity_edge_list)
-        # WIP
+
+        G = nx.from_pandas_edgelist(ava_blast_df, "qgene", "sgene",edge_attr="bitscore_p_residue")
+        int_mapping = {node: i for i, node in enumerate(sorted(G.nodes()))}
+
+        ava_blast_df["qid"] = ava_blast_df["qgene"].apply(lambda x: int_mapping[x])
+        ava_blast_df["sid"] = ava_blast_df["sgene"].apply(lambda x: int_mapping[x])
+        ava_blast_df[["qgene", "sgene", "qid", "sid", "bitscore_p_residue"]].to_csv(output.similarity_edge_list)
+
+        with open(output.similarity_mentis, "w") as w:
+            w.write(f'{G.number_of_nodes()}\t{G.number_of_edges()}\t1\n')
+            for node in sorted(G.nodes()):
+                line = [f'{int_mapping[edge[1]]} {edge[2]["bitscore_p_residue"]}' for edge in G.edges(node, data=True)]
+                w.write("  ".join(line) + "\n")
+
+
 
