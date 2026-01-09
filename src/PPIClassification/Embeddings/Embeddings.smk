@@ -21,18 +21,21 @@ def get_sp_uniprot_gene_name(gene_name):
     if len(fasta) < 5:
          return f"> QGN={gene_name}\n"
     else:
-        hits = re.split("[(?:^|\n)]>", fasta)  # Someone put > in their description
+        hits = fasta.split("\n>")  # Someone put > in their description
+
         hit_keep = hits[0]
-        for hit in hits:
+        for i, hit in enumerate(hits):
             sp_match = re.search(r' GN=([^ ]+)',hit)
             if sp_match and sp_match.groups()[0] == gene_name:
                 hit_keep = hit
+                if i != 0:
+                    hit_keep = ">" + hit_keep
                 break
 
         lines = hit_keep.split("\n")
         lines[0] = lines[0] + f" QGN={gene_name}"
 
-        return "\n".join(lines) + "\n"
+        return "\n".join(lines) + "\n" #NOTE: there will be some extra empty lines fix later
 
 
 rule get_all_canonical_sequences:
@@ -96,6 +99,9 @@ rule swissprot_gn_to_intact_gn:
                 write_sequence = False
                 for line in f:
                     line = line.strip()
+                    if not line:
+                        continue
+
                     if line[0] == ">":
                         sp_match = re.search(r' GN=([^ ]+)',line)
                         intact_match = re.search(r' QGN=([^"]+)',line).groups()[0]
