@@ -1,6 +1,27 @@
 import pandas as pd
 import re
-from ..Embeddings.get_embeddings import read_fasta
+
+
+#TODO DRY fix
+def read_fasta(fasta_filename):
+    gene_name_seq_dict = dict()
+    with open(fasta_filename) as f:
+        gene_name = ""
+        for line in f:
+            if line[0] == ">":
+                if gene_name:
+                    gene_name = gene_name.groups()[0]
+                    gene_name_seq_dict[gene_name] = seq
+                gene_name = re.search(" GN=([A-Za-z/0-9-]+) ", line)
+                seq = ""
+            else:
+                seq += line.strip()
+
+        if gene_name:
+            gene_name = gene_name.groups()[0]
+            gene_name_seq_dict[gene_name] = seq
+    return gene_name_seq_dict
+
 
 rule blast_sequence_similarity:
     params:
@@ -49,11 +70,5 @@ rule get_METIS_adjacency_list:
         ava_blast_df = ava_blast_df[~ava_blast_df["edge_id"].duplicated(keep="first")]
 
         ava_blast_df[["qgene", "sgene", "bitscore_p_residue"]].to_csv(output.similarity_edge_list)
-
-        with open(ouput.)
-        nodes = range(1000)
-        for node in nodes:
-            nV nE
-
-
+        # WIP
 
