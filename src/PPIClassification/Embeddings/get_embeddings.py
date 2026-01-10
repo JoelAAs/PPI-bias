@@ -14,10 +14,10 @@ class RayEmbeddWorker:
     def get_mean_embeddings(self, sequences, i, n):
         inputs = self.tokenizer(sequences, return_tensors="pt", padding=True)
         m2 = datetime.datetime.now()
+        inputs = {k: v.to("cuda") for k, v in inputs.items()}  # GPU transfer
         with torch.no_grad():
             outputs = self.model(**inputs)
-            embeddings = outputs.last_hidden_state
-        mean_embeddings = embeddings.mean(dim=1)
+        mean_embeddings = outputs.last_hidden_state.mean(dim=1)
         e = datetime.datetime.now()
         print(f"Embedding_time: {e - m2} for sequences {i-len(sequences)} - {i} / {n} ")
 
@@ -26,7 +26,11 @@ class RayEmbeddWorker:
     @staticmethod
     def download_setup_model(chosen_model):
         tokenizer = AutoTokenizer.from_pretrained(chosen_model)
-        model = AutoModel.from_pretrained(chosen_model, dtype=torch.float16).eval()
+        model = AutoModel.from_pretrained(
+            chosen_model,
+            torch_dtype=torch.float16,  # FP16 for P400 speed/memory
+            device_map="cuda",  # Auto GPU placement
+            low_cpu_mem_usage=True).eval()
         return tokenizer, model
 
 def read_fasta(fasta_filename):
@@ -35,6 +39,8 @@ def read_fasta(fasta_filename):
         gene_name = ""
         for line in f:
             if line[0] == ">":
+                if line == "":
+                    continue
                 if gene_name:
                     gene_name = gene_name.groups()[0]
                     gene_name_seq_dict[gene_name] = seq

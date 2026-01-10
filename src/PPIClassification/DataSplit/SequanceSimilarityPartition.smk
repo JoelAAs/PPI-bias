@@ -48,7 +48,7 @@ rule get_METIS_adjacency_list:
         similarity_tsv=f"work_folder{pn}/protein_sequences/similarity/all_vs_all.tsv",
         aa_seq_fasta=f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
     output:
-        similarity_edge_list=f"work_folder{pn}/protein_sequences/similarity/avg_bitscore_all.fasta",
+        similarity_edge_list=f"work_folder{pn}/protein_sequences/similarity/avg_bitscore_all.tsv",
         similarity_mentis=f"work_folder{pn}/protein_sequences/similarity/avg_bitscore.graph"
     run:
         gene_seq_dict = read_fasta(input.aa_seq_fasta)
@@ -69,10 +69,11 @@ rule get_METIS_adjacency_list:
         ava_blast_df["bitscore_p_residue"] = ava_blast_df.apply(
             lambda x: round(x["bitscore"] / min([x["q_length"], x["s_length"]]) * mean_length),axis=1)
         ava_blast_df["edge_id"] = ava_blast_df[["qgene", "sgene"]].apply(lambda x: "-".join(sorted(x)),axis=1)
-        ava_blast_df = ava_blast_df[~ava_blast_df["edge_id"].duplicated(keep="first")]
+        ava_blast_df = ava_blast_df[~ava_blast_df["edge_id"].duplicated(keep="first")] # B->A ~ A->B
 
         G = nx.from_pandas_edgelist(ava_blast_df,"qgene","sgene",edge_attr="bitscore_p_residue")
-        int_mapping = {node: i for i, node in enumerate(sorted(G.nodes()))}
+        sorted_nodes = list(enumerate(sorted(G.nodes())))
+        int_mapping = {node: i+1 for i, node in sorted_nodes}
 
         ava_blast_df["qid"] = ava_blast_df["qgene"].apply(lambda x: int_mapping[x])
         ava_blast_df["sid"] = ava_blast_df["sgene"].apply(lambda x: int_mapping[x])
@@ -80,8 +81,22 @@ rule get_METIS_adjacency_list:
 
         with open(output.similarity_mentis,"w") as w:
             w.write(f'{G.number_of_nodes()}\t{G.number_of_edges()}\t1\n')
-            for node in sorted(G.nodes()):
+            for i, node in sorted_nodes:
                 line = [
                     f'{int_mapping[edge[1]]} {edge[2]["bitscore_p_residue"]}' for
                     edge in G.edges(node,data=True) if int_mapping[edge[1]] > int_mapping[node]]
-                w.write("  ".join(line) + "\n")
+                w.write(" ".join(line) + "\n")
+
+
+rule get_kahip_partitions:
+    params:
+        kahip_location=config["kahip_location"],
+        seed=config["seed"]
+    input:
+        similarity_mentis=f"work_folder{pn}/protein_sequences/similarity/avg_bitscore.graph"
+    output:
+        partitons=f"work_folder{pn}/protein_sequences/similarity/partitions/clusters_kaffpa.txt"
+    shell:
+        """
+        {params.kahip_location}  {input.similarity_mentis} --seed={params.seed} --output_file={output.partitons} --k=3 --preconfiguration=strong 
+        """
