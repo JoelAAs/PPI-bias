@@ -17,8 +17,9 @@ class EmbeddWorker:
             outputs = self.model(**inputs)
         mean_embeddings = outputs.last_hidden_state.mean(dim=1)
         e = datetime.datetime.now()
-        print(f"Embedding_time: {e - m2} for sequences {i-len(sequences)} - {i} / {n} ")
-
+        print(f"Embedding_time: {e - m2} for sequences {i} / {n} ")
+        del inputs, outputs  # Delete tensors
+        torch.cuda.empty_cache()
         return mean_embeddings
 
     @staticmethod
@@ -71,7 +72,7 @@ def get_all_mean_embeddings(fasta_file, chosen_model, chunk_size):
     em = EmbeddWorker(chosen_model)
     seq_bins = binit(sequences, chunk_size)
     embeddings = [
-        em.get_mean_embeddings(seqs, i, len(sequences))
+        em.get_mean_embeddings(seqs, i*, len(sequences))
         for i, seqs in enumerate(seq_bins)
     ]
     embeddings = torch.cat(embeddings, dim=0)
