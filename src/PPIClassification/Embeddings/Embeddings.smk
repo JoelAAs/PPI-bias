@@ -126,7 +126,7 @@ rule get_esm_embeddings:
     output:
         embeddings_csv = f"work_folder{pn}/embeddings/canonical_embedding.csv.gz"
     conda:
-        "huggingface"
+        "esm_gpu"
     shell:
         """
         python {params.script_location} \
