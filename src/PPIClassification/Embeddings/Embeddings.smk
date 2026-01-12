@@ -129,8 +129,7 @@ rule get_esm_embeddings:
         gpu=1,
         gpu_model='nvidia_h200',
         time='20:00:00'
-    container:
-        "docker://huggingface/transformers-all-latest-gpu:latest" # run with --apptainer-args="--nv"
+    container: "huggingface-transformers-all-latest-gpu.sif" # run with --apptainer-args="--nv"
     shell:
         """
         python3 {params.script_location} \
