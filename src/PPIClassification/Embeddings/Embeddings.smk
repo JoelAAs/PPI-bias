@@ -126,9 +126,11 @@ rule get_esm_embeddings:
     output:
         embeddings_csv = f"work_folder{pn}/embeddings/canonical_embedding.csv.gz"
     resources:
+        cpu_per_task=2,
+        mem='2G',
         gpu=1,
         gpu_model='nvidia_h200',
-        time='20:00:00'
+        runtime=60
     container: "huggingface-transformers-all-latest-gpu.sif" # run with --apptainer-args="--nv"
     shell:
         """
