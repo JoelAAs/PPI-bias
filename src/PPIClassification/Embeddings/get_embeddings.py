@@ -1,32 +1,34 @@
 import datetime
-import ray
 import pandas as pd
 import torch
 from transformers import AutoModel, AutoTokenizer
 import re
 import argparse
 
-@ray.remote(num_cpus=1)
-class RayEmbeddWorker:
+class EmbeddWorker:
     def __init__(self, chosen_model):
         self.tokenizer, self.model = self.download_setup_model(chosen_model)
 
     def get_mean_embeddings(self, sequences, i, n):
         inputs = self.tokenizer(sequences, return_tensors="pt", padding=True)
         m2 = datetime.datetime.now()
+        inputs = {k: v.to("cuda") for k, v in inputs.items()}  # GPU transfer
         with torch.no_grad():
             outputs = self.model(**inputs)
-            embeddings = outputs.last_hidden_state
-        mean_embeddings = embeddings.mean(dim=1)
+        mean_embeddings = outputs.last_hidden_state.mean(dim=1).cpu()
         e = datetime.datetime.now()
-        print(f"Embedding_time: {e - m2} for sequences {i-len(sequences)} - {i} / {n} ")
-
+        print(f"Embedding_time: {e - m2} for sequences {i} / {n} ")
+        del inputs, outputs  # Delete tensors
+        torch.cuda.empty_cache()
         return mean_embeddings
 
     @staticmethod
     def download_setup_model(chosen_model):
         tokenizer = AutoTokenizer.from_pretrained(chosen_model)
-        model = AutoModel.from_pretrained(chosen_model, dtype=torch.float16).eval()
+        model = AutoModel.from_pretrained(
+            chosen_model,
+            dtype=torch.float16,
+            device_map="cuda").eval()
         return tokenizer, model
 
 def read_fasta(fasta_filename):
@@ -35,6 +37,8 @@ def read_fasta(fasta_filename):
         gene_name = ""
         for line in f:
             if line[0] == ">":
+                if line == "":
+                    continue
                 if gene_name:
                     gene_name = gene_name.groups()[0]
                     gene_name_seq_dict[gene_name] = seq
@@ -49,7 +53,7 @@ def read_fasta(fasta_filename):
     return gene_name_seq_dict
 
 
-def get_all_mean_embeddings(fasta_file, chosen_model, chunk_size, n_cores):
+def get_all_mean_embeddings(fasta_file, chosen_model, chunk_size):
     gene_name_seq_dict = read_fasta(fasta_file)
     sequences = list(gene_name_seq_dict.values())
     genes = list(gene_name_seq_dict.keys())
@@ -64,20 +68,13 @@ def get_all_mean_embeddings(fasta_file, chosen_model, chunk_size, n_cores):
             binned.append(x)
         return binned
 
-
-    ray.init(num_cpus=n_cores)
-
-    workers = [RayEmbeddWorker.remote(chosen_model) for _ in range(n_cores)]
-    print("Ray workers recruited")
+    em = EmbeddWorker(chosen_model)
     seq_bins = binit(sequences, chunk_size)
-    work_queue = []
-    for i, seqs in enumerate(seq_bins):
-        chosen_worker = workers[i%len(workers)]
-        work_queue.append(chosen_worker.get_mean_embeddings.remote(seqs, i*chunk_size, len(sequences)))
-
-    embeddings = ray.get(work_queue)
+    embeddings = [
+        em.get_mean_embeddings(seqs, i*chunk_size, len(sequences))
+        for i, seqs in enumerate(seq_bins)
+    ]
     embeddings = torch.cat(embeddings, dim=0)
-    ray.shutdown()
 
     return embeddings, genes
 
@@ -91,9 +88,8 @@ if __name__ == '__main__':
     model_name = args.model_name
     output_csv = args.embedding_csv
 
-    chuck_size = 2
-    n_cores = 45
-    mean_embeddings, genes = get_all_mean_embeddings(fasta_filename, model_name, chuck_size, n_cores)
+    chuck_size = 8
+    mean_embeddings, genes = get_all_mean_embeddings(fasta_filename, model_name, chuck_size)
     df_embeddings = pd.DataFrame(mean_embeddings)
     df_embeddings["gene_name"] = genes
     df_embeddings.to_csv(output_csv, sep="\t", index=False)

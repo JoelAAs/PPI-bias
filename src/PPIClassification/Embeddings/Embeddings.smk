@@ -129,7 +129,7 @@ rule get_esm_embeddings:
         gpus='l40s',
         time='20:00:00',
     conda:
-        "huggingface"
+        "esm_gpu"
     shell:
         """
         module load CUDA GCC
