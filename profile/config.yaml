@@ -1,0 +1,13 @@
+default-storage-provider: fs
+default-storage-prefix: /beegfs/scratch/ieo7513/
+apptainer-prefix: /beegfs/scratch/ieo7513/apptainer
+executor: slurm
+slurm-logdir: /beegfs/scratch/ieo7513/logs
+default-resources:
+  slurm_account: ieo7513
+  mem: 2G
+  cpus_per_task: 2
+  runtime: 06:00:00
+jobs: 10
+latency-wait: 60
+retries: 0
