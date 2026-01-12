@@ -15,7 +15,7 @@ class EmbeddWorker:
         inputs = {k: v.to("cuda") for k, v in inputs.items()}  # GPU transfer
         with torch.no_grad():
             outputs = self.model(**inputs)
-        mean_embeddings = outputs.last_hidden_state.mean(dim=1)
+        mean_embeddings = outputs.last_hidden_state.mean(dim=1).cpu()
         e = datetime.datetime.now()
         print(f"Embedding_time: {e - m2} for sequences {i} / {n} ")
         del inputs, outputs  # Delete tensors
@@ -28,8 +28,7 @@ class EmbeddWorker:
         model = AutoModel.from_pretrained(
             chosen_model,
             dtype=torch.float16,
-            device_map="cuda",
-            low_cpu_mem_usage=True).eval()
+            device_map="cuda").eval()
         return tokenizer, model
 
 def read_fasta(fasta_filename):
@@ -72,7 +71,7 @@ def get_all_mean_embeddings(fasta_file, chosen_model, chunk_size):
     em = EmbeddWorker(chosen_model)
     seq_bins = binit(sequences, chunk_size)
     embeddings = [
-        em.get_mean_embeddings(seqs, i*, len(sequences))
+        em.get_mean_embeddings(seqs, i*chunk_size, len(sequences))
         for i, seqs in enumerate(seq_bins)
     ]
     embeddings = torch.cat(embeddings, dim=0)
