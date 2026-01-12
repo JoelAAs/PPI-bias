@@ -38,7 +38,7 @@ def get_subsets(wc):
     """
     if wc.subset in config:
         return multi_method_aggregation(config[wc.subset])
-    return get_input_files(wc.subset,config["id_pattern"],config["formated_ppi"])
+    return get_input_files(wc.subset,config["id_pattern"],storage.fs(config["formated_ppi"]))
 
 rule aggregate_pids:
     """
@@ -47,7 +47,7 @@ rule aggregate_pids:
     params:
         id_pattern = config["id_pattern"]
     input:
-        input_ppi = config["formated_ppi"],
+        input_ppi = storage.fs(config["formated_ppi"]),
         subsets = lambda wc: get_subsets(wc)
     output:
         method_aggregate = f"work_folder{pn}/inferred_search_space/aggregated/methods/{{subset}}_experimental_wise.csv"

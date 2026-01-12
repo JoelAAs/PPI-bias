@@ -28,3 +28,6 @@ dependencies:
       - snakemake-interface-report-plugins==1.1.0
       - snakemake-interface-storage-plugins==4.2.1
       - snakemake-executor-plugin-slurm
+      - snakemake-storage-plugin-fs
+      - networkx
+      - uniprot-id-mapper

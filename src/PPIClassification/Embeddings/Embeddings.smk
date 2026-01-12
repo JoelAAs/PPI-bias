@@ -126,13 +126,14 @@ rule get_esm_embeddings:
     output:
         embeddings_csv = f"work_folder{pn}/embeddings/canonical_embedding.csv.gz"
     resources:
-        gpus='l40s',
-        time='20:00:00',
+        gpu=1,
+        gpu_model='nvidia_h200',
+        time='20:00:00'
     container:
-        "huggingface/transformers-all-latest-gpu:2.9.1-cuda12.6-cudnn9-runtime"
+        "docker://huggingface/transformers-all-latest-gpu:latest" # run with --apptainer-args="--nv"
     shell:
         """
-        python {params.script_location} \
+        python3 {params.script_location} \
         --protein_fasta {input.fasta} \
         --model_name {params.model} \
         --embedding_csv {output.embeddings_csv}
