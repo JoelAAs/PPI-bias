@@ -88,7 +88,7 @@ if __name__ == '__main__':
     model_name = args.model_name
     output_csv = args.embedding_csv
 
-    chuck_size = 8
+    chuck_size = 64
     mean_embeddings, genes = get_all_mean_embeddings(fasta_filename, model_name, chuck_size)
     df_embeddings = pd.DataFrame(mean_embeddings)
     df_embeddings["gene_name"] = genes

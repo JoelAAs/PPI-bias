@@ -128,12 +128,10 @@ rule get_esm_embeddings:
     resources:
         gpus='l40s',
         time='20:00:00',
-    conda:
-        "esm_gpu"
+    container:
+        "huggingface/transformers-all-latest-gpu:2.9.1-cuda12.6-cudnn9-runtime"
     shell:
         """
-        module load CUDA GCC
-        
         python {params.script_location} \
         --protein_fasta {input.fasta} \
         --model_name {params.model} \
