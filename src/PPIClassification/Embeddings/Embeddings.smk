@@ -125,10 +125,15 @@ rule get_esm_embeddings:
         fasta = f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
     output:
         embeddings_csv = f"work_folder{pn}/embeddings/canonical_embedding.csv.gz"
+    resources:
+        gpus='l40s',
+        time='20:00:00',
     conda:
         "huggingface"
     shell:
         """
+        module load CUDA GCC
+        
         python {params.script_location} \
         --protein_fasta {input.fasta} \
         --model_name {params.model} \

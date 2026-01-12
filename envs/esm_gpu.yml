@@ -1,0 +1,15 @@
+name: esm_gpu
+channels:
+  - conda-forge
+  - defaults
+  - https://repo.anaconda.com/pkgs/main
+  - pytorch
+  - nvidia
+dependencies:
+  - pytorch-cuda=11.8
+  - tokenizers
+  - transformers
+  - pandas
+  - pytorch
+  - torchvision
+  - torchaudio
