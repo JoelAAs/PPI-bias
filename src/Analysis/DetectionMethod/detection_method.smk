@@ -27,7 +27,7 @@ def get_input_files(method, id_pattern, filename, remove_single=True):
 
 def multi_method_aggregation(methods):
     return expand(
-        rules.aggregate_pids.output.method_aggregate,
+        str(rules.aggregate_pids.output.method_aggregate),
         subset=methods
     )
 
