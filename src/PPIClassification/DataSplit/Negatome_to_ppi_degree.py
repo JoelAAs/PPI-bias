@@ -87,6 +87,17 @@ def subset_negative_set(negative_bait_prey_df, positive_bait_prey_df):
 
 
 if __name__ == '__main__':
+        parser = argparse.ArgumentParser(description="Get mean embeddings from protein fasta")
+    parser.add_argument("--protein_fasta", required=True, help="Path to input protein fasta")
+    parser.add_argument("--model_name", required=True, help="Name of embedding model (huggingface)")
+    parser.add_argument("--embedding_csv", required=True, help="Path to output csv file")
+    args = parser.parse_args()
+    fasta_filename = args.protein_fasta
+    model_name = args.model_name
+    output_csv = args.embedding_csv
+
+
+
     df_ms = pd.read_csv("work_folder/per_gene/analysis/POD/POD_ms.csv", sep="\t")
     df_neg = df_ms[(df_ms["n_tested"] > 3) & (df_ms["n_observed"] == 0)]
     df_neg = df_neg[["gene_name_bait", "gene_name_prey"]].copy()
