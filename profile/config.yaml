@@ -1,13 +1,22 @@
 default-storage-provider: fs
-default-storage-prefix: /beegfs/scratch/ieo7513/
-apptainer-prefix: /beegfs/scratch/ieo7513/apptainer
+default-storage-prefix: /beegfs/scratch/ieo7513
+apptainer-prefix: /beegfs/scratch/ieo7513/.snakemake/apptainer
 executor: slurm
 slurm-logdir: /beegfs/scratch/ieo7513/logs
+
 default-resources:
-  slurm_account: ieo7513
-  mem: 2G
+  slurm_account: ieo
+  mem_mb: 2048
   cpus_per_task: 2
-  runtime: 06:00:00
+  runtime: 360 # 6 h
+set-resources:
+  get_esm_embeddings:  # Replace with your actual rule name
+    slurm_partition: short  # or medium/long based on your needs
+    slurm_constraint: gpu
+    slurm_extra: "'--gpus=nvidia_h200'"
+    mem_mb: 16000  # H200 jobs typically need more host RAM
+    cpus_per_task: 8  # Pair with sufficient CPUs (node has 96 total)
+    runtime: 60  # Adjust based on partition limits (short=8h max)
 jobs: 10
 latency-wait: 60
 retries: 0

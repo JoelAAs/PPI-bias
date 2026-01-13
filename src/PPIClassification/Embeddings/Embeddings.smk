@@ -125,13 +125,7 @@ rule get_esm_embeddings:
         fasta = f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
     output:
         embeddings_csv = f"work_folder{pn}/embeddings/canonical_embedding.csv.gz"
-    resources:
-        cpu_per_task=2,
-        mem='2G',
-        gpu=1,
-        gpu_model='nvidia_h200',
-        runtime=60
-    container: "huggingface-transformers-all-latest-gpu.sif" # run with --apptainer-args="--nv"
+    container: "/beegfs/scratch/ieo7513/.snakemake/apptainer/huggingface-transformers-all-latest-gpu-latest.sif" # run with --apptainer-args="--nv"
     shell:
         """
         python3 {params.script_location} \
