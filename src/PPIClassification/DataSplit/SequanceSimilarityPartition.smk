@@ -87,7 +87,7 @@ rule get_METIS_adjacency_list:
             for i, node in sorted_nodes:
                 line = [
                     f'{int_mapping[edge[1]]} {edge[2]["bitscore_p_residue"]}' for
-                    edge in G.edges(node,data=True)
+                    edge in G.edges(node,data=True)]
                 w.write(" ".join(line) + "\n")
 
 

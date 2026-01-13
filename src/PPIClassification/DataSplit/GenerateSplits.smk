@@ -6,8 +6,8 @@ rule define_positive_negative_sets:
         neg_limit=4,
         pos_limit=0.15 # 2/2 or 3/4 etc
     input:
-        gene_partition = f"work_folder{pn}/protein_sequences/similarity/gene_int_id.tsv",
-        input_pod = f"work_folder{pn}/analysis/POD/{{dataset}}_ms.csv"
+        gene_partition = f"work_folder{pn}/protein_sequences/similarity/gene_partition.tsv",
+        input_pod = f"work_folder{pn}/analysis/POD/POD_{{dataset}}.csv"
     output:
         train_pos = f"work_folder/{pn}/subsets/train/{{dataset}}}_pos.csv",
         train_neg = f"work_folder/{pn}/subsets/train/{{dataset}}_neg.csv",
@@ -18,16 +18,21 @@ rule define_positive_negative_sets:
     run:
         df_tests = pd.read_csv(input.input_pod, sep="\t")
         partitions_df = pd.read_csv(input.gene_partition, sep="\t")
-
-        partitions = partitions_df["partition_id"].unique()
-
-    df_ms = pd.read_csv("work_folder/per_gene/analysis/POD/POD_ms.csv", sep="\t")
-    df_neg = df_ms[(df_ms["n_tested"] > 3) & (df_ms["n_observed"] == 0)]
-    df_neg = df_neg[["gene_name_bait", "gene_name_prey"]].copy()
-    df_neg.columns = ["bait", "prey"]
-
-    df_pos = df_ms[df_ms["lower_bound_pod"] > 0.2]
-    df_pos = df_pos[["gene_name_bait", "gene_name_prey"]].copy()
-    df_pos.columns = ["bait", "prey"]
-
-    subset_negative_set(df_neg, df_pos)
+        df_pos = df_tests[df_tests["lower_bound_pod"] >= params.pos_limit]
+        df_neg = df_tests[(df_tests["n_observed"] == 0) & (df_tests["n_tested"] >= params.neg_limit)]
+        partitions = partitions_df["sequence_partition"].unique()
+        partition_pos = dict()
+        partition_neg = dict()
+        for partition_id in partitions:
+            genes_partition = set(partitions_df[partitions_df["sequence_partition"] == partition_id]["gene_name"])
+            partition_pos[partition_id] = df_pos[
+                (df_pos["gene_name_bait"].isin(genes_partition)) & (df_pos["gene_name_prey"].isin(genes_partition))
+            ]
+            partition_neg[partition_id] = df_neg[
+                (df_neg["gene_name_bait"].isin(genes_partition)) &( df_neg["gene_name_prey"].isin(genes_partition))
+                ]
+        # Largest to train, test, validate
+        order_partitions = sorted(partitions, key=lambda x: partition_pos[x].shape[0], reverse=True) # Will break if k!=3 kahip
+        for i, partition_id in enumerate(order_partitions):
+            partition_pos[partition_id].to_csv(output[i], sep="\t", index=False)
+            partition_neg[partition_id].to_csv(output[i+1],sep="\t",index=False)
