@@ -1,7 +1,6 @@
 import pandas as pd
 import re
 import networkx as nx
-from sympy import partition
 
 
 #TODO DRY fix
@@ -78,17 +77,17 @@ rule get_METIS_adjacency_list:
         int_mapping = {node: i+1 for i, node in sorted_nodes}
         with open(output.gene_int_id, "w") as w:
             w.write("gene_name\tint_id\n")
-            for gene, int_id in int_mapping:
+            for gene, int_id in int_mapping.items():
                 w.write(f"{gene}\t{int_id}\n")
 
         ava_blast_df[["qgene", "sgene", "bitscore_p_residue"]].to_csv(output.similarity_edge_list)
 
         with open(output.similarity_mentis,"w") as w:
-            w.write(f'{G.number_of_nodes()}\t{G.number_of_edges()}\t1\n')
+            w.write(f'{G.number_of_nodes()} {G.number_of_edges()} 1\n')
             for i, node in sorted_nodes:
                 line = [
                     f'{int_mapping[edge[1]]} {edge[2]["bitscore_p_residue"]}' for
-                    edge in G.edges(node,data=True) if int_mapping[edge[1]] > int_mapping[node]]
+                    edge in G.edges(node,data=True)
                 w.write(" ".join(line) + "\n")
 
 
