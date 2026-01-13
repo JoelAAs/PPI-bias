@@ -53,25 +53,31 @@ def read_fasta(fasta_filename):
     return gene_name_seq_dict
 
 
-def get_all_mean_embeddings(fasta_file, chosen_model, chunk_size):
+def get_all_mean_embeddings(fasta_file, chosen_model):
     gene_name_seq_dict = read_fasta(fasta_file)
     sequences = list(gene_name_seq_dict.values())
     genes = list(gene_name_seq_dict.keys())
 
-    def binit(x, n):
+    def binit(x, max_elements):
         binned = []
-        while  n < len(x):
-            binned.append(x[:n])
-            x = x[n:]
-
-        if len(x):
-            binned.append(x)
+        c_bin = []
+        max_length = 0
+        while x:
+            if (len(c_bin) + 1) * max(max_length, len(x[0])) > max_elements:
+                binned.append(c_bin)
+                c_bin = []
+                max_length = 0  # Reset max_length for new bin
+            c_bin.append(x[0])  # Always append after check/reset
+            x = x[1:]
+            max_length = max([len(l) for l in c_bin])
+        if c_bin:  # Append any remaining bin
+            binned.append(c_bin)
         return binned
 
     em = EmbeddWorker(chosen_model)
-    seq_bins = binit(sequences, chunk_size)
+    seq_bins = binit(sequences, 4000 *128)
     embeddings = [
-        em.get_mean_embeddings(seqs, i*chunk_size, len(sequences))
+        em.get_mean_embeddings(seqs, sum(map(len, seq_bins[:(i+1)])), len(sequences))
         for i, seqs in enumerate(seq_bins)
     ]
     embeddings = torch.cat(embeddings, dim=0)
@@ -88,8 +94,7 @@ if __name__ == '__main__':
     model_name = args.model_name
     output_csv = args.embedding_csv
 
-    chuck_size = 64
-    mean_embeddings, genes = get_all_mean_embeddings(fasta_filename, model_name, chuck_size)
+    mean_embeddings, genes = get_all_mean_embeddings(fasta_filename, model_name)
     df_embeddings = pd.DataFrame(mean_embeddings)
     df_embeddings["gene_name"] = genes
     df_embeddings.to_csv(output_csv, sep="\t", index=False)
