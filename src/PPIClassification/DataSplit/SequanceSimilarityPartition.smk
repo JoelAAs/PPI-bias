@@ -110,7 +110,7 @@ rule get_gene_to_partition:
         partitions = f"work_folder{pn}/protein_sequences/similarity/partitions/clusters_kaffpa.txt",
         gene_int_id= f"work_folder{pn}/protein_sequences/similarity/gene_int_id.tsv"
     output:
-        gene_partition = f"work_folder{pn}/protein_sequences/similarity/gene_int_id.tsv"
+        gene_partition = f"work_folder{pn}/protein_sequences/similarity/gene_partition.tsv"
     run:
         rows = []
         int_id = 1

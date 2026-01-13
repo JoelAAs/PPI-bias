@@ -1,10 +1,10 @@
 import pandas as pd
-from sympy import partition
+
 
 rule define_positive_negative_sets:
     params:
         neg_limit=4,
-        pos_limit=0.15 # 2/2 or 3/4 etx
+        pos_limit=0.15 # 2/2 or 3/4 etc
     input:
         gene_partition = f"work_folder{pn}/protein_sequences/similarity/gene_int_id.tsv",
         input_pod = f"work_folder{pn}/analysis/POD/{{dataset}}_ms.csv"

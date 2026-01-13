@@ -88,7 +88,7 @@ include: "src/Analysis/NegatomeComparison/CompareSharedBaits.smk"
 include: "src/Analysis/CompareLocalisationMethod/MethodLocalisation.smk"
 
 include: "src/PPIClassification/Embeddings/Embeddings.smk"
-
+include: "src/PPIClassification/DataSplit/SequanceSimilarityPartition.smk"
 include: "src/Plotting/get_plots.smk"
 
 wildcard_constraints:
