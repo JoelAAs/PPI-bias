@@ -1,6 +1,7 @@
 import pandas as pd
 import re
 import networkx as nx
+from sympy import partition
 
 
 #TODO DRY fix
@@ -49,6 +50,7 @@ rule get_METIS_adjacency_list:
         aa_seq_fasta=f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
     output:
         similarity_edge_list=f"work_folder{pn}/protein_sequences/similarity/avg_bitscore_all.tsv",
+        gene_int_id = f"work_folder{pn}/protein_sequences/similarity/gene_int_id.tsv",
         similarity_mentis=f"work_folder{pn}/protein_sequences/similarity/avg_bitscore.graph"
     run:
         gene_seq_dict = read_fasta(input.aa_seq_fasta)
@@ -74,10 +76,12 @@ rule get_METIS_adjacency_list:
         G = nx.from_pandas_edgelist(ava_blast_df,"qgene","sgene",edge_attr="bitscore_p_residue")
         sorted_nodes = list(enumerate(sorted(G.nodes())))
         int_mapping = {node: i+1 for i, node in sorted_nodes}
+        with open(output.gene_int_id, "w") as w:
+            w.write("gene_name\tint_id\n")
+            for gene, int_id in int_mapping:
+                w.write(f"{gene}\t{int_id}\n")
 
-        ava_blast_df["qid"] = ava_blast_df["qgene"].apply(lambda x: int_mapping[x])
-        ava_blast_df["sid"] = ava_blast_df["sgene"].apply(lambda x: int_mapping[x])
-        ava_blast_df[["qgene", "sgene", "qid", "sid", "bitscore_p_residue"]].to_csv(output.similarity_edge_list)
+        ava_blast_df[["qgene", "sgene", "bitscore_p_residue"]].to_csv(output.similarity_edge_list)
 
         with open(output.similarity_mentis,"w") as w:
             w.write(f'{G.number_of_nodes()}\t{G.number_of_edges()}\t1\n')
@@ -100,3 +104,23 @@ rule get_kahip_partitions:
         """
         {params.kahip_location}  {input.similarity_mentis} --seed={params.seed} --output_file={output.partitons} --k=3 --preconfiguration=strong 
         """
+
+rule get_gene_to_partition:
+    input:
+        partitions = f"work_folder{pn}/protein_sequences/similarity/partitions/clusters_kaffpa.txt",
+        gene_int_id= f"work_folder{pn}/protein_sequences/similarity/gene_int_id.tsv"
+    output:
+        gene_partition = f"work_folder{pn}/protein_sequences/similarity/gene_int_id.tsv"
+    run:
+        rows = []
+        int_id = 1
+        with open(input.partitions, "r") as f:
+            for line in f:
+                rows.append({"int_id": int_id, "sequence_partition": line.strip()})
+                int_id += 1
+
+        partition_df = pd.DataFrame(rows)
+        gene_id = pd.read_csv(input.gene_int_id, sep="\t")
+
+        gene_partition_df = gene_id.merge(partition_df, on="int_id")
+        gene_partition_df.to_csv(output.gene_partition, sep="\t", index=False)

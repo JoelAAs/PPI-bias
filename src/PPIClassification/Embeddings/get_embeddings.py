@@ -66,11 +66,10 @@ def get_all_mean_embeddings(fasta_file, chosen_model):
             if (len(c_bin) + 1) * max(max_length, len(x[0])) > max_elements:
                 binned.append(c_bin)
                 c_bin = []
-                max_length = 0  # Reset max_length for new bin
-            c_bin.append(x[0])  # Always append after check/reset
+            c_bin.append(x[0])
             x = x[1:]
             max_length = max([len(l) for l in c_bin])
-        if c_bin:  # Append any remaining bin
+        if c_bin:
             binned.append(c_bin)
         return binned
 
