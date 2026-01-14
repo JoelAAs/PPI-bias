@@ -21,7 +21,7 @@ def get_input_files(method, id_pattern, filename, remove_single=True):
         ppi_df = ppi_df.groupby(["pubmed_id"], as_index=False).size()
         ppi_df = ppi_df[ppi_df["size"] != 1]
     expected = [
-        f"{STUDY_FOLDER}/{pid}_{method}.csv" for pid in ppi_df["pubmed_id"].unique()
+        storage.fs(f"{STUDY_FOLDER}/{pid}_{method}.csv") for pid in ppi_df["pubmed_id"].unique()
     ]
     return expected
 
