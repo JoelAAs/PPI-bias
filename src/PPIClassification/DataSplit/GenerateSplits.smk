@@ -83,14 +83,33 @@ rule define_positive_negative_sets:
             subset_ppi(df_neg,genes).to_csv(output[i * 2 + 1],sep="\t",index=False)
 
 rule balance_splits:
+    params:
+        script_location="src/PPIClassification/DataSplit/balance_degree_bait_prey.py",
+        error_rate=0.1
     input:
         set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_pos.csv",
         set_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_neg.csv"
     output:
-        set_balanced_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_pos.csv",
-        set_balanced_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_neg.csv"
+        balancing_file=f"work_folder{pn}/subsets/{{settype}}/picked/ppis_{{dataset}}.csv",
+        set_balanced_pos=f"work_folder{pn}/subsets/{{settype}}/balanced_{{dataset}}_pos.csv",
+        set_balanced_neg=f"work_folder{pn}/subsets/{{settype}}/balanced_{{dataset}}_neg.csv"
     shell:
         """
-        
+        if [ {wildcards.settype} == "test" ]; then 
+            subtractive=0
+            size="equal"
+        else
+            subtractive=1
+            size="max"
+        fi
+        python3 {params.script_location} \
+            --positive_data {input.set_neg}\
+            --negative_data {input.set_pos}\
+            --selected_ppis {output.balancing_file} \
+            --balanced_negative {output.set_balanced_pos} \
+            --balanced_positive {output.set_balanced_neg} \
+            --subtractive $subtractive \
+            --size $size \
+            --accepted_error {params.error_rate}
         
         """
