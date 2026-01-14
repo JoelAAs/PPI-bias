@@ -1,50 +1,98 @@
 import pandas as pd
+from itertools import combinations
+
+
+def subset_ppi(ppi_df, gene_set):
+    ppi_df_ss = ppi_df[
+        (ppi_df["gene_name_bait"].isin(gene_set)) &
+        (ppi_df["gene_name_prey"].isin(gene_set))
+        ]
+    return ppi_df_ss
+
+
+def get_genes_in_partitions(partition_df, partition_set):
+    genes_partition_set = set()
+    for c_partition in partition_set:
+        genes_partition_set |= set(partition_df[partition_df["sequence_partition"] == c_partition]["gene_name"])
+    return genes_partition_set
+
+
+def estimate_ppis_kept(ppi_df, partition_df, partition_set):
+    all_genes_in_partitions = get_genes_in_partitions(partition_df,partition_set)
+    ppis_in_partitions = subset_ppi(ppi_df,all_genes_in_partitions)
+    return ppis_in_partitions.shape[0] / ppi_df.shape[0]
+
+
+def maximise_data_kept(ppi_df, partition_df, remaining_partitions):
+    test_slice = int(len(remaining_partitions) * 2 / 3)
+    validation_slice = len(remaining_partitions) - test_slice
+    test_partitions = list(combinations(remaining_partitions,test_slice))
+    combination_partitions = [b for tp in test_partitions for b in remaining_partitions if b not in tp]
+    combination_partitions = [
+        combination_partitions[i:(i + validation_slice)] for i in range(0,len(combination_partitions),validation_slice)
+    ]
+    test_partitions, validation_partitions = sorted(
+        zip(test_partitions,combination_partitions),
+        key=lambda x: estimate_ppis_kept(ppi_df,partition_df,x[0]) + estimate_ppis_kept(ppi_df,partition_df,
+            x[1]),reverse=True
+    )[0]
+    return test_partitions, validation_partitions
 
 
 rule define_positive_negative_sets:
     params:
         neg_limit=4,
-        pos_limit=0.15 # 2/2 or 3/4 etc
+        pos_limit=0.15  # 2/2 or 3/4 etc
     input:
-        gene_partition = f"work_folder{pn}/protein_sequences/similarity/gene_partition.tsv",
-        input_pod = f"work_folder{pn}/analysis/POD/POD_{{dataset}}.csv"
+        gene_partition=f"work_folder{pn}/protein_sequences/similarity/gene_partition.tsv",
+        input_pod=f"work_folder{pn}/analysis/POD/POD_{{dataset}}.csv"
     output:
-        train_pos = f"work_folder{pn}/subsets/train/{{dataset}}_pos.csv",
-        train_neg = f"work_folder{pn}/subsets/train/{{dataset}}_neg.csv",
-        test_pos = f"work_folder{pn}/subsets/test/{{dataset}}_pos.csv",
-        test_neg = f"work_folder{pn}/subsets/test/{{dataset}}_neg.csv",
-        val_pos = f"work_folder{pn}/subsets/validation/{{dataset}}_pos.csv",
-        val_neg = f"work_folder{pn}/subsets/validation/{{dataset}}_neg.csv"
+        train_pos=f"work_folder{pn}/subsets/train/{{dataset}}_pos.csv",
+        train_neg=f"work_folder{pn}/subsets/train/{{dataset}}_neg.csv",
+        test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_pos.csv",
+        test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_neg.csv",
+        val_pos=f"work_folder{pn}/subsets/validation/{{dataset}}_pos.csv",
+        val_neg=f"work_folder{pn}/subsets/validation/{{dataset}}_neg.csv"
     run:
-        df_tests = pd.read_csv(input.input_pod, sep="\t")
-        partitions_df = pd.read_csv(input.gene_partition, sep="\t")
+        df_tests = pd.read_csv(input.input_pod,sep="\t")
+        partitions_df = pd.read_csv(input.gene_partition,sep="\t")
         df_pos = df_tests[df_tests["lower_bound_pod"] >= params.pos_limit]
         df_neg = df_tests[(df_tests["n_observed"] == 0) & (df_tests["n_tested"] >= params.neg_limit)]
         partitions = partitions_df["sequence_partition"].unique()
         partition_pos = dict()
         partition_neg = dict()
-        for partition_id in partitions:
-            genes_partition = set(partitions_df[partitions_df["sequence_partition"] == partition_id]["gene_name"])
-            partition_pos[partition_id] = df_pos[
-                (df_pos["gene_name_bait"].isin(genes_partition)) & (df_pos["gene_name_prey"].isin(genes_partition))
-            ]
-            partition_neg[partition_id] = df_neg[
-                (df_neg["gene_name_bait"].isin(genes_partition)) &( df_neg["gene_name_prey"].isin(genes_partition))
-                ]
-        # Largest to train, test, validate
-        order_partitions = sorted(partitions, key=lambda x: partition_pos[x].shape[0], reverse=True) # Will break if k!=3 kahip
-        for i, partition_id in enumerate(order_partitions):
-            partition_pos[partition_id].to_csv(output[i*2], sep="\t", index=False)
-            partition_neg[partition_id].to_csv(output[i*2+1],sep="\t",index=False)
+        train_combinations = list(combinations(partitions,int(len(partitions) * 0.7)))
+        train_partition = sorted(
+            train_combinations,key=lambda x: estimate_ppis_kept(df_pos,partitions_df,x),reverse=True
+        )[0]
+
+        test_validation_partitions = [p for p in partitions if p not in train_partition]
+        test_partition, validation_partition = maximise_data_kept(df_pos,partitions_df,test_validation_partitions)
+
+        pos_kept_train = estimate_ppis_kept(df_pos,partitions_df,train_partition)
+        pos_kept_test = estimate_ppis_kept(df_pos,partitions_df,test_partition)
+        pos_kept_validate = estimate_ppis_kept(df_pos,partitions_df,validation_partition)
+        msg = f"From the KaFFPa partitions the number of kept {round(100 * (pos_kept_train + pos_kept_test + pos_kept_validate))} % of PPIs: \n"
+        msg += f"\tTrain: {round(100 * pos_kept_train)} % \n"
+        msg += f"\tTest: {round(100 * pos_kept_test)} % \n"
+        msg += f"\tValidation: {round(100 * pos_kept_validate)} % \n"
+        print(msg)
+
+        for i, partition in enumerate([train_partition, test_partition, validation_partition]):
+            genes = get_genes_in_partitions(partitions_df,partition)
+            subset_ppi(df_pos,genes).to_csv(
+                output[i * 2],sep="\t",index=False)  # NOTE: If order of output is changed, this breaks
+            subset_ppi(df_neg,genes).to_csv(output[i * 2 + 1],sep="\t",index=False)
 
 rule balance_splits:
     input:
-        set_pos = f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_pos.csv",
-        set_neg= f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_neg.csv"
+        set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_pos.csv",
+        set_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_neg.csv"
     output:
-        set_balanced_pos = f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_pos.csv",
-        set_balanced_neg = f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_neg.csv"
+        set_balanced_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_pos.csv",
+        set_balanced_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_neg.csv"
     shell:
         """
+        
         
         """

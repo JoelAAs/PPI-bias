@@ -94,14 +94,15 @@ rule get_METIS_adjacency_list:
 rule get_kahip_partitions:
     params:
         kahip_location=config["kahip_location"],
-        seed=config["seed"]
+        seed=config["seed"],
+        k = 20
     input:
         similarity_mentis=f"work_folder{pn}/protein_sequences/similarity/avg_bitscore.graph"
     output:
         partitons=f"work_folder{pn}/protein_sequences/similarity/partitions/clusters_kaffpa.txt"
     shell:
         """
-        {params.kahip_location}  {input.similarity_mentis} --seed={params.seed} --output_file={output.partitons} --k=3 --preconfiguration=strong 
+        {params.kahip_location}  {input.similarity_mentis} --seed={params.seed} --output_file={output.partitons} --k={params.k} --preconfiguration=strong 
         """
 
 rule get_gene_to_partition:

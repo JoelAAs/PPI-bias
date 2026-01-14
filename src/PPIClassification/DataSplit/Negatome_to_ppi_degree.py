@@ -87,7 +87,7 @@ def subset_negative_set(negative_bait_prey_df, positive_bait_prey_df):
 
 
 if __name__ == '__main__':
-        parser = argparse.ArgumentParser(description="Get mean embeddings from protein fasta")
+    parser = argparse.ArgumentParser(description="Get mean embeddings from protein fasta")
     parser.add_argument("--protein_fasta", required=True, help="Path to input protein fasta")
     parser.add_argument("--model_name", required=True, help="Name of embedding model (huggingface)")
     parser.add_argument("--embedding_csv", required=True, help="Path to output csv file")
