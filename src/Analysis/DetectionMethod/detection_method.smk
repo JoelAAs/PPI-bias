@@ -8,7 +8,7 @@ def get_input_files(method, id_pattern, filename, remove_single=True):
     :return: (list) list of paths of expected output
     """
     STUDY_FOLDER = checkpoints.infer_experimental_search_space.get(cell_line="_method").output[0]
-
+    STUDY_FOLDER = "work_folder" + STUDY_FOLDER.split("work_folder")[1]
     ppi_df = pd.read_csv(filename, sep="\t")
     ppi_df = ppi_df[ppi_df["detection_method"] == method]
     ppi_df = ppi_df[
@@ -21,7 +21,7 @@ def get_input_files(method, id_pattern, filename, remove_single=True):
         ppi_df = ppi_df.groupby(["pubmed_id"], as_index=False).size()
         ppi_df = ppi_df[ppi_df["size"] != 1]
     expected = [
-        storage.fs(f"{STUDY_FOLDER}/{pid}_{method}.csv") for pid in ppi_df["pubmed_id"].unique()
+        f"{STUDY_FOLDER}/{pid}_{method}.csv" for pid in ppi_df["pubmed_id"].unique()
     ]
     return expected
 
@@ -38,7 +38,7 @@ def get_subsets(wc):
     """
     if wc.subset in config:
         return multi_method_aggregation(config[wc.subset])
-    return get_input_files(wc.subset,config["id_pattern"],storage.fs(config["formated_ppi"]))
+    return get_input_files(wc.subset,config["id_pattern"],config["formated_ppi"])
 
 rule aggregate_pids:
     """
