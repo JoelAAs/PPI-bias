@@ -59,9 +59,7 @@ rule define_positive_negative_sets:
         df_pos = df_tests[df_tests["lower_bound_pod"] >= params.pos_limit]
         df_neg = df_tests[(df_tests["n_observed"] == 0) & (df_tests["n_tested"] >= params.neg_limit)]
         partitions = partitions_df["sequence_partition"].unique()
-        partition_pos = dict()
-        partition_neg = dict()
-        train_combinations = list(combinations(partitions,int(len(partitions) * 0.7)))
+        train_combinations = list(combinations(partitions,int(len(partitions) * 0.6)))
         train_partition = sorted(
             train_combinations,key=lambda x: estimate_ppis_kept(df_pos,partitions_df,x),reverse=True
         )[0]

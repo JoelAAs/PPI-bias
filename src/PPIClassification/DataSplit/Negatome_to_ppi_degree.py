@@ -1,6 +1,7 @@
 import datetime
 import numpy as np
 import pandas as pd
+import argparse
 
 def draw_and_update(bp_matrix, row_target, column_target, n_draws):
     all_row_index = np.zeros(n_draws)
@@ -88,11 +89,13 @@ def subset_negative_set(negative_bait_prey_df, positive_bait_prey_df):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Get mean embeddings from protein fasta")
-    parser.add_argument("--protein_fasta", required=True, help="Path to input protein fasta")
-    parser.add_argument("--model_name", required=True, help="Name of embedding model (huggingface)")
-    parser.add_argument("--embedding_csv", required=True, help="Path to output csv file")
+    parser.add_argument("--positive_data", required=True, help="")
+    parser.add_argument("--negative_data", required=True, help="")
+    parser.add_argument("--balanced_negative", required=True, help="Path to output csv file")
+    parser.add_argument("--balanced_positive", required=True, help="Path to output csv file")
     args = parser.parse_args()
-    fasta_filename = args.protein_fasta
+    positive_data = args.positive_data
+    negative_data = args.negative_data
     model_name = args.model_name
     output_csv = args.embedding_csv
 
