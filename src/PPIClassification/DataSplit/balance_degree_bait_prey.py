@@ -75,7 +75,7 @@ def subset_negative_set(negative_bait_prey_df, positive_bait_prey_df, selected_p
     for bp_matrix, edge_df in zip(
             [neg_bp_matrix, pos_bp_matrix],
             [negative_bait_prey_df, positive_bait_prey_df]):
-        for b, p in edge_df.values:
+        for b, p in edge_df.values():
             bp_matrix[bait_idx[b], prey_idx[p]] = 1
 
     target_row_frequency = pos_bp_matrix.sum(axis=1) / pos_bp_matrix.sum()

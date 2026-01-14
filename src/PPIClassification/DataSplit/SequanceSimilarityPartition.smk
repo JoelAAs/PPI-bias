@@ -99,10 +99,10 @@ rule get_kahip_partitions:
     input:
         similarity_mentis=f"work_folder{pn}/protein_sequences/similarity/avg_bitscore.graph"
     output:
-        partitons=f"work_folder{pn}/protein_sequences/similarity/partitions/clusters_kaffpa.txt"
+        partitions=f"work_folder{pn}/protein_sequences/similarity/partitions/clusters_kaffpa.txt"
     shell:
         """
-        {params.kahip_location}  {input.similarity_mentis} --seed={params.seed} --output_file={output.partitons} --k={params.k} --preconfiguration=strong 
+        {params.kahip_location}  {input.similarity_mentis} --seed={params.seed} --output_file={output.partitions} --k={params.k} --preconfiguration=strong 
         """
 
 rule get_gene_to_partition:
