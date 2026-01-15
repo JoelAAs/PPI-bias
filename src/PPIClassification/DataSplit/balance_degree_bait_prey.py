@@ -4,6 +4,7 @@ import pandas as pd
 import argparse
 import warnings
 
+
 def draw_and_update(bp_matrix, row_target, column_target, subtractive, n_draws):
     all_row_index = np.zeros(n_draws)
     all_column_index = np.zeros(n_draws)
@@ -58,8 +59,8 @@ def draw_and_update(bp_matrix, row_target, column_target, subtractive, n_draws):
         all_row_errors[i] = row_error
         all_column_errors[i] = col_error
 
-    idx = i + is_valid_choice
-    return all_row_index[:idx], all_column_index[:idx], all_row_errors[:idx], all_column_errors[:idx], bp_matrix[:idx]
+    idx = i + int(is_valid_choice)
+    return all_row_index[:idx], all_column_index[:idx], all_row_errors[:idx], all_column_errors[:idx], bp_matrix
 
 
 def subset_negative_set(negative_bp_df, positive_bp_df, select_ppi_file, subtractive_bool, size_setting,
@@ -96,7 +97,8 @@ def subset_negative_set(negative_bp_df, positive_bp_df, select_ppi_file, subtrac
         picked_limit = neg_bp_matrix.sum()
 
     percent_degree_mean_error = round(neg_bp_matrix.sum() * acceptable_error)
-    row_error = percent_degree_mean_error; col_error = percent_degree_mean_error
+    row_error = percent_degree_mean_error
+    col_error = percent_degree_mean_error
     print(f"Starting picking ppis with a aimed difference of at most: {percent_degree_mean_error}")
     n = 1000
     picked = 0
@@ -114,8 +116,8 @@ def subset_negative_set(negative_bp_df, positive_bp_df, select_ppi_file, subtrac
                 w.write(f"{idx_bait[bait_idx_dropped]}\t{idx_prey[prey_idx_dropped]}\t{row_error}\t{col_error}\n")
             e = datetime.datetime.now()
             picked += n
-            print(f"{(e - s).seconds} seconds per {n} samples")
-
+            msg =f"{(e - s).seconds} seconds per {n} samples"
+            msg += f"error: {row_error + col_error} picked: {picked}"
 
     selected_ppi_df = pd.read_csv(select_ppi_file, sep="\t")
     selected_ppi_df["mean_error"] = selected_ppi_df["row_error"] + selected_ppi_df["col_error"]
@@ -124,14 +126,15 @@ def subset_negative_set(negative_bp_df, positive_bp_df, select_ppi_file, subtrac
         return selected_ppi_df.iloc[:picked_limit][["bait", "prey"]], positive_bp_df
     else:
         last_row = selected_ppi_df[selected_ppi_df["mean_error"] < percent_degree_mean_error]
-        if not last_row.empty():
+        if not last_row.empty:
             last_row_idx = last_row.index.tolist()[0]
             selected_ppi_df = selected_ppi_df.iloc[:last_row_idx]
-        
+
         remove_ids = selected_ppi_df[["bait", "prey"]].apply(lambda x: ":".join(x)).tolist()
         negative_bp_df["id"] = negative_bp_df[["bait", "prey"]].apply(lambda x: ":".join(x))
         negative_bp_df = negative_bp_df[negative_bp_df["id"].isin(remove_ids)]
         return negative_bp_df[["bait", "prey"]], positive_bp_df
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Get mean embeddings from protein fasta")
@@ -142,7 +145,7 @@ if __name__ == '__main__':
     parser.add_argument("--balanced_positive", required=True, help="Path to output csv file")
     parser.add_argument("--subtractive", default=False, action="store_true", help="Path to output csv file")
     parser.add_argument("--size", default="max", help="Path to output csv file")
-    parser.add_argument("--accepted_error", type=float, default=0.1, required=True, help="Path to output csv file")
+    parser.add_argument("--accepted_error", type=float, default=0.1, help="Path to output csv file")
 
     args = parser.parse_args()
     positive_data = args.positive_data

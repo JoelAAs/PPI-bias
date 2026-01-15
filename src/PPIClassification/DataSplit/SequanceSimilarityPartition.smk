@@ -95,7 +95,7 @@ rule get_kahip_partitions:
     params:
         kahip_location=config["kahip_location"],
         seed=config["seed"],
-        k = 20
+        k = 12
     input:
         similarity_mentis=f"work_folder{pn}/protein_sequences/similarity/avg_bitscore.graph"
     output:
