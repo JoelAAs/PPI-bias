@@ -110,6 +110,7 @@ def subset_negative_set(negative_bp_df, positive_bp_df, select_ppi_file, subtrac
             picked += n
             print(f"{(e - s).seconds} seconds per {n} samples")
 
+
     selected_ppi_df = pd.read_csv(select_ppi_file, sep="\t")
     selected_ppi_df["mean_error"] = selected_ppi_df["row_error"] + selected_ppi_df["col_error"]
 
@@ -131,7 +132,7 @@ if __name__ == '__main__':
     parser.add_argument("--selected_ppis", required=True, help="Path to output csv file")
     parser.add_argument("--balanced_negative", required=True, help="Path to output csv file")
     parser.add_argument("--balanced_positive", required=True, help="Path to output csv file")
-    parser.add_argument("--subtractive", default=False, type=bool, help="Path to output csv file")
+    parser.add_argument("--subtractive", default=False, action="store_true", help="Path to output csv file")
     parser.add_argument("--size", default="max", help="Path to output csv file")
     parser.add_argument("--accepted_error", type=float, default=0.1, required=True, help="Path to output csv file")
 

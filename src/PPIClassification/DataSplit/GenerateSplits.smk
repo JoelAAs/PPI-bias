@@ -96,10 +96,10 @@ rule balance_splits:
     shell:
         """
         if [ "{wildcards.settype}" == "test" ]; then 
-            subtractive=0
+            subtractive=""
             size="equal"
         else
-            subtractive=1
+            subtractive="--subtractive"
             size="max"
         fi
         echo $subtractive $size
@@ -109,7 +109,7 @@ rule balance_splits:
             --selected_ppis {output.balancing_file} \
             --balanced_negative {output.set_balanced_pos} \
             --balanced_positive {output.set_balanced_neg} \
-            --subtractive $subtractive \
+            $subtractive \
             --size $size \
             --accepted_error {params.error_rate}
         
