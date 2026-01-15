@@ -5,7 +5,54 @@ import argparse
 import warnings
 
 
-def draw_and_update(bp_matrix, row_target, column_target, subtractive, n_draws):
+def possible_choices(bp_matrix, row_probability, column_probability, subtractive):
+    if not subtractive:
+        row_probability = - row_probability
+        column_probability = - column_probability
+    row_probability[row_probability < 0] = 0  # remove choices in the wrong directions
+    column_probability[column_probability < 0] = 0
+
+    prob_matrix = row_probability[:, None] * column_probability[None, :]
+    possible_choice_matrix = bp_matrix * prob_matrix
+
+    if sum(row_probability) == 0 or sum(column_probability) == 0:
+        raise ValueError("No possible bait/prey choices")
+
+    if bp_matrix.sum() == 0:
+        raise ValueError("No PPIs left")
+
+    return possible_choice_matrix
+
+
+def draw_index(possible_choice_matrix):
+    flat_prob = possible_choice_matrix.ravel()
+    flat_prob = flat_prob / flat_prob.sum()
+    cum_probs = np.cumsum(flat_prob / flat_prob.sum())
+    r = np.random.rand()
+    flat_idx = np.searchsorted(cum_probs, r, side='right')
+
+    row_idx = int(flat_idx / possible_choice_matrix.shape[1])
+    col_idx = flat_idx - row_idx * possible_choice_matrix.shape[1]
+
+    return row_idx, col_idx
+
+def get_subtractive_error(row_sum, total_sum, column_sum, row_target, column_target):
+    delta_row = row_sum - row_target * total_sum
+    delta_column = column_sum - column_target * total_sum
+    row_error = np.abs(delta_row).sum()
+    col_error = np.abs(delta_column).sum()
+    return row_error, col_error
+
+def get_additive_error(additive_matrix, row_target, column_target, pos_sum):
+    additive_row_sum = additive_matrix.sum(axis = 1)
+    additive_column_sum = additive_matrix.sum(axis = 0)
+    delta_row = additive_row_sum - row_target * pos_sum
+    delta_column = additive_column_sum - column_target * pos_sum
+    row_error = np.abs(delta_row).sum()
+    col_error = np.abs(delta_column).sum()
+    return row_error, col_error
+
+def draw_and_update(bait_prey_matrix, row_target, column_target, additive_matrix, subtractive, pos_sum, n_draws):
     all_row_index = np.zeros(n_draws)
     all_column_index = np.zeros(n_draws)
     all_row_errors = np.zeros(n_draws)
@@ -13,46 +60,29 @@ def draw_and_update(bp_matrix, row_target, column_target, subtractive, n_draws):
 
     is_valid_choice = True
     for i in range(n_draws):
-        row_sum = bp_matrix.sum(axis=1)
-        column_sum = bp_matrix.sum(axis=0)
+        row_sum = bait_prey_matrix.sum(axis=1)  # bait_degree
+        column_sum = bait_prey_matrix.sum(axis=0)
         total_sum = column_sum.sum()
-        row_probability = row_sum - row_target * total_sum
+        row_probability = row_sum - row_target * total_sum  # excess/lack representation
         column_probability = column_sum - column_target * total_sum
-        if not subtractive:
-            row_probability = -row_probability
-            column_probability = -column_probability
-        row_probability[row_probability < 0] = 0
-        column_probability[column_probability < 0] = 0
+        possible_choice_matrix = possible_choices(bait_prey_matrix, row_probability, column_probability, subtractive)
 
-        if sum(row_probability) == 0 or sum(column_probability) == 0:
-            raise ValueError("No possible bait/prey choices")
-
-        if bp_matrix.sum() == 0:
-            raise ValueError("No PPIs left")
-
-        prob_matrix = row_probability[:, None] * column_probability[None, :]
-        possible_choice_matrix = bp_matrix * prob_matrix
         if possible_choice_matrix.sum() == 0:
             warnings.warn("No possible choices that reduce degree imbalance!")
             is_valid_choice = False
             break
-        flat_prob = possible_choice_matrix.ravel()
-        flat_prob = flat_prob / flat_prob.sum()
-        cum_probs = np.cumsum(flat_prob / flat_prob.sum())
-        r = np.random.rand()
-        flat_idx = np.searchsorted(cum_probs, r, side='right')
+        row_idx, col_idx = draw_index(possible_choice_matrix)
 
-        # flat_idx = np.random.choice(range(len(flat_prob)), p=flat_prob / flat_prob.sum()) # too slow
-        row_idx = int(flat_idx / possible_choice_matrix.shape[1])
-        col_idx = flat_idx - row_idx * possible_choice_matrix.shape[1]
         row_sum[row_idx] -= 1
         column_sum[col_idx] -= 1
 
-        delta_row = row_sum - row_target * total_sum
-        delta_column = column_sum - column_target * total_sum
-        row_error = np.abs(delta_row).sum()
-        col_error = np.abs(delta_column).sum()
-        bp_matrix[row_idx, col_idx] = 0
+        if subtractive:
+            row_error, col_error = get_subtractive_error(row_sum, total_sum, column_sum, row_target, column_target)
+        else:
+            row_error, col_error = get_additive_error(additive_matrix, row_target, column_target, pos_sum)
+            additive_matrix[row_idx, col_idx] = 1
+
+        bait_prey_matrix[row_idx, col_idx] = 0
 
         all_row_index[i] = row_idx
         all_column_index[i] = col_idx
@@ -60,7 +90,7 @@ def draw_and_update(bp_matrix, row_target, column_target, subtractive, n_draws):
         all_column_errors[i] = col_error
 
     idx = i + int(is_valid_choice)
-    return all_row_index[:idx], all_column_index[:idx], all_row_errors[:idx], all_column_errors[:idx], bp_matrix
+    return all_row_index[:idx], all_column_index[:idx], all_row_errors[:idx], all_column_errors[:idx], bait_prey_matrix
 
 
 def subset_negative_set(negative_bp_df, positive_bp_df, select_ppi_file, subtractive_bool, size_setting,
@@ -102,12 +132,21 @@ def subset_negative_set(negative_bp_df, positive_bp_df, select_ppi_file, subtrac
     print(f"Starting picking ppis with a aimed difference of at most: {percent_degree_mean_error}")
     n = 1000
     picked = 0
+    additive_matrix = np.zeros_like(neg_bp_matrix)
+    pos_sum = pos_bp_matrix.sum()
     with open(select_ppi_file, "w") as w:
         w.write(f"bait\tprey\trow_error\tcol_error\n")
-        while (row_error + col_error) > percent_degree_mean_error and picked < picked_limit:
+        finished = False
+        while not finished:
             s = datetime.datetime.now()
             batch_bait_idx_dropped, batch_prey_idx_dropped, batch_row_error, batch_col_error, neg_bp_matrix = draw_and_update(
-                neg_bp_matrix, target_row_frequency, target_col_frequency, subtractive_bool, n)
+                bait_prey_matrix=neg_bp_matrix,
+                row_target=target_row_frequency,
+                column_target=target_col_frequency,
+                additive_matrix=additive_matrix,
+                subtractive=subtractive_bool,
+                pos_sum=pos_sum,
+                n_draws=n)
             for bait_idx_dropped, prey_idx_dropped, row_error, col_error in zip(
                     *[batch_bait_idx_dropped,
                       batch_prey_idx_dropped,
@@ -116,8 +155,12 @@ def subset_negative_set(negative_bp_df, positive_bp_df, select_ppi_file, subtrac
                 w.write(f"{idx_bait[bait_idx_dropped]}\t{idx_prey[prey_idx_dropped]}\t{row_error}\t{col_error}\n")
             e = datetime.datetime.now()
             picked += n
-            msg =f"{(e - s).seconds} seconds per {n} samples"
+            msg = f"{(e - s).seconds} seconds per {n} samples"
             msg += f"error: {row_error + col_error} picked: {picked}"
+            if size_setting == "equal":
+                finished = picked < picked_limit # will fail of Nneg < Npos
+            else:
+                finished = (row_error + col_error) > percent_degree_mean_error or picked < picked_limit
 
     selected_ppi_df = pd.read_csv(select_ppi_file, sep="\t")
     selected_ppi_df["mean_error"] = selected_ppi_df["row_error"] + selected_ppi_df["col_error"]
