@@ -4,7 +4,7 @@ import pandas as pd
 import argparse
 
 
-def draw_and_update(bp_matrix, row_target, column_target, n_draws):
+def draw_and_update(bp_matrix, row_target, column_target, subtractive, n_draws):
     all_row_index = np.zeros(n_draws)
     all_column_index = np.zeros(n_draws)
     all_row_errors = np.zeros(n_draws)
@@ -16,13 +16,16 @@ def draw_and_update(bp_matrix, row_target, column_target, n_draws):
         total_sum = column_sum.sum()
         row_probability = row_sum - row_target * total_sum
         column_probability = column_sum - column_target * total_sum
+        if not subtractive:
+            row_probability = -row_probability
+            column_probability = -column_probability
         row_probability[row_probability < 0] = 0
         column_probability[column_probability < 0] = 0
 
         if sum(row_probability) == 0 or sum(column_probability) == 0:
             raise ValueError("No possible bait/prey choices")
 
-        if sum(bp_matrix) == 0:
+        if bp_matrix.sum() == 0:
             raise ValueError("No PPIs left")
 
         prob_matrix = row_probability[:, None] * column_probability[None, :]
@@ -53,52 +56,50 @@ def draw_and_update(bp_matrix, row_target, column_target, n_draws):
     return all_row_index, all_column_index, all_row_errors, all_column_errors, bp_matrix
 
 
-def subset_negative_set(negative_bait_prey_df, positive_bait_prey_df, selected_ppi_file, subtractive, size,
-                        accepted_error):
-    baits = set(negative_bait_prey_df["bait"]) & set(positive_bait_prey_df["bait"])
+def subset_negative_set(negative_bp_df, positive_bp_df, select_ppi_file, subtractive_bool, size_setting,
+                        acceptable_error):
+    baits = set(negative_bp_df["bait"]) & set(positive_bp_df["bait"])
     bait_idx = {bait: i for i, bait in enumerate(baits)}
     idx_bait = {value: key for key, value in bait_idx.items()}
 
-    all_prey = set(negative_bait_prey_df["prey"]) & set(positive_bait_prey_df["prey"])
+    all_prey = set(negative_bp_df["prey"]) & set(positive_bp_df["prey"])
     prey_idx = {prey: i for i, prey in enumerate(all_prey)}
     idx_prey = {value: key for key, value in prey_idx.items()}
 
-    pos_bp_matrix = np.zeros((len(baits), len(all_prey)))
-    neg_bp_matrix = np.zeros((len(baits), len(all_prey)))
+    pos_bp_matrix = np.zeros((len(baits), len(all_prey)), dtype=int)
+    neg_bp_matrix = np.zeros((len(baits), len(all_prey)), dtype=int)
 
     # Remove all PPIs where bait and prey is not present in both neg/pos
-    negative_bait_prey_df = negative_bait_prey_df[
-        negative_bait_prey_df["bait"].isin(baits) & negative_bait_prey_df["prey"].isin(all_prey)]
-    positive_bait_prey_df = positive_bait_prey_df[
-        positive_bait_prey_df["bait"].isin(baits) & positive_bait_prey_df["prey"].isin(all_prey)]
+    negative_bp_df = negative_bp_df[
+        negative_bp_df["bait"].isin(baits) & negative_bp_df["prey"].isin(all_prey)]
+    positive_bp_df = positive_bp_df[
+        positive_bp_df["bait"].isin(baits) & positive_bp_df["prey"].isin(all_prey)]
 
     for bp_matrix, edge_df in zip(
             [neg_bp_matrix, pos_bp_matrix],
-            [negative_bait_prey_df, positive_bait_prey_df]):
-        for b, p in edge_df.values():
+            [negative_bp_df, positive_bp_df]):
+        for b, p in edge_df.values:
             bp_matrix[bait_idx[b], prey_idx[p]] = 1
 
     target_row_frequency = pos_bp_matrix.sum(axis=1) / pos_bp_matrix.sum()
     target_col_frequency = pos_bp_matrix.sum(axis=0) / pos_bp_matrix.sum()
-    if not subtractive:
-        target_row_frequency = -target_row_frequency
-        target_col_frequency = -target_col_frequency
 
-    if size == "equal":
-        picked_limit = sum(pos_bp_matrix)
+    if size_setting == "equal":
+        picked_limit = pos_bp_matrix.sum()
     else:
-        picked_limit = sum(neg_bp_matrix)
+        picked_limit = neg_bp_matrix.sum()
 
-    percent_degree_mean_error = round(sum(pos_bp_matrix) * accepted_error)
+    percent_degree_mean_error = round(pos_bp_matrix.sum() * acceptable_error)
+    row_error = percent_degree_mean_error; col_error = percent_degree_mean_error
     print(f"Starting picking ppis with a aimed difference of at most: {percent_degree_mean_error}")
     n = 1000
     picked = 0
-    with open(selected_ppi_file, "w") as w:
+    with open(select_ppi_file, "w") as w:
         w.write(f"bait\tprey\trow_error\tcol_error\n")
         while (row_error + col_error) > percent_degree_mean_error and picked < picked_limit:
             s = datetime.datetime.now()
             batch_bait_idx_dropped, batch_prey_idx_dropped, batch_row_error, batch_col_error, neg_bp_matrix = draw_and_update(
-                neg_bp_matrix, target_row_frequency, target_col_frequency, n)
+                neg_bp_matrix, target_row_frequency, target_col_frequency, subtractive_bool, n)
             for bait_idx_dropped, prey_idx_dropped, row_error, col_error in zip(
                     *[batch_bait_idx_dropped,
                       batch_prey_idx_dropped,
@@ -109,19 +110,19 @@ def subset_negative_set(negative_bait_prey_df, positive_bait_prey_df, selected_p
             picked += n
             print(f"{(e - s).seconds} seconds per {n} samples")
 
-    selected_ppi_df = pd.read_csv(selected_ppi_file, sep="\t")
+    selected_ppi_df = pd.read_csv(select_ppi_file, sep="\t")
     selected_ppi_df["mean_error"] = selected_ppi_df["row_error"] + selected_ppi_df["col_error"]
 
-    if size == "equal" and not subtractive:
-        return selected_ppi_df.iloc[:picked_limit][["bait", "prey"]], positive_bait_prey_df
+    if size_setting == "equal" and not subtractive_bool:
+        return selected_ppi_df.iloc[:picked_limit][["bait", "prey"]], positive_bp_df
     else:
         last_row = selected_ppi_df[selected_ppi_df["mean_error"] < percent_degree_mean_error]
         last_row_idx = last_row.index.tolist()[0]
         selected_ppi_df = selected_ppi_df.iloc[:last_row_idx]
         remove_ids = selected_ppi_df[["bait", "prey"]].apply(lambda x: ":".join(x)).tolist()
-        negative_bait_prey_df["id"] = negative_bait_prey_df[["bait", "prey"]].apply(lambda x: ":".join(x))
-        negative_bait_prey_df = negative_bait_prey_df[negative_bait_prey_df["id"].isin(remove_ids)]
-        return negative_bait_prey_df[["bait", "prey"]], positive_bait_prey_df
+        negative_bp_df["id"] = negative_bp_df[["bait", "prey"]].apply(lambda x: ":".join(x))
+        negative_bp_df = negative_bp_df[negative_bp_df["id"].isin(remove_ids)]
+        return negative_bp_df[["bait", "prey"]], positive_bp_df
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Get mean embeddings from protein fasta")
@@ -146,14 +147,14 @@ if __name__ == '__main__':
     size = args.size
     accepted_error = args.accepted_error
 
-    negative_bait_prey_df = pd.read_csv(positive_data, sep="\t")
-    positive_bait_prey_df = pd.read_csv(negative_data, sep="\t")
+    negative_bait_prey_df = pd.read_csv(negative_data, sep="\t")
+    positive_bait_prey_df = pd.read_csv(positive_data, sep="\t")
 
     negative_bait_prey_df = negative_bait_prey_df[["gene_name_bait", "gene_name_prey"]]
     positive_bait_prey_df = positive_bait_prey_df[["gene_name_bait", "gene_name_prey"]]
 
-    negative_bait_prey_df.columns = [["bait", "prey"]]
-    positive_bait_prey_df.columns = [["bait", "prey"]]
+    negative_bait_prey_df.columns = ["bait", "prey"]
+    positive_bait_prey_df.columns = ["bait", "prey"]
 
     balanced_negative_df, balanced_positive_df =subset_negative_set(
         negative_bait_prey_df,

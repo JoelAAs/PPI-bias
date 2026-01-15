@@ -95,13 +95,14 @@ rule balance_splits:
         set_balanced_neg=f"work_folder{pn}/subsets/{{settype}}/balanced_{{dataset}}_neg.csv"
     shell:
         """
-        if [ {wildcards.settype} == "test" ]; then 
+        if [ "{wildcards.settype}" == "test" ]; then 
             subtractive=0
             size="equal"
         else
             subtractive=1
             size="max"
         fi
+        echo $subtractive $size
         python3 {params.script_location} \
             --positive_data {input.set_neg}\
             --negative_data {input.set_pos}\
