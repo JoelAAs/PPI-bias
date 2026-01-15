@@ -89,7 +89,7 @@ def subset_negative_set(negative_bp_df, positive_bp_df, select_ppi_file, subtrac
     else:
         picked_limit = neg_bp_matrix.sum()
 
-    percent_degree_mean_error = round(pos_bp_matrix.sum() * acceptable_error)
+    percent_degree_mean_error = round(neg_bp_matrix.sum() * acceptable_error)
     row_error = percent_degree_mean_error; col_error = percent_degree_mean_error
     print(f"Starting picking ppis with a aimed difference of at most: {percent_degree_mean_error}")
     n = 1000
@@ -131,9 +131,9 @@ if __name__ == '__main__':
     parser.add_argument("--selected_ppis", required=True, help="Path to output csv file")
     parser.add_argument("--balanced_negative", required=True, help="Path to output csv file")
     parser.add_argument("--balanced_positive", required=True, help="Path to output csv file")
-    parser.add_argument("--subtractive", default=False, help="Path to output csv file")
+    parser.add_argument("--subtractive", default=False, type=bool, help="Path to output csv file")
     parser.add_argument("--size", default="max", help="Path to output csv file")
-    parser.add_argument("--accepted_error", default=0.1, required=True, help="Path to output csv file")
+    parser.add_argument("--accepted_error", type=float, default=0.1, required=True, help="Path to output csv file")
 
     args = parser.parse_args()
     positive_data = args.positive_data
@@ -141,22 +141,23 @@ if __name__ == '__main__':
 
     selected_ppi_file = args.selected_ppis
 
-    balanced_negative = args.balanced_negative
     balanced_positive = args.balanced_positive
+    balanced_negative = args.balanced_negative
+
     subtractive = args.subtractive
     size = args.size
     accepted_error = args.accepted_error
 
-    negative_bait_prey_df = pd.read_csv(negative_data, sep="\t")
     positive_bait_prey_df = pd.read_csv(positive_data, sep="\t")
+    negative_bait_prey_df = pd.read_csv(negative_data, sep="\t")
 
-    negative_bait_prey_df = negative_bait_prey_df[["gene_name_bait", "gene_name_prey"]]
     positive_bait_prey_df = positive_bait_prey_df[["gene_name_bait", "gene_name_prey"]]
+    negative_bait_prey_df = negative_bait_prey_df[["gene_name_bait", "gene_name_prey"]]
 
-    negative_bait_prey_df.columns = ["bait", "prey"]
     positive_bait_prey_df.columns = ["bait", "prey"]
+    negative_bait_prey_df.columns = ["bait", "prey"]
 
-    balanced_negative_df, balanced_positive_df =subset_negative_set(
+    balanced_negative_df, balanced_positive_df = subset_negative_set(
         negative_bait_prey_df,
         positive_bait_prey_df,
         selected_ppi_file,
