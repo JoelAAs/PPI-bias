@@ -2,7 +2,7 @@ import datetime
 import numpy as np
 import pandas as pd
 import argparse
-
+import warnings
 
 def draw_and_update(bp_matrix, row_target, column_target, subtractive, n_draws):
     all_row_index = np.zeros(n_draws)
@@ -10,6 +10,7 @@ def draw_and_update(bp_matrix, row_target, column_target, subtractive, n_draws):
     all_row_errors = np.zeros(n_draws)
     all_column_errors = np.zeros(n_draws)
 
+    is_valid_choice = True
     for i in range(n_draws):
         row_sum = bp_matrix.sum(axis=1)
         column_sum = bp_matrix.sum(axis=0)
@@ -30,6 +31,10 @@ def draw_and_update(bp_matrix, row_target, column_target, subtractive, n_draws):
 
         prob_matrix = row_probability[:, None] * column_probability[None, :]
         possible_choice_matrix = bp_matrix * prob_matrix
+        if possible_choice_matrix.sum() == 0:
+            warnings.warn("No possible choices that reduce degree imbalance!")
+            is_valid_choice = False
+            break
         flat_prob = possible_choice_matrix.ravel()
         flat_prob = flat_prob / flat_prob.sum()
         cum_probs = np.cumsum(flat_prob / flat_prob.sum())
@@ -53,7 +58,8 @@ def draw_and_update(bp_matrix, row_target, column_target, subtractive, n_draws):
         all_row_errors[i] = row_error
         all_column_errors[i] = col_error
 
-    return all_row_index, all_column_index, all_row_errors, all_column_errors, bp_matrix
+    idx = i + is_valid_choice
+    return all_row_index[:idx], all_column_index[:idx], all_row_errors[:idx], all_column_errors[:idx], bp_matrix[:idx]
 
 
 def subset_negative_set(negative_bp_df, positive_bp_df, select_ppi_file, subtractive_bool, size_setting,
@@ -118,8 +124,10 @@ def subset_negative_set(negative_bp_df, positive_bp_df, select_ppi_file, subtrac
         return selected_ppi_df.iloc[:picked_limit][["bait", "prey"]], positive_bp_df
     else:
         last_row = selected_ppi_df[selected_ppi_df["mean_error"] < percent_degree_mean_error]
-        last_row_idx = last_row.index.tolist()[0]
-        selected_ppi_df = selected_ppi_df.iloc[:last_row_idx]
+        if not last_row.empty():
+            last_row_idx = last_row.index.tolist()[0]
+            selected_ppi_df = selected_ppi_df.iloc[:last_row_idx]
+        
         remove_ids = selected_ppi_df[["bait", "prey"]].apply(lambda x: ":".join(x)).tolist()
         negative_bp_df["id"] = negative_bp_df[["bait", "prey"]].apply(lambda x: ":".join(x))
         negative_bp_df = negative_bp_df[negative_bp_df["id"].isin(remove_ids)]
