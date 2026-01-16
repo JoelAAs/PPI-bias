@@ -42,6 +42,12 @@ def set_node_id(df, ids_dict):
     df.loc[:, "prey_id"] = df["prey"].map(ids_dict)
     return df
 
+def get_first_non_zero(degree_list, skip_single):
+    for i, val in enumerate(degree_list):
+        if val > 1:
+            return i
+    return None
+
 
 def get_subsample_graph(targetG, sampledG, node_ids, size_setting="max", accepted_error=0.1):
     in_degree_target, out_degree_target = get_degree(targetG)
@@ -56,6 +62,15 @@ def get_subsample_graph(targetG, sampledG, node_ids, size_setting="max", accepte
                 round(d + d * fraction_sampled_edges * scaling_factor) for d in in_degree_target_list]
             scaled_out_degree_target_list = [
                 round(d + d * fraction_sampled_edges * scaling_factor) for d in out_degree_target_list]
+            degree_diff = sum(scaled_in_degree_target_list) - sum(scaled_out_degree_target_list)
+            while degree_diff != 0:
+                print(degree_diff)
+                if degree_diff > 0:
+                    scaled_in_degree_target_list[get_first_non_zero(scaled_in_degree_target_list)] -= 1
+                else:
+                    scaled_out_degree_target_list[get_first_non_zero(scaled_out_degree_target_list)] -= 1
+            degree_diff = sum(scaled_in_degree_target_list) - sum(scaled_out_degree_target_list)
+
             s_diG = get_sampled_graph(scaled_in_degree_target_list, scaled_out_degree_target_list, sampledG)
             delta_degree = get_degree_difference(targetG, s_diG)
             if delta_degree < accepted_error * n_neg_edges:
