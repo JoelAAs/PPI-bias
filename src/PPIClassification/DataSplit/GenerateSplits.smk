@@ -102,12 +102,10 @@ rule balance_splits:
         fi
         echo $subtractive $size
         python3 {params.script_location} \
-            --positive_data {input.set_pos}\
-            --negative_data {input.set_neg}\
-            --selected_ppis {output.balancing_file} \
+            --positive_data {input.set_pos} \
+            --negative_data {input.set_neg} \
             --balanced_negative {output.set_balanced_pos} \
             --balanced_positive {output.set_balanced_neg} \
-            $subtractive \
             --size $size \
             --accepted_error {params.error_rate}
         
