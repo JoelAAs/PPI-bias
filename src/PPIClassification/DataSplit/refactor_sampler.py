@@ -68,7 +68,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Get mean embeddings from protein fasta")
     parser.add_argument("--positive_data", required=True, help="")
     parser.add_argument("--negative_data", required=True, help="")
-    parser.add_argument("--selected_ppis", required=True, help="Path to output csv file")
     parser.add_argument("--balanced_negative", required=True, help="Path to output csv file")
     parser.add_argument("--balanced_positive", required=True, help="Path to output csv file")
     parser.add_argument("--size", default="max", help="Path to output csv file")
@@ -77,10 +76,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     positive_data = args.positive_data
     negative_data = args.negative_data
-    selected_ppi_file = args.selected_ppis
     balanced_positive = args.balanced_positive
     balanced_negative = args.balanced_negative
-    subtractive = args.subtractive
     size = args.size
     accepted_error = args.accepted_error
 
