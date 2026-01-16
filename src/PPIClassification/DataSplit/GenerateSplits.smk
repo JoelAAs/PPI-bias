@@ -90,7 +90,6 @@ rule balance_splits:
         set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_pos.csv",
         set_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_neg.csv"
     output:
-        balancing_file=f"work_folder{pn}/subsets/{{settype}}/picked/ppis_{{dataset}}.csv",
         set_balanced_pos=f"work_folder{pn}/subsets/{{settype}}/balanced_{{dataset}}_pos.csv",
         set_balanced_neg=f"work_folder{pn}/subsets/{{settype}}/balanced_{{dataset}}_neg.csv"
     shell:
