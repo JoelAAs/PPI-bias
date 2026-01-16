@@ -42,9 +42,9 @@ def set_node_id(df, ids_dict):
     df.loc[:, "prey_id"] = df["prey"].map(ids_dict)
     return df
 
-def get_first_non_zero(degree_list, skip_single):
+def get_first_non_zero(degree_list, skip_single=True):
     for i, val in enumerate(degree_list):
-        if val > 1:
+        if val > int(skip_single):
             return i
     return None
 
