@@ -97,9 +97,9 @@ if __name__ == '__main__':
     all_prey = set(negative_bait_prey_df["prey"]) & set(positive_bait_prey_df["prey"])
 
     negative_bp_df = negative_bait_prey_df[
-        negative_bait_prey_df["bait"].isin(baits) & negative_bait_prey_df["prey"].isin(all_prey)]
+        negative_bait_prey_df["bait"].isin(baits) & negative_bait_prey_df["prey"].isin(all_prey)].copy()
     positive_bp_df = positive_bait_prey_df[
-        positive_bait_prey_df["bait"].isin(baits) & positive_bait_prey_df["prey"].isin(all_prey)]
+        positive_bait_prey_df["bait"].isin(baits) & positive_bait_prey_df["prey"].isin(all_prey)].copy()
 
     node_ids = {gene_name: i for i, gene_name in enumerate(baits | all_prey)}
     id_to_gene = {i: gene for gene, i in node_ids.items()}
