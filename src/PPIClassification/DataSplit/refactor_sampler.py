@@ -57,7 +57,9 @@ def get_subsample_graph(targetG, sampledG, node_ids, size_setting="max", accepte
     n_neg_edges = len(sampledG.edges())
     fraction_sampled_edges = n_pos_edges / n_neg_edges
     if size_setting == "max":
+        print("checking scaling")
         for scaling_factor in range(100, 0, -1):
+            print("scaling factor:", scaling_factor)
             scaled_in_degree_target_list = [
                 round(d + d * fraction_sampled_edges * scaling_factor) for d in in_degree_target_list]
             scaled_out_degree_target_list = [
@@ -69,7 +71,7 @@ def get_subsample_graph(targetG, sampledG, node_ids, size_setting="max", accepte
                     scaled_in_degree_target_list[get_first_non_zero(scaled_in_degree_target_list)] -= 1
                 else:
                     scaled_out_degree_target_list[get_first_non_zero(scaled_out_degree_target_list)] -= 1
-            degree_diff = sum(scaled_in_degree_target_list) - sum(scaled_out_degree_target_list)
+                degree_diff = sum(scaled_in_degree_target_list) - sum(scaled_out_degree_target_list)
 
             s_diG = get_sampled_graph(scaled_in_degree_target_list, scaled_out_degree_target_list, sampledG)
             delta_degree = get_degree_difference(targetG, s_diG)
