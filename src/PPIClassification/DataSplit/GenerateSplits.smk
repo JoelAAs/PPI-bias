@@ -100,7 +100,6 @@ rule balance_splits:
         else
             size="max"
         fi
-        echo $subtractive $size
         python3 {params.script_location} \
             --positive_data {input.set_pos} \
             --negative_data {input.set_neg} \
