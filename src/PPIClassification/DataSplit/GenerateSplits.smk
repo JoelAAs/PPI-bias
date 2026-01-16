@@ -84,7 +84,7 @@ rule define_positive_negative_sets:
 
 rule balance_splits:
     params:
-        script_location="src/PPIClassification/DataSplit/balance_degree_bait_prey.py",
+        script_location="src/PPIClassification/DataSplit/refactor_sampler.py",
         error_rate=0.1
     input:
         set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_pos.csv",
@@ -96,10 +96,8 @@ rule balance_splits:
     shell:
         """
         if [ "{wildcards.settype}" == "test" ]; then 
-            subtractive=""
             size="equal"
         else
-            subtractive="--subtractive"
             size="max"
         fi
         echo $subtractive $size
