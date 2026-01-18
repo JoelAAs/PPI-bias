@@ -1,0 +1,103 @@
+import networkx as nx
+from fractions import Fraction
+import pandas as pd
+
+
+def get_degrees(G):
+    degree_in = dict(G.in_degree())
+    degree_out = dict(G.out_degree())
+    return degree_in, degree_out
+
+
+def scaling_fractions(min_edges, max_edges):
+    return [
+        Fraction(i, min_edges) for i in range(max_edges, 1, -1)
+    ]
+
+
+def get_possible_scaling_factors(targetG, scaling):
+    target_degree_in, target_degree_out = get_degrees(targetG)
+    target_in_scaled = {}
+    target_out_scaled = {}
+    feasible = True
+    for node in targetG.nodes():
+        target_in_scaled[node] = target_degree_in[node] * scaling
+        target_out_scaled[node] = target_degree_out[node] * scaling
+        if target_in_scaled[node].denominator != 1 or target_out_scaled[node].denominator != 1:
+            feasible = False
+            break
+    return target_in_scaled, target_out_scaled, feasible
+
+
+def build_flow_graph(otherG, scaled_degree_in, scaled_degree_out):
+    F = nx.DiGraph()
+
+    for node in otherG.nodes():  # same nodes in pos/neg
+        F.add_edge("source", ("out", node), capacity=scaled_degree_out.get(node, Fraction(0)).numerator)
+        F.add_edge(("in", node), "sink", capacity=scaled_degree_in.get(node, Fraction(0)).numerator)
+
+    for bait, prey in otherG.edges():
+        F.add_edge(("out", bait), ("in", prey), capacity=1)
+
+    return F
+
+def get_degree_differance(targetG, otherG, alpha_hat):
+    in_degree, out_degree = get_degrees(targetG)
+    in_degree_other, out_degree_other = get_degrees(otherG)
+    error = 0
+    for node in targetG.nodes():
+        error += abs(in_degree.get(node, 0) - in_degree_other.get(node, 0)*alpha_hat)
+        error += abs(out_degree.get(node, 0) - out_degree_other.get(node, 0)*alpha_hat)
+
+    return error/(2*S.number_of_edges())
+
+if __name__ == '__main__':
+    positive_data = "work_folder/per_gene/subsets/train/ms_pos.csv"
+    negative_data = "work_folder/per_gene/subsets/train/ms_neg.csv"
+    positive_bait_prey_df = pd.read_csv(positive_data, sep="\t")
+    negative_bait_prey_df = pd.read_csv(negative_data, sep="\t")
+
+    positive_bait_prey_df = positive_bait_prey_df[["gene_name_bait", "gene_name_prey"]]
+    negative_bait_prey_df = negative_bait_prey_df[["gene_name_bait", "gene_name_prey"]]
+
+    positive_bait_prey_df.columns = ["bait", "prey"]
+    negative_bait_prey_df.columns = ["bait", "prey"]
+
+    baits = set(negative_bait_prey_df["bait"]) & set(positive_bait_prey_df["bait"])
+    all_prey = set(negative_bait_prey_df["prey"]) & set(positive_bait_prey_df["prey"])
+
+    negative_bp_df = negative_bait_prey_df[
+        negative_bait_prey_df["bait"].isin(baits) & negative_bait_prey_df["prey"].isin(all_prey)].copy()
+    positive_bp_df = positive_bait_prey_df[
+        positive_bait_prey_df["bait"].isin(baits) & positive_bait_prey_df["prey"].isin(all_prey)].copy()
+
+    node_ids = {gene_name: i for i, gene_name in enumerate(baits | all_prey)}
+    id_to_gene = {i: gene for gene, i in node_ids.items()}
+    positive_diG = nx.from_pandas_edgelist(
+        positive_bp_df, "bait", "prey", create_using=nx.DiGraph()
+    )
+    negative_diG = nx.from_pandas_edgelist(
+        negative_bp_df, "bait", "prey", create_using=nx.DiGraph()
+    )
+
+    pa = scaling_fractions(len(positive_diG.edges()), len(negative_diG.edges()))
+    for pai in pa:
+        target_in, target_out, success = get_possible_scaling_factors(positive_diG, pai)
+        if success:
+            print(f"Trying a subset where {pai.numerator} : 1")
+            testF = build_flow_graph(negative_diG, target_in, target_out)
+            flow_value, flow_dict = nx.maximum_flow(testF, "source", "sink")
+            percent_output = round(flow_value / sum(target_in.values()).numerator * 100)
+
+            print(f"Flow value: {flow_value}, That being is {percent_output} %")
+
+            S = nx.DiGraph()
+            S.add_nodes_from(negative_diG.nodes())
+
+            for u, v in negative_diG.edges():
+                if flow_dict.get(("out", u), {}).get(("in", v), 0) == 1:
+                    S.add_edge(u, v)
+
+            alpha_hat = S.number_of_edges() / positive_diG.number_of_edges()
+            print(f"alpha: {alpha_hat} degree error is: {get_degree_differance(positive_diG, S, alpha_hat)}")
+
