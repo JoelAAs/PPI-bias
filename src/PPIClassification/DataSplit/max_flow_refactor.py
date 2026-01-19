@@ -41,15 +41,16 @@ def build_flow_graph(otherG, scaled_degree_in, scaled_degree_out):
 
     return F
 
-def get_degree_differance(targetG, otherG, alpha_hat):
+
+def write_degree_differance(filename, targetG, otherG, alpha_hat):
     in_degree, out_degree = get_degrees(targetG)
     in_degree_other, out_degree_other = get_degrees(otherG)
-    error = 0
-    for node in targetG.nodes():
-        error += abs(in_degree.get(node, 0) - in_degree_other.get(node, 0)*alpha_hat)
-        error += abs(out_degree.get(node, 0) - out_degree_other.get(node, 0)*alpha_hat)
 
-    return error/(2*S.number_of_edges())
+    with open(filename, "w") as w:
+        w.write("node\ttarget_in_degree\tscaled_in_degree\ttarget_out_degree\tscaled_out_degree\testimated_increase\n")
+        for node in targetG.nodes():
+            w.write(f"{node}\t{in_degree.get(node, 0)}\t{in_degree_other.get(node, 0)}\t")
+            w.write(f"{out_degree.get(node, 0)}\t{out_degree_other.get(node, 0)}\t{alpha_hat}\n")
 
 if __name__ == '__main__':
     positive_data = "work_folder/per_gene/subsets/train/ms_pos.csv"
@@ -84,7 +85,7 @@ if __name__ == '__main__':
     for pai in pa:
         target_in, target_out, success = get_possible_scaling_factors(positive_diG, pai)
         if success:
-            print(f"Trying a subset where {pai.numerator} : 1")
+            print(f"Trying a subset where {pai} : 1")
             testF = build_flow_graph(negative_diG, target_in, target_out)
             flow_value, flow_dict = nx.maximum_flow(testF, "source", "sink")
             percent_output = round(flow_value / sum(target_in.values()).numerator * 100)
@@ -99,5 +100,6 @@ if __name__ == '__main__':
                     S.add_edge(u, v)
 
             alpha_hat = S.number_of_edges() / positive_diG.number_of_edges()
-            print(f"alpha: {alpha_hat} degree error is: {get_degree_differance(positive_diG, S, alpha_hat)}")
-
+            write_degree_differance("test_node_delta.csv", positive_diG, S, alpha_hat)
+            if percent_output > 40:
+                break

@@ -1,182 +1,45 @@
-import datetime
+import math
+import random
+from fractions import Fraction
+
 import numpy as np
+import networkx as nx
 import pandas as pd
-import argparse
-import warnings
+from ortools.sat.python import cp_model
 
 
-def possible_choices(bp_matrix, row_probability, column_probability, subtractive):
-    if not subtractive:
-        row_probability = - row_probability
-        column_probability = - column_probability
-    row_probability[row_probability < 0] = 0  # remove choices in the wrong directions
-    column_probability[column_probability < 0] = 0
+def get_degrees(bait_idx, prey_idx, G):
+    target_baits = np.zeros(len(bait_idx), dtype=int)
+    target_preys = np.zeros(len(prey_idx), dtype=int)
+    for bait, prey in G.edges():
+        target_baits[bait_idx[bait]] += 1
+        target_preys[prey_idx[prey]] += 1
 
-    prob_matrix = row_probability[:, None] * column_probability[None, :]
-    possible_choice_matrix = bp_matrix * prob_matrix
+    return target_baits, target_preys
 
-    if sum(row_probability) == 0 or sum(column_probability) == 0:
-        raise ValueError("No possible bait/prey choices")
+def get_error(target_degrees, s_degree):
+    return np.abs(target_degrees[0] - s_degree[0]).sum() + np.abs(target_degrees[0] - s_degree[0]).sum()
 
-    if bp_matrix.sum() == 0:
-        raise ValueError("No PPIs left")
+def scaling_fractions(min_edges, max_edges):
+    return [
+        Fraction(i, min_edges) for i in range(max_edges, 1, -1)
+    ]
 
-    return possible_choice_matrix
 
-
-def draw_index(possible_choice_matrix):
-    flat_prob = possible_choice_matrix.ravel()
-    flat_prob = flat_prob / flat_prob.sum()
-    cum_probs = np.cumsum(flat_prob / flat_prob.sum())
-    r = np.random.rand()
-    flat_idx = np.searchsorted(cum_probs, r, side='right')
-
-    row_idx = int(flat_idx / possible_choice_matrix.shape[1])
-    col_idx = flat_idx - row_idx * possible_choice_matrix.shape[1]
-
-    return row_idx, col_idx
-
-def get_subtractive_error(row_sum, total_sum, column_sum, row_target, column_target):
-    delta_row = row_sum - row_target * total_sum
-    delta_column = column_sum - column_target * total_sum
-    row_error = np.abs(delta_row).sum()
-    col_error = np.abs(delta_column).sum()
-    return row_error, col_error
-
-def get_additive_error(additive_matrix, row_target, column_target, pos_sum):
-    additive_row_sum = additive_matrix.sum(axis = 1)
-    additive_column_sum = additive_matrix.sum(axis = 0)
-    delta_row = additive_row_sum - row_target * pos_sum
-    delta_column = additive_column_sum - column_target * pos_sum
-    row_error = np.abs(delta_row).sum()
-    col_error = np.abs(delta_column).sum()
-    return row_error, col_error
-
-def draw_and_update(bait_prey_matrix, row_target, column_target, additive_matrix, subtractive, pos_sum, n_draws):
-    all_row_index = np.zeros(n_draws)
-    all_column_index = np.zeros(n_draws)
-    all_row_errors = np.zeros(n_draws)
-    all_column_errors = np.zeros(n_draws)
-
-    is_valid_choice = True
-    for i in range(n_draws):
-        row_sum = bait_prey_matrix.sum(axis=1)  # bait_degree
-        column_sum = bait_prey_matrix.sum(axis=0)
-        total_sum = column_sum.sum()
-        row_probability = row_sum - row_target * total_sum  # excess/lack representation
-        column_probability = column_sum - column_target * total_sum
-        possible_choice_matrix = possible_choices(bait_prey_matrix, row_probability, column_probability, subtractive)
-
-        if possible_choice_matrix.sum() == 0:
-            warnings.warn("No possible choices that reduce degree imbalance!")
-            is_valid_choice = False
+def get_possible_scaling_factors(targetG, scaling):
+    target_degree_in, target_degree_out = get_degrees(targetG)
+    target_in_scaled = {}
+    target_out_scaled = {}
+    feasible = True
+    for node in targetG.nodes():
+        target_in_scaled[node] = target_degree_in[node] * scaling
+        target_out_scaled[node] = target_degree_out[node] * scaling
+        if target_in_scaled[node].denominator != 1 or target_out_scaled[node].denominator != 1:
+            feasible = False
             break
-        row_idx, col_idx = draw_index(possible_choice_matrix)
+    return target_in_scaled, target_out_scaled, feasible
 
-        row_sum[row_idx] -= 1
-        column_sum[col_idx] -= 1
-
-        if subtractive:
-            row_error, col_error = get_subtractive_error(row_sum, total_sum, column_sum, row_target, column_target)
-        else:
-            row_error, col_error = get_additive_error(additive_matrix, row_target, column_target, pos_sum)
-            additive_matrix[row_idx, col_idx] = 1
-
-        bait_prey_matrix[row_idx, col_idx] = 0
-
-        all_row_index[i] = row_idx
-        all_column_index[i] = col_idx
-        all_row_errors[i] = row_error
-        all_column_errors[i] = col_error
-
-    idx = i + int(is_valid_choice)
-    return all_row_index[:idx], all_column_index[:idx], all_row_errors[:idx], all_column_errors[:idx], bait_prey_matrix
-
-
-def subset_negative_set(negative_bp_df, positive_bp_df, select_ppi_file, subtractive_bool, size_setting,
-                        acceptable_error):
-    baits = set(negative_bp_df["bait"]) & set(positive_bp_df["bait"])
-    bait_idx = {bait: i for i, bait in enumerate(baits)}
-    idx_bait = {value: key for key, value in bait_idx.items()}
-
-    all_prey = set(negative_bp_df["prey"]) & set(positive_bp_df["prey"])
-    prey_idx = {prey: i for i, prey in enumerate(all_prey)}
-    idx_prey = {value: key for key, value in prey_idx.items()}
-
-    pos_bp_matrix = np.zeros((len(baits), len(all_prey)), dtype=int)
-    neg_bp_matrix = np.zeros((len(baits), len(all_prey)), dtype=int)
-
-    # Remove all PPIs where bait and prey is not present in both neg/pos
-    negative_bp_df = negative_bp_df[
-        negative_bp_df["bait"].isin(baits) & negative_bp_df["prey"].isin(all_prey)]
-    positive_bp_df = positive_bp_df[
-        positive_bp_df["bait"].isin(baits) & positive_bp_df["prey"].isin(all_prey)]
-
-    for bp_matrix, edge_df in zip(
-            [neg_bp_matrix, pos_bp_matrix],
-            [negative_bp_df, positive_bp_df]):
-        for b, p in edge_df.values:
-            bp_matrix[bait_idx[b], prey_idx[p]] = 1
-
-    target_row_frequency = pos_bp_matrix.sum(axis=1) / pos_bp_matrix.sum()
-    target_col_frequency = pos_bp_matrix.sum(axis=0) / pos_bp_matrix.sum()
-
-    if size_setting == "equal":
-        picked_limit = pos_bp_matrix.sum()
-    else:
-        picked_limit = neg_bp_matrix.sum()
-
-    percent_degree_mean_error = round(neg_bp_matrix.sum() * acceptable_error)
-    row_error = percent_degree_mean_error
-    col_error = percent_degree_mean_error
-    print(f"Starting picking ppis with a aimed difference of at most: {percent_degree_mean_error}")
-    n = 1000
-    picked = 0
-    additive_matrix = np.zeros_like(neg_bp_matrix)
-    pos_sum = pos_bp_matrix.sum()
-    with open(select_ppi_file, "w") as w:
-        w.write(f"bait\tprey\trow_error\tcol_error\n")
-        finished = False
-        while not finished:
-            s = datetime.datetime.now()
-            batch_bait_idx_dropped, batch_prey_idx_dropped, batch_row_error, batch_col_error, neg_bp_matrix = draw_and_update(
-                bait_prey_matrix=neg_bp_matrix,
-                row_target=target_row_frequency,
-                column_target=target_col_frequency,
-                additive_matrix=additive_matrix,
-                subtractive=subtractive_bool,
-                pos_sum=pos_sum,
-                n_draws=n)
-            for bait_idx_dropped, prey_idx_dropped, row_error, col_error in zip(
-                    *[batch_bait_idx_dropped,
-                      batch_prey_idx_dropped,
-                      batch_row_error,
-                      batch_col_error]):
-                w.write(f"{idx_bait[bait_idx_dropped]}\t{idx_prey[prey_idx_dropped]}\t{row_error}\t{col_error}\n")
-            e = datetime.datetime.now()
-            picked += n
-            msg = f"{(e - s).seconds} seconds per {n} samples"
-            msg += f"error: {row_error + col_error} picked: {picked}"
-            if size_setting == "equal":
-                finished = picked < picked_limit # will fail of Nneg < Npos
-            else:
-                finished = (row_error + col_error) > percent_degree_mean_error or picked < picked_limit
-
-    selected_ppi_df = pd.read_csv(select_ppi_file, sep="\t")
-    selected_ppi_df["mean_error"] = selected_ppi_df["row_error"] + selected_ppi_df["col_error"]
-
-    if size_setting == "equal" and not subtractive_bool:
-        return selected_ppi_df.iloc[:picked_limit][["bait", "prey"]], positive_bp_df
-    else:
-        last_row = selected_ppi_df[selected_ppi_df["mean_error"] < percent_degree_mean_error]
-        if not last_row.empty:
-            last_row_idx = last_row.index.tolist()[0]
-            selected_ppi_df = selected_ppi_df.iloc[:last_row_idx]
-
-        remove_ids = selected_ppi_df[["bait", "prey"]].apply(lambda x: ":".join(x)).tolist()
-        negative_bp_df["id"] = negative_bp_df[["bait", "prey"]].apply(lambda x: ":".join(x))
-        negative_bp_df = negative_bp_df[negative_bp_df["id"].isin(remove_ids)]
-        return negative_bp_df[["bait", "prey"]], positive_bp_df
+def update_drop(s_degree, drop_idx):
 
 
 if __name__ == '__main__':
@@ -203,6 +66,12 @@ if __name__ == '__main__':
     size = args.size
     accepted_error = args.accepted_error
 
+
+
+
+
+    positive_data = "work_folder/per_gene/subsets/train/ms_pos.csv"
+    negative_data = "work_folder/per_gene/subsets/train/ms_neg.csv"
     positive_bait_prey_df = pd.read_csv(positive_data, sep="\t")
     negative_bait_prey_df = pd.read_csv(negative_data, sep="\t")
 
@@ -212,13 +81,54 @@ if __name__ == '__main__':
     positive_bait_prey_df.columns = ["bait", "prey"]
     negative_bait_prey_df.columns = ["bait", "prey"]
 
-    balanced_negative_df, balanced_positive_df = subset_negative_set(
-        negative_bait_prey_df,
-        positive_bait_prey_df,
-        selected_ppi_file,
-        subtractive,
-        size,
-        accepted_error
-    )
-    balanced_negative_df.to_csv(balanced_negative, sep="\t", index=False)
-    balanced_positive_df.to_csv(balanced_positive, sep="\t", index=False)
+    all_baits = set(positive_bait_prey_df["bait"]) | set(negative_bait_prey_df["bait"])
+    all_prey = set(positive_bait_prey_df["prey"]) | set(negative_bait_prey_df["prey"])
+
+    bait_int_idx = {bait: i for i, bait in enumerate(all_baits)}
+    prey_int_idx = {prey: i for i, prey in enumerate(all_prey)}
+
+    positive_diG = nx.from_pandas_edgelist(
+        positive_bait_prey_df, "bait", "prey", create_using=nx.DiGraph())
+    negative_diG = nx.from_pandas_edgelist(
+        negative_bait_prey_df, "bait", "prey", create_using=nx.DiGraph())
+
+    negative_edges = list(negative_diG.edges(data=True))
+    target_degrees = get_degrees(bait_int_idx, prey_int_idx, positive_diG)
+
+
+    model = cp_model.CpModel()
+    x = [model.NewBoolVar(f"x_{i}") for i in range(len(negative_edges))]
+    bait_error = [model.NewIntVar(0, len(negative_edges), f"be_{i}")
+                  for i in range(len(bait_int_idx))]
+    prey_error = [model.NewIntVar(0, len(negative_edges), f"pe_{i}")
+                  for i in range(len(prey_int_idx))]
+
+
+    pa = scaling_fractions(len(positive_diG.edges()), len(negative_diG.edges()))
+    for pai in pa:
+        target_in, target_out, success = get_possible_scaling_factors(positive_diG, pai)
+
+
+    e = 0.1
+    upper_bound_bait = list(map(target_degrees[0], lambda x: math.ceil(x*(1+e))))
+    lower_bound_bait = list(map(target_degrees[0], lambda x: math.ceil(x*(1+e))))
+
+    for bait, idx in bait_int_idx.items():
+        s = sum(x[i] for i,(u,v,d) in enumerate(negative_edges) if u == bait)
+        model.Add(bait_error[idx] >= s - target_degrees[0][idx])
+        model.Add(bait_error[idx] >= target_degrees[0][idx] - s)
+
+    # prey constraints
+    for prey, idx in prey_int_idx.items():
+        s = sum(x[i] for i,(u,v,d) in enumerate(negative_edges) if v == prey)
+        model.Add(prey_error[idx] >= s - target_degrees[1][idx])
+        model.Add(prey_error[idx] >= target_degrees[1][idx] - s)
+
+    #model.Minimize(sum(bait_error) + sum(prey_error))
+    model.maximize()
+    solver = cp_model.CpSolver()
+    solver.Solve(model)
+    selected_indices = [i for i in range(len(x)) if solver.Value(x[i]) == 1]
+    subset_edges = [negative_edges[i] for i in selected_indices]
+
+
