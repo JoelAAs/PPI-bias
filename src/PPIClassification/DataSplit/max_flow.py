@@ -111,16 +111,13 @@ if __name__ == '__main__':
                     if flow_dict.get(("out", u), {}).get(("in", v), 0) == 1:
                         S.add_edge(u, v)
 
-                nx.write_edgelist(
-                    S,
-                    max_flow_negative,
-                    comments=f"Scaled: {pai.numerator} : 1",
-                    delimiter="\t"
-                )
+                with open(max_flow_negative, "w") as w:
+                    w.write(f"Scaled: {pai.numerator} : 1\n")
+                    for u, v in S.edges():
+                        w.write(f"{u}\t{v}\t\n")
 
-                nx.write_edgelist(
-                    positive_diG,
-                    max_flow_positive,
-                    delimiter="\t"
-                )
+                with open(max_flow_positive, "w") as w:
+                    for u, v in positive_diG.edges():
+                        w.write(f"{u}\t{v}\n")
+
                 break
