@@ -1,7 +1,3 @@
-import math
-import random
-from fractions import Fraction
-
 import numpy as np
 import networkx as nx
 import pandas as pd
@@ -17,29 +13,10 @@ def get_degrees(bait_idx, prey_idx, G):
 
     return target_baits, target_preys
 
+
 def get_error(target_degrees, s_degree):
     return np.abs(target_degrees[0] - s_degree[0]).sum() + np.abs(target_degrees[0] - s_degree[0]).sum()
 
-def scaling_fractions(min_edges, max_edges):
-    return [
-        Fraction(i, min_edges) for i in range(max_edges, 1, -1)
-    ]
-
-
-def get_possible_scaling_factors(targetG, scaling):
-    target_degree_in, target_degree_out = get_degrees(targetG)
-    target_in_scaled = {}
-    target_out_scaled = {}
-    feasible = True
-    for node in targetG.nodes():
-        target_in_scaled[node] = target_degree_in[node] * scaling
-        target_out_scaled[node] = target_degree_out[node] * scaling
-        if target_in_scaled[node].denominator != 1 or target_out_scaled[node].denominator != 1:
-            feasible = False
-            break
-    return target_in_scaled, target_out_scaled, feasible
-
-def update_drop(s_degree, drop_idx):
 
 
 if __name__ == '__main__':
@@ -66,69 +43,79 @@ if __name__ == '__main__':
     size = args.size
     accepted_error = args.accepted_error
 
+    from ortools.sat.python import cp_model
+    import pandas as pd
+    import networkx as nx
+    import numpy as np
 
-
-
-
+    # ----------------------------
+    # Load data
+    # ----------------------------
     positive_data = "work_folder/per_gene/subsets/train/ms_pos.csv"
     negative_data = "work_folder/per_gene/subsets/train/ms_neg.csv"
-    positive_bait_prey_df = pd.read_csv(positive_data, sep="\t")
-    negative_bait_prey_df = pd.read_csv(negative_data, sep="\t")
 
-    positive_bait_prey_df = positive_bait_prey_df[["gene_name_bait", "gene_name_prey"]]
-    negative_bait_prey_df = negative_bait_prey_df[["gene_name_bait", "gene_name_prey"]]
+    positive_df = pd.read_csv(positive_data, sep="\t")[["gene_name_bait", "gene_name_prey"]]
+    negative_df = pd.read_csv(negative_data, sep="\t")[["gene_name_bait", "gene_name_prey"]]
 
-    positive_bait_prey_df.columns = ["bait", "prey"]
-    negative_bait_prey_df.columns = ["bait", "prey"]
+    positive_df.columns = ["bait", "prey"]
+    negative_df.columns = ["bait", "prey"]
 
-    all_baits = set(positive_bait_prey_df["bait"]) | set(negative_bait_prey_df["bait"])
-    all_prey = set(positive_bait_prey_df["prey"]) | set(negative_bait_prey_df["prey"])
+    all_baits = set(positive_df["bait"]) | set(negative_df["bait"])
+    all_preys = set(positive_df["prey"]) | set(negative_df["prey"])
 
-    bait_int_idx = {bait: i for i, bait in enumerate(all_baits)}
-    prey_int_idx = {prey: i for i, prey in enumerate(all_prey)}
+    bait_int_idx = {b: i for i, b in enumerate(all_baits)}
+    prey_int_idx = {p: i for i, p in enumerate(all_preys)}
 
     positive_diG = nx.from_pandas_edgelist(
-        positive_bait_prey_df, "bait", "prey", create_using=nx.DiGraph())
+        positive_df, "bait", "prey", create_using=nx.DiGraph())
     negative_diG = nx.from_pandas_edgelist(
-        negative_bait_prey_df, "bait", "prey", create_using=nx.DiGraph())
+        negative_df, "bait", "prey", create_using=nx.DiGraph())
 
     negative_edges = list(negative_diG.edges(data=True))
-    target_degrees = get_degrees(bait_int_idx, prey_int_idx, positive_diG)
-
+    positive_edges = list(positive_diG.edges(data=True))
 
     model = cp_model.CpModel()
-    x = [model.NewBoolVar(f"x_{i}") for i in range(len(negative_edges))]
+    xn = [model.NewBoolVar(f"xn_{i}") for i in range(len(negative_edges))]
+    xp = [model.NewBoolVar(f"xp_{i}") for i in range(len(positive_edges))]
+
+    K = model.NewIntVar(0, len(positive_edges) + len(negative_edges), "k")
+    model.add(K == sum(xn) + sum(xp))
     bait_error = [model.NewIntVar(0, len(negative_edges), f"be_{i}")
                   for i in range(len(bait_int_idx))]
-    prey_error = [model.NewIntVar(0, len(negative_edges), f"pe_{i}")
+    prey_error = [model.NewIntVar(0, len(positive_edges), f"pe_{i}")
                   for i in range(len(prey_int_idx))]
 
 
-    pa = scaling_fractions(len(positive_diG.edges()), len(negative_diG.edges()))
-    for pai in pa:
-        target_in, target_out, success = get_possible_scaling_factors(positive_diG, pai)
-
-
-    e = 0.1
-    upper_bound_bait = list(map(target_degrees[0], lambda x: math.ceil(x*(1+e))))
-    lower_bound_bait = list(map(target_degrees[0], lambda x: math.ceil(x*(1+e))))
-
     for bait, idx in bait_int_idx.items():
-        s = sum(x[i] for i,(u,v,d) in enumerate(negative_edges) if u == bait)
-        model.Add(bait_error[idx] >= s - target_degrees[0][idx])
-        model.Add(bait_error[idx] >= target_degrees[0][idx] - s)
+        s_n = sum(xn[i] for i,(u,v,d) in enumerate(negative_edges) if u == bait)
+        s_p = sum(xp[i] for i,(u,v,d) in enumerate(positive_edges) if u == bait)
+        diff = s_n - s_p
+        model.Add(bait_error[idx] >= diff)
+        model.Add(bait_error[idx] >= -diff)
 
     # prey constraints
     for prey, idx in prey_int_idx.items():
-        s = sum(x[i] for i,(u,v,d) in enumerate(negative_edges) if v == prey)
-        model.Add(prey_error[idx] >= s - target_degrees[1][idx])
-        model.Add(prey_error[idx] >= target_degrees[1][idx] - s)
+        s_n = sum(xn[i] for i, (u, v, d) in enumerate(negative_edges) if v == prey)
+        s_p = sum(xp[i] for i, (u, v, d) in enumerate(positive_edges) if v == prey)
+        diff =  s_n - s_p
+        model.Add(prey_error[idx] >= diff)
+        model.Add(prey_error[idx] >= -diff)
 
-    #model.Minimize(sum(bait_error) + sum(prey_error))
-    model.maximize()
+
+    model.minimize(sum(prey_error) + sum(bait_error) - K)
     solver = cp_model.CpSolver()
-    solver.Solve(model)
-    selected_indices = [i for i in range(len(x)) if solver.Value(x[i]) == 1]
-    subset_edges = [negative_edges[i] for i in selected_indices]
+    status = solver.Solve(model)
 
+    # ----------------------------
+    # Inspect solution
+    # ----------------------------
+
+    if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
+        for bait, idx in bait_int_idx.items():
+            degree_negative = sum(solver.Value(xn[i]) for i, (u, v, d) in enumerate(negative_edges) if u == bait)
+            degree_positive = sum(solver.Value(xp[i]) for i, (u, v, d) in enumerate(positive_edges) if u == bait)
+            delta = abs(degree_negative - degree_positive)
+            print(bait,"bp:", degree_positive,"bn:", degree_negative, "delta:", delta)
+    else:
+        print("No feasible solution found! Solver status:", status)
 
