@@ -14,7 +14,7 @@ def read_edgelist(file):
                 if match:
                     scaled_to = int(match.group(1))
 
-    df = pd.read_csv(positive_data, sep="\t")[["gene_name_bait", "gene_name_prey"]]
+    df = pd.read_csv(file, sep="\t")[["gene_name_bait", "gene_name_prey"]]
     df.columns = ["bait", "prey"]
     return df, scaled_to
 
