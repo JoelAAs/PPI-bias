@@ -41,7 +41,7 @@ def maximise_data_kept(ppi_df, partition_df, remaining_partitions):
 
 rule define_positive_negative_sets:
     params:
-        neg_limit=4,
+        neg_limit=3,
         pos_limit=0.15  # 2/2 or 3/4 etc
     input:
         gene_partition=f"work_folder{pn}/protein_sequences/similarity/gene_partition.tsv",
@@ -85,7 +85,7 @@ rule define_positive_negative_sets:
 rule balance_splits:
     params:
         script_location="src/PPIClassification/DataSplit/refactor_sampler.py",
-        error_rate=0.1
+        accepted_missmatches=2
     input:
         set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_pos.csv",
         set_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_neg.csv"
