@@ -123,3 +123,4 @@ if __name__ == '__main__':
                     max_flow_positive,
                     delimiter="\t"
                 )
+                break

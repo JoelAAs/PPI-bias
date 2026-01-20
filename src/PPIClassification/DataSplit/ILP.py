@@ -33,7 +33,7 @@ if __name__ == '__main__':
     negative_data = args.negative_data
     balanced_positive = args.balanced_positive
     balanced_negative = args.balanced_negative
-    missmatch_allowed = args.missmatch_allowed
+    missmatch_allowed = args.accepted_error
     threads = args.threads
 
     positive_df, _ = read_edgelist(positive_data)
@@ -131,7 +131,7 @@ if __name__ == '__main__':
             degree_positive = sum(solver.Value(xp[i]) for i, (u, v, d) in enumerate(positive_edges) if u == bait)
             delta = abs(degree_negative - degree_positive*scale)
             total_mismatched_bait += delta
-            
+
         for prey, idx in prey_int_idx.items():
             degree_negative = sum(solver.Value(xn[i]) for i, (u, v, d) in enumerate(negative_edges) if v == prey)
             degree_positive = sum(solver.Value(xp[i]) for i, (u, v, d) in enumerate(positive_edges) if v == prey)

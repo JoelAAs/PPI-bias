@@ -115,8 +115,8 @@ rule ilp:
         set_max_flow_pos=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_pos.edgelist",
         set_max_flow_neg=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_neg.edgelist"
     output:
-        balanced_pos=f"work_folder{pn}/subsets/{{settype}}/balanced/{{dataset}}_pos.edgelist",
-        balanced_neg=f"work_folder{pn}/subsets/{{settype}}/balanced/{{dataset}}_neg.edgelist"
+        balanced_pos=f"work_folder{pn}/subsets/{{settype}}/balanced/{{dataset}}_pos.csv",
+        balanced_neg=f"work_folder{pn}/subsets/{{settype}}/balanced/{{dataset}}_neg.csv"
     shell:
         """
         
