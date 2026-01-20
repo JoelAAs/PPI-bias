@@ -1,7 +1,7 @@
 import networkx as nx
 from fractions import Fraction
 import pandas as pd
-
+import argparse
 
 def get_degrees(G):
     degree_in = dict(G.in_degree())
@@ -52,9 +52,22 @@ def write_degree_differance(filename, targetG, otherG, alpha_hat):
             w.write(f"{node}\t{in_degree.get(node, 0)}\t{in_degree_other.get(node, 0)}\t")
             w.write(f"{out_degree.get(node, 0)}\t{out_degree_other.get(node, 0)}\t{alpha_hat}\n")
 
+
 if __name__ == '__main__':
-    positive_data = "work_folder/per_gene/subsets/train/ms_pos.csv"
-    negative_data = "work_folder/per_gene/subsets/train/ms_neg.csv"
+    parser = argparse.ArgumentParser(description="Get mean embeddings from protein fasta")
+    parser.add_argument("--positive_data", required=True, help="")
+    parser.add_argument("--negative_data", required=True, help="")
+    parser.add_argument("--max_flow_positive", required=True, help="Path to output csv file")
+    parser.add_argument("--max_flow_negative", required=True, help="Path to output csv file")
+    parser.add_argument("--min_max_flow", type=int, default=40, help="")
+
+    args = parser.parse_args()
+    positive_data = args.positive_data
+    negative_data = args.negative_data
+    max_flow_positive = args.max_flow_positive
+    max_flow_negative = args.max_flow_negative
+    min_max_flow = args.min_max_flow
+
     positive_bait_prey_df = pd.read_csv(positive_data, sep="\t")
     negative_bait_prey_df = pd.read_csv(negative_data, sep="\t")
 
@@ -72,8 +85,6 @@ if __name__ == '__main__':
     positive_bp_df = positive_bait_prey_df[
         positive_bait_prey_df["bait"].isin(baits) & positive_bait_prey_df["prey"].isin(all_prey)].copy()
 
-    node_ids = {gene_name: i for i, gene_name in enumerate(baits | all_prey)}
-    id_to_gene = {i: gene for gene, i in node_ids.items()}
     positive_diG = nx.from_pandas_edgelist(
         positive_bp_df, "bait", "prey", create_using=nx.DiGraph()
     )
@@ -92,14 +103,23 @@ if __name__ == '__main__':
 
             print(f"Flow value: {flow_value}, That being is {percent_output} %")
 
-            S = nx.DiGraph()
-            S.add_nodes_from(negative_diG.nodes())
+            if percent_output > min_max_flow:
+                S = nx.DiGraph()
+                S.add_nodes_from(negative_diG.nodes())
 
-            for u, v in negative_diG.edges():
-                if flow_dict.get(("out", u), {}).get(("in", v), 0) == 1:
-                    S.add_edge(u, v)
+                for u, v in negative_diG.edges():
+                    if flow_dict.get(("out", u), {}).get(("in", v), 0) == 1:
+                        S.add_edge(u, v)
 
-            alpha_hat = S.number_of_edges() / positive_diG.number_of_edges()
-            write_degree_differance("test_node_delta.csv", positive_diG, S, alpha_hat)
-            if percent_output > 40:
-                break
+                nx.write_edgelist(
+                    S,
+                    max_flow_negative,
+                    comments=f"Scaled: {pai.numerator} : 1",
+                    delimiter="\t"
+                )
+
+                nx.write_edgelist(
+                    positive_diG,
+                    max_flow_positive,
+                    delimiter="\t"
+                )

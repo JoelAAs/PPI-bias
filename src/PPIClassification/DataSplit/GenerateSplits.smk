@@ -41,7 +41,7 @@ def maximise_data_kept(ppi_df, partition_df, remaining_partitions):
 
 rule define_positive_negative_sets:
     params:
-        neg_limit=3,
+        neg_limit=2,
         pos_limit=0.15  # 2/2 or 3/4 etc
     input:
         gene_partition=f"work_folder{pn}/protein_sequences/similarity/gene_partition.tsv",
@@ -52,12 +52,16 @@ rule define_positive_negative_sets:
         test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_pos.csv",
         test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_neg.csv",
         val_pos=f"work_folder{pn}/subsets/validation/{{dataset}}_pos.csv",
-        val_neg=f"work_folder{pn}/subsets/validation/{{dataset}}_neg.csv"
+        val_neg=f"work_folder{pn}/subsets/validation/{{dataset}}_neg.csv",
+        full_pos=f"work_folder{pn}/subsets/{{dataset}}_full_pos.csv",
+        full_neg=f"work_folder{pn}/subsets/{{dataset}}_full_neg.csv"
     run:
         df_tests = pd.read_csv(input.input_pod,sep="\t")
         partitions_df = pd.read_csv(input.gene_partition,sep="\t")
         df_pos = df_tests[df_tests["lower_bound_pod"] >= params.pos_limit]
+        df_pos.to_csv(output.full_pos,sep="\t",index=False)
         df_neg = df_tests[(df_tests["n_observed"] == 0) & (df_tests["n_tested"] >= params.neg_limit)]
+        df_neg.to_csv(output.full_neg,sep="\t",index=False)
         partitions = partitions_df["sequence_partition"].unique()
         train_combinations = list(combinations(partitions,int(len(partitions) * 0.6)))
         train_partition = sorted(
@@ -82,29 +86,45 @@ rule define_positive_negative_sets:
                 output[i * 2],sep="\t",index=False)  # NOTE: If order of output is changed, this breaks
             subset_ppi(df_neg,genes).to_csv(output[i * 2 + 1],sep="\t",index=False)
 
-rule balance_splits:
+rule maxflow_splits:
     params:
-        script_location="src/PPIClassification/DataSplit/refactor_sampler.py",
-        accepted_missmatches=2
+        script_location="src/PPIClassification/DataSplit/max_flow.py",
+        min_max_flow =65
     input:
         set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_pos.csv",
         set_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_neg.csv"
     output:
-        set_balanced_pos=f"work_folder{pn}/subsets/{{settype}}/balanced_{{dataset}}_pos.csv",
-        set_balanced_neg=f"work_folder{pn}/subsets/{{settype}}/balanced_{{dataset}}_neg.csv"
+        set_max_flow_pos=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_pos.edgelist",
+        set_max_flow_neg=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_neg.edgelist"
     shell:
         """
-        if [ "{wildcards.settype}" == "test" ]; then 
-            size="equal"
-        else
-            size="max"
-        fi
         python3 {params.script_location} \
             --positive_data {input.set_pos} \
             --negative_data {input.set_neg} \
-            --balanced_negative {output.set_balanced_pos} \
-            --balanced_positive {output.set_balanced_neg} \
-            --size $size \
-            --accepted_error {params.error_rate}
+            --max_flow_positive {output.set_max_flow_pos} \
+            --max_flow_negative {output.set_max_flow_neg} \
+            --min_max_flow {params.min_max_flow} 
+        """
+
+rule ilp:
+    params:
+        script_location="src/PPIClassification/DataSplit/ILP.py",
+        accepted_missmatch = 2
+    threads: 20
+    input:
+        set_max_flow_pos=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_pos.edgelist",
+        set_max_flow_neg=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_neg.edgelist"
+    output:
+        balanced_pos=f"work_folder{pn}/subsets/{{settype}}/balanced/{{dataset}}_pos.edgelist",
+        balanced_neg=f"work_folder{pn}/subsets/{{settype}}/balanced/{{dataset}}_neg.edgelist"
+    shell:
+        """
         
+        python3 {params.script_location} \
+            --positive_data {input.set_max_flow_pos} \
+            --negative_data {input.set_max_flow_neg} \
+            --balanced_negative {output.balanced_pos} \
+            --balanced_positive {output.balanced_neg} \
+            --accepted_error {params.accepted_missmatch} \
+            --threads  {threads}
         """
