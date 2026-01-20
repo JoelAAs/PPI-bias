@@ -14,8 +14,8 @@ def read_edgelist(file):
                 if match:
                     scaled_to = int(match.group(1))
 
-    df = pd.read_csv(file, sep="\t", comment='#')
-    df.rename({0: "bait", 1:"prey"}, axis=1, inplace=True)
+    df = pd.read_csv(file, sep="\t", header=None, comment='#')
+    df = df.rename({0: "bait", 1:"prey"}, axis=1)
     return df, scaled_to
 
 
@@ -53,9 +53,6 @@ if __name__ == '__main__':
 
     positive_edges = list(positive_diG.edges(data=True))
     negative_edges = list(negative_diG.edges(data=True))
-
-    all_baits = set(positive_df["bait"]) | set(negative_df["bait"])
-    all_preys = set(positive_df["prey"]) | set(negative_df["prey"])
 
     positive_edge_list_df = pd.DataFrame(positive_edges)
     positive_edge_list_df.columns = ["bait", "prey", "data"]
