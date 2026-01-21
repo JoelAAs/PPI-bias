@@ -111,11 +111,14 @@ if __name__ == '__main__':
         model.Add(prey_error[idx] >= 0)
 
     print("Minimizing degree delta and edges removed ...")
-    model.Minimize(sum(bait_error) + sum(prey_error) - K*1.5)
+    model.Minimize(10*sum(bait_error) + 10*sum(prey_error) - K*15)
     solver = cp_model.CpSolver()
+    solver.parameters.max_time_in_seconds = 600
+    solver.parameters.log_search_progress = True
     solver.parameters.num_workers = threads
     status = solver.Solve(model)
     print("Finished optimization")
+
 
     if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
         total_mismatched_bait = 0

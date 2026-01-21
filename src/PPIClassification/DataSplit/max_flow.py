@@ -10,6 +10,8 @@ def get_degrees(G):
 
 
 def scaling_fractions(min_edges, max_edges):
+    if max_edges/min_edges > 100:
+        max_edges = min_edges*100
     return [
         Fraction(i, min_edges) for i in range(max_edges, 1, -1)
     ]

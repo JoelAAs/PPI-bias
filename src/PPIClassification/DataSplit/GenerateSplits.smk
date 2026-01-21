@@ -90,6 +90,7 @@ rule maxflow_splits:
     params:
         script_location="src/PPIClassification/DataSplit/max_flow.py",
         min_max_flow =65
+    log: "logs/maxflow/maxflow_{settype}_{dataset}.log"
     input:
         set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_pos.csv",
         set_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_neg.csv"
@@ -97,20 +98,21 @@ rule maxflow_splits:
         set_max_flow_pos=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_pos.edgelist",
         set_max_flow_neg=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_neg.edgelist"
     shell:
-        """
+        """(
         python3 {params.script_location} \
             --positive_data {input.set_pos} \
             --negative_data {input.set_neg} \
             --max_flow_positive {output.set_max_flow_pos} \
             --max_flow_negative {output.set_max_flow_neg} \
             --min_max_flow {params.min_max_flow} 
-        """
+        ) >{log} 2>&1"""
 
 rule ilp:
     params:
         script_location="src/PPIClassification/DataSplit/ILP.py",
         accepted_missmatch = 2
     threads: 20
+    log: "logs/ilp/ilp_{settype}_{dataset}.log"
     input:
         set_max_flow_pos=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_pos.edgelist",
         set_max_flow_neg=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_neg.edgelist"
@@ -118,7 +120,7 @@ rule ilp:
         balanced_pos=f"work_folder{pn}/subsets/{{settype}}/balanced/{{dataset}}_pos.csv",
         balanced_neg=f"work_folder{pn}/subsets/{{settype}}/balanced/{{dataset}}_neg.csv"
     shell:
-        """
+        """(
         
         python3 {params.script_location} \
             --positive_data {input.set_max_flow_pos} \
@@ -127,4 +129,4 @@ rule ilp:
             --balanced_positive {output.balanced_neg} \
             --accepted_error {params.accepted_missmatch} \
             --threads  {threads}
-        """
+        ) >{log} 2>&1"""
