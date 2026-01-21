@@ -16,7 +16,7 @@ def get_dataset(pos_data_file, neg_data_file, embedding_dict, embed_length):
     X = np.zeros((n_samples, embed_length*2,), dtype=float)
     i = 0
     for c_df in [df_pos, df_negative]:
-        for _, (bait_gene_name, prey_gene_name) in c_df.iterrows():
+        for _, (bait_gene_name, prey_gene_name) in c_df.iloc[:,:2].iterrows():
             X[i,:embed_length] = embedding_dict[bait_gene_name]
             X[i, embed_length:embed_length*2] = embedding_dict[prey_gene_name]
             i += 1
@@ -36,9 +36,10 @@ def get_embedding_dict(protein_embeddings_file):
     return embedding_dict, embed_length
 
 
-def hyperparameter_tuned_model(X_train, y_train, X_test, y_test, threads):
+def hyperparameter_tuned_model(X_train, y_train, X_test, y_test, threads, n_iters=50):
+    print("Hyperparameter tuning started")
     param_dist = {
-        "n_estimators": randint(200, 100000),
+        "n_estimators": randint(1000, 10000),
         "max_depth": [None] + list(range(5, 50, 5)),
         "min_samples_split": randint(2, 20),
         "min_samples_leaf": randint(1, 10),
@@ -49,7 +50,8 @@ def hyperparameter_tuned_model(X_train, y_train, X_test, y_test, threads):
     best_model = None
     best_params = None
 
-    for params in ParameterSampler(param_dist, n_iter=30, random_state=RANDOM_STATE):
+    for params in ParameterSampler(param_dist, n_iter=n_iters, random_state=RANDOM_STATE):
+        print(f"N_estimators: {params['n_estimators']}")
         model = RandomForestClassifier(
             **params,
             random_state=RANDOM_STATE,
@@ -60,7 +62,7 @@ def hyperparameter_tuned_model(X_train, y_train, X_test, y_test, threads):
 
         y_test_pred = model.predict(X_test)
         score = accuracy_score(y_test, y_test_pred)
-
+        print(f"Current score: {score} current n_estimators: {model.n_estimators}")
         if score > best_score:
             best_score = score
             best_model = model
@@ -116,8 +118,10 @@ if __name__ == '__main__':
     dataset="ms"
     threads = 40
     RANDOM_STATE=1234
+    print("Creating embedding dict ... ")
     embed_dict, n_embedding =  get_embedding_dict(f"work_folder{pn}/embeddings/canonical_embedding.csv.gz")
 
+    print("Reading training data ... ")
     X_train, y_train = get_dataset(
         f"work_folder{pn}/subsets/train/balanced/{dataset}_pos.csv",
         f"work_folder{pn}/subsets/train/balanced/{dataset}_neg.csv",
@@ -125,6 +129,7 @@ if __name__ == '__main__':
         n_embedding
     )
 
+    print("Reading test data ... ")
     X_test, y_test = get_dataset(
         f"work_folder{pn}/subsets/test/balanced/{dataset}_pos.csv",
         f"work_folder{pn}/subsets/test/balanced/{dataset}_neg.csv",
@@ -132,9 +137,10 @@ if __name__ == '__main__':
         n_embedding
     )
 
+    print("Reading validation data ... ")
     X_validate, y_validate = get_dataset(
-        f"work_folder{pn}/subsets/test/balanced/{dataset}_pos.csv",
-        f"work_folder{pn}/subsets/test/balanced/{dataset}_neg.csv",
+        f"work_folder{pn}/subsets/validation/{dataset}_pos.csv",
+        f"work_folder{pn}/subsets/validation/{dataset}_neg.csv",
         embed_dict,
         n_embedding
     )
