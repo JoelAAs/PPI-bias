@@ -62,7 +62,7 @@ if __name__ == '__main__':
     parser.add_argument("--max_flow_positive", required=True, help="Path to output csv file")
     parser.add_argument("--max_flow_negative", required=True, help="Path to output csv file")
     parser.add_argument("--min_max_flow", type=int, default=40, help="")
-    parser.add_argument("--subset", dtype=str)
+    parser.add_argument("--subset", type=str)
 
     args = parser.parse_args()
     positive_data = args.positive_data
@@ -94,7 +94,7 @@ if __name__ == '__main__':
     negative_diG = nx.from_pandas_edgelist(
         negative_bp_df, "bait", "prey", create_using=nx.DiGraph()
     )
-
+    success = False
     if args.subset == "test":
         pa = [Fraction(i, 1) for i in range(7,1,-1)]
     else:
@@ -125,5 +125,7 @@ if __name__ == '__main__':
                 with open(max_flow_positive, "w") as w:
                     for u, v in positive_diG.edges():
                         w.write(f"{u}\t{v}\n")
+                success = True
                 break
-    raise ValueError(f"No possible subsett with flow > {min_max_flow} %")
+    if not success:
+        raise ValueError(f"No possible subsett with flow > {min_max_flow} %")
