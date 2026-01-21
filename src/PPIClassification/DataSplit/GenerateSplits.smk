@@ -104,7 +104,8 @@ rule maxflow_splits:
             --negative_data {input.set_neg} \
             --max_flow_positive {output.set_max_flow_pos} \
             --max_flow_negative {output.set_max_flow_neg} \
-            --min_max_flow {params.min_max_flow} 
+            --min_max_flow {params.min_max_flow} \
+            --subset {wildcards.settype}
         ) >{log} 2>&1"""
 
 rule ilp:
@@ -125,8 +126,9 @@ rule ilp:
         python3 {params.script_location} \
             --positive_data {input.set_max_flow_pos} \
             --negative_data {input.set_max_flow_neg} \
-            --balanced_negative {output.balanced_pos} \
-            --balanced_positive {output.balanced_neg} \
+            --balanced_positive {output.balanced_pos} \
+            --balanced_negative {output.balanced_neg} \
             --accepted_error {params.accepted_missmatch} \
-            --threads  {threads}
+            --threads {threads} \
+            --subset {wildcards.settype}
         ) >{log} 2>&1"""

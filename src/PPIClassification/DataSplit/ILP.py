@@ -27,6 +27,7 @@ if __name__ == '__main__':
     parser.add_argument("--balanced_positive", required=True, help="Path to output csv file")
     parser.add_argument("--accepted_error", type=int, default=2, help="Path to output csv file")
     parser.add_argument("--threads", type=int, default=8, help="Path to output csv file")
+    parser.add_argument("--subset",default="", help="Yes")
 
     args = parser.parse_args()
     positive_data = args.positive_data
@@ -83,8 +84,15 @@ if __name__ == '__main__':
     xn = [model.NewBoolVar(f"xn_{i}") for i in range(len(negative_edges))]
     xp = [model.NewBoolVar(f"xp_{i}") for i in range(len(positive_edges))]
 
-    K = model.NewIntVar(0, len(positive_edges) + len(negative_edges), "k")
-    model.add(K == sum(xn) + sum(xp))
+    Kp = model.NewIntVar(0, len(positive_edges), "kp")
+    Kn = model.NewIntVar(0, len(negative_edges), "kp")
+    model.add(Kp == sum(xp))
+    model.add(Kn == sum(xn))
+
+    if args.subset=="test":
+        model.Add(Kp==Kn)
+        scale=1
+
     bait_error = [model.NewIntVar(0, len(negative_edges), f"be_{i}")
                   for i in range(len(bait_int_idx))]
     prey_error = [model.NewIntVar(0, len(positive_edges), f"pe_{i}")
@@ -111,7 +119,7 @@ if __name__ == '__main__':
         model.Add(prey_error[idx] >= 0)
 
     print("Minimizing degree delta and edges removed ...")
-    model.Minimize(10*sum(bait_error) + 10*sum(prey_error) - K*15)
+    model.Minimize(10*sum(bait_error) + 10*sum(prey_error) - Kn*10 - Kp*15)
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = 600
     solver.parameters.log_search_progress = True

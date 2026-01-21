@@ -62,6 +62,7 @@ if __name__ == '__main__':
     parser.add_argument("--max_flow_positive", required=True, help="Path to output csv file")
     parser.add_argument("--max_flow_negative", required=True, help="Path to output csv file")
     parser.add_argument("--min_max_flow", type=int, default=40, help="")
+    parser.add_argument("--subset", dtype=str)
 
     args = parser.parse_args()
     positive_data = args.positive_data
@@ -94,7 +95,10 @@ if __name__ == '__main__':
         negative_bp_df, "bait", "prey", create_using=nx.DiGraph()
     )
 
-    pa = scaling_fractions(len(positive_diG.edges()), len(negative_diG.edges()))
+    if args.subset == "test":
+        pa = [Fraction(i, 1) for i in range(7,1,-1)]
+    else:
+        pa = scaling_fractions(len(positive_diG.edges()), len(negative_diG.edges()))
     for pai in pa:
         target_in, target_out, success = get_possible_scaling_factors(positive_diG, pai)
         if success:
@@ -114,12 +118,12 @@ if __name__ == '__main__':
                         S.add_edge(u, v)
 
                 with open(max_flow_negative, "w") as w:
-                    w.write(f"Scaled: {pai.numerator} : 1\n")
+                    w.write(f"#Scaled: {pai.numerator} : 1\n")
                     for u, v in S.edges():
                         w.write(f"{u}\t{v}\t\n")
 
                 with open(max_flow_positive, "w") as w:
                     for u, v in positive_diG.edges():
                         w.write(f"{u}\t{v}\n")
-
                 break
+    raise ValueError(f"No possible subsett with flow > {min_max_flow} %")
