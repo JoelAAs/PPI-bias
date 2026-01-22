@@ -97,7 +97,9 @@ wildcard_constraints:
     cell_line="_[_a-zA-Z]+",
     subset="[a-zA-Z0-9-]+",
     model="[_a-zA-Z0-9-]+",
-    pid="[:a-zA-Z0-9-]+"
+    pid="[:a-zA-Z0-9-]+",
+    neg_limit="[0-9.]+]",
+    pos_limit="[0-9.]+"
 
 
 rule all:
