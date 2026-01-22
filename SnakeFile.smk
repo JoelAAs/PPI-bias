@@ -90,6 +90,7 @@ include: "src/Analysis/CompareLocalisationMethod/MethodLocalisation.smk"
 include: "src/PPIClassification/Embeddings/Embeddings.smk"
 include: "src/PPIClassification/DataSplit/SequanceSimilarityPartition.smk"
 include: "src/PPIClassification/DataSplit/GenerateSplits.smk"
+include: "src/PPIClassification/Classification/RandomForest.smk"
 include: "src/Plotting/get_plots.smk"
 
 wildcard_constraints:
@@ -101,8 +102,11 @@ wildcard_constraints:
 
 rule all:
     input:
-        expected_output,
-        f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
+        expand(f"work_folder{pn}/classification/randomforest/parametes_{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.txt",
+            dataset=datasets, neg_limit=4, pos_limit = 0.15
+        )
+        #expected_output,
+        #f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
         #f"work_folder{pn}/plots/degree/GO_enrichment.png",
         #f"work_folder{pn}/plots/localisation/HuRI_bioplex.png",
         #f"work_folder{pn}/plots/membrane/HuRI_bioplex.png"
