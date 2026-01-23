@@ -99,7 +99,7 @@ rule get_METIS_adjacency_list:
         with open(output.similarity_mentis,"w") as w:
             w.write(f'{G.number_of_nodes()} {G.number_of_edges()} 11\n') # 11 for node and edge weights
             for i, node in sorted_nodes:
-                line = f"{node_weights[node]}  "
+                line = f"{node_weights.get(node, 0)}  "
                 line += " ".join([
                     f'{int_mapping[edge[1]]} {edge[2]["bitscore_p_residue"]}' for
                     edge in G.edges(node,data=True)])
