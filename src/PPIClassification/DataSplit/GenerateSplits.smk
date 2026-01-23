@@ -59,7 +59,7 @@ rule get_positive_set:
     run:
         df_pod = pd.read_csv(input.input_pod,sep="\t")
         df_pos = df_pod[df_pod["lower_bound_pod"] >= float(wildcards.pos_limit)]
-        df_pos.to_csv(output.full_neg, sep="\t", index=False)
+        df_pos.to_csv(output.full_pos, sep="\t", index=False)
 
 rule define_negative_sets:
     input:

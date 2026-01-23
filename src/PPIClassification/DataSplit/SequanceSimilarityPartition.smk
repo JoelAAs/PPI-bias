@@ -122,7 +122,7 @@ rule get_kahip_partitions:
 
 rule get_gene_to_partition:
     input:
-        partitions = f"work_folder{pn}/protein_sequences/similarity/{{dataset}}/partitons/clusters_kaffpa_poslimit_{{pos_limit}}.txt",
+        partitions = f"work_folder{pn}/protein_sequences/similarity/{{dataset}}/partitions/clusters_kaffpa_poslimit_{{pos_limit}}.txt",
         gene_int_id= f"work_folder{pn}/protein_sequences/similarity/{{dataset}}/gene_int_id_poslimit_{{pos_limit}}.tsv"
     output:
         gene_partition = f"work_folder{pn}/protein_sequences/similarity/{{dataset}}/gene_partition_poslimit_{{pos_limit}}.tsv"
