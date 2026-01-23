@@ -55,7 +55,7 @@ rule get_positive_set:
     input:
         input_pod=f"work_folder{pn}/analysis/POD/POD_{{dataset}}.csv",
     output:
-        full_pos = f"work_folder{pn}/subsets/{{dataset}}_full_limit_{{pos_limit}}_pos.csv"
+        full_pos = f"work_folder{pn}/subsets/{{dataset}}_full_limit_poslimit_{{pos_limit}}_pos.csv"
     run:
         df_pod = pd.read_csv(input.input_pod,sep="\t")
         df_pos = df_pod[df_pod["lower_bound_pod"] >= float(wildcards.pos_limit)]
@@ -86,7 +86,7 @@ rule define_negative_sets:
 rule define_positive_sets:
     input:
         gene_partition=f"work_folder{pn}/protein_sequences/similarity/{{dataset}}/gene_partition_poslimit_{{pos_limit}}.tsv",
-        full_pos = f"work_folder{pn}/subsets/{{dataset}}_full_limit_{{pos_limit}}_pos.csv"
+        full_pos = f"work_folder{pn}/subsets/{{dataset}}_full_limit_poslimit_{{pos_limit}}_pos.csv"
     output:
         train_pos=f"work_folder{pn}/subsets/train/{{dataset}}_limit_{{pos_limit}}_pos.csv",
         train_partition_genes = f"work_folder{pn}/subsets/train/genes/genes_{{dataset}}_{{pos_limit}}.txt",
