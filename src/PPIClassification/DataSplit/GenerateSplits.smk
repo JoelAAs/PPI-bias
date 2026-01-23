@@ -51,7 +51,15 @@ rule get_negative_set:
             (df_pod["n_tested"] >= int(wildcards.neg_limit))]
         df_neg.to_csv(output.full_neg, sep="\t", index=False)
 
-
+rule get_positive_set:
+    input:
+        input_pod=f"work_folder{pn}/analysis/POD/POD_{{dataset}}.csv",
+    output:
+        full_pos = f"work_folder{pn}/subsets/{{dataset}}_full_limit_{{pos_limit}}_pos.csv"
+    run:
+        df_pod = pd.read_csv(input.input_pod,sep="\t")
+        df_pos = df_pod[df_pod["lower_bound_pod"] >= float(wildcards.pos_limit)]
+        df_pos.to_csv(output.full_neg, sep="\t", index=False)
 
 rule define_negative_sets:
     input:
@@ -77,8 +85,8 @@ rule define_negative_sets:
 
 rule define_positive_sets:
     input:
-        gene_partition=f"work_folder{pn}/protein_sequences/similarity/gene_partition.tsv",
-        input_pod= f"work_folder{pn}/analysis/POD/POD_{{dataset}}.csv"
+        gene_partition=f"work_folder{pn}/protein_sequences/similarity/gene_partition_poslimit_{{pos_limit}}.tsv",
+        full_pos = f"work_folder{pn}/subsets/{{dataset}}_full_limit_{{pos_limit}}_pos.csv"
     output:
         train_pos=f"work_folder{pn}/subsets/train/{{dataset}}_limit_{{pos_limit}}_pos.csv",
         train_partition_genes = f"work_folder{pn}/subsets/train/genes/genes_{{dataset}}_{{pos_limit}}.txt",
@@ -86,12 +94,9 @@ rule define_positive_sets:
         validate_partition_genes= f"work_folder{pn}/subsets/validation/genes/genes_{{dataset}}_{{pos_limit}}.txt",
         test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_limit_{{pos_limit}}_pos.csv",
         test_partition_genes= f"work_folder{pn}/subsets/test/genes/genes_{{dataset}}_{{pos_limit}}.txt",
-        full_pos=f"work_folder{pn}/subsets/{{dataset}}_full_limit_{{pos_limit}}_pos.csv"
     run:
-        df_tests = pd.read_csv(input.input_pod,sep="\t")
+        df_pos = pd.read_csv(input.full_pos,sep="\t")
         partitions_df = pd.read_csv(input.gene_partition,sep="\t")
-        df_pos = df_tests[df_tests["lower_bound_pod"] >= float(wildcards.pos_limit)]
-        df_pos.to_csv(output.full_pos,sep="\t",index=False)
         partitions = partitions_df["sequence_partition"].unique()
         train_combinations = list(combinations(partitions,int(len(partitions) * 0.6)))
         train_partition = sorted(
