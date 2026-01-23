@@ -62,10 +62,10 @@ rule get_METIS_adjacency_list:
         prey_count = pos_edges.groupby("gene_name_prey",as_index=False).size().rename(
             {"gene_name_prey": "gene_name"},axis=1)
         edge_per_gene = bait_count.merge(prey_count, on="gene_name", how="outer").fillna(0) # NOTE: assumes no homodimers
-        edge_per_gene["frequency"] = (edge_per_gene["size_x"] + edge_per_gene["size_y"])/n_pos_edges
-        node_weights = {g:w for i, (g, w) in edge_per_gene[["gene_name", "frequency"]].iterrows()}
+        edge_per_gene["n_edges"] = (edge_per_gene["size_x"] + edge_per_gene["size_y"])
+        node_weights = {g:int(w) for i, (g, w) in edge_per_gene[["gene_name", "n_edges"]].iterrows()}
 
-        #
+        # Edge normalized bitscore
         gene_seq_dict = read_fasta(input.aa_seq_fasta)
         mean_length = round(sum([len(s) for s in gene_seq_dict.values()]) / len(gene_seq_dict))
         ava_blast_df = pd.read_csv(input.similarity_tsv,header=None,sep="\t")
