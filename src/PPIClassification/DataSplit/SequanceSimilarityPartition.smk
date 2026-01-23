@@ -112,9 +112,9 @@ rule get_kahip_partitions:
         seed=config["seed"],
         k = 12
     input:
-        similarity_mentis=f"work_folder{pn}/protein_sequences/similarity/avg_bitscore_poslimit_{{pos_limit}}.graph"
+        similarity_mentis=f"work_folder{pn}/protein_sequences/similarity/{{dataset}}/avg_bitscore_poslimit_{{pos_limit}}.graph"
     output:
-        partitions=f"work_folder{pn}/protein_sequences/similarity/partitions/clusters_kaffpa_poslimit_{{pos_limit}}.txt"
+        partitions=f"work_folder{pn}/protein_sequences/similarity/{{dataset}}/partitions/clusters_kaffpa_poslimit_{{pos_limit}}.txt"
     shell:
         """
         {params.kahip_location}  {input.similarity_mentis} --seed={params.seed} --output_file={output.partitions} --k={params.k} --preconfiguration=strong 
@@ -122,10 +122,10 @@ rule get_kahip_partitions:
 
 rule get_gene_to_partition:
     input:
-        partitions = f"work_folder{pn}/protein_sequences/similarity/partitons/clusters_kaffpa_poslimit_{{pos_limit}}.txt",
-        gene_int_id= f"work_folder{pn}/protein_sequences/similarity/gene_int_id_poslimit_{{pos_limit}}.tsv"
+        partitions = f"work_folder{pn}/protein_sequences/similarity/{{dataset}}/partitons/clusters_kaffpa_poslimit_{{pos_limit}}.txt",
+        gene_int_id= f"work_folder{pn}/protein_sequences/similarity/{{dataset}}/gene_int_id_poslimit_{{pos_limit}}.tsv"
     output:
-        gene_partition = f"work_folder{pn}/protein_sequences/similarity/gene_partition_poslimit_{{pos_limit}}.tsv"
+        gene_partition = f"work_folder{pn}/protein_sequences/similarity/{{dataset}}/gene_partition_poslimit_{{pos_limit}}.tsv"
     run:
         rows = []
         int_id = 1

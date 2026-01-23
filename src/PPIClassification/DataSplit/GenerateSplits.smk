@@ -85,7 +85,7 @@ rule define_negative_sets:
 
 rule define_positive_sets:
     input:
-        gene_partition=f"work_folder{pn}/protein_sequences/similarity/gene_partition_poslimit_{{pos_limit}}.tsv",
+        gene_partition=f"work_folder{pn}/protein_sequences/similarity/{{dataset}}/gene_partition_poslimit_{{pos_limit}}.tsv",
         full_pos = f"work_folder{pn}/subsets/{{dataset}}_full_limit_{{pos_limit}}_pos.csv"
     output:
         train_pos=f"work_folder{pn}/subsets/train/{{dataset}}_limit_{{pos_limit}}_pos.csv",
