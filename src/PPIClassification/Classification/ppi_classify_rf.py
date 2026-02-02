@@ -4,9 +4,10 @@ import datetime
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-from scipy.stats import randint
+from scipy.stats import randint, uniform
 from sklearn.metrics import accuracy_score, classification_report, balanced_accuracy_score
 from sklearn.model_selection import ParameterSampler
+from sklearn.metrics import f1_score
 
 global RANDOM_STATE
 
@@ -41,13 +42,22 @@ def get_embedding_dict(protein_embeddings_file):
 
 def hyperparameter_tuned_model(X_train, y_train, X_validation, y_validation, n_threads, fileout, n_iters=10):
     print("Hyperparameter tuning started")
+
     param_dist = {
-        "n_estimators": randint(200, 800),
-        "max_depth": randint(4, 12),
-        "min_samples_split": randint(20, 200),
-        "min_samples_leaf": randint(10, 100),
-        "max_features": ["sqrt"],
-        "class_weight": ["balanced"]
+        "n_estimators": randint(400, 2000),
+        "max_depth": [None, 8, 10, 12, 16, 20, 24],
+        "min_samples_split": randint(10, 500),
+        "min_samples_leaf": randint(20, 300),
+        "ccp_alpha": [0.0, 1e-5, 1e-4, 1e-3],
+        "max_features": [
+            "sqrt",
+            "log2",
+            0.05, 0.1, 0.2, 0.3
+        ],
+        "bootstrap": [True],
+        "max_samples": uniform(0.5, 0.5),
+        "min_impurity_decrease": [0.0, 1e-4, 1e-3, 1e-2],
+        "class_weight": ["balanced", "balanced_subsample"]
     }
 
     best_score = -np.inf
@@ -69,11 +79,11 @@ def hyperparameter_tuned_model(X_train, y_train, X_validation, y_validation, n_t
         fileout.write("Current params: " + str(params) + "\n")
 
         y_test_pred = model.predict(X_validation)
-        score = balanced_accuracy_score(y_validation, y_test_pred)
+        score = f1_score(y_validation, y_test_pred, average="macro")
         fileout.write(f"Current score: {score} for Validation current n_estimators: {model.n_estimators}\n")
 
         y_train_pred = model.predict(X_train)
-        t_score = balanced_accuracy_score(y_train, y_train_pred)
+        t_score = f1_score(y_train, y_train_pred, average="macro")
         fileout.write(f"Current score: {t_score} for Train current n_estimators: {model.n_estimators}\n")
 
         if score > best_score:
@@ -132,7 +142,7 @@ if __name__ == '__main__':
     )
 
     param_file = open(args.params_out, "w")
-    _, score, parameters = hyperparameter_tuned_model(X_train, y_train, X_validate, y_validate, threads, param_file, n_iters = 50)
+    _, score, parameters = hyperparameter_tuned_model(X_train, y_train, X_validate, y_validate, threads, param_file, n_iters = 2)
 
     # DON'T TOUCH UNTIL MIDSOMMAR
     # rfc = RandomForestClassifier(

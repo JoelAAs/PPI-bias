@@ -120,7 +120,7 @@ if __name__ == '__main__':
                 with open(max_flow_negative, "w") as w:
                     w.write(f"#Scaled: {pai.numerator} : 1\n")
                     for u, v in S.edges():
-                        w.write(f"{u}\t{v}\t\n")
+                        w.write(f"{u}\t{v}\n")
 
                 with open(max_flow_positive, "w") as w:
                     for u, v in positive_diG.edges():

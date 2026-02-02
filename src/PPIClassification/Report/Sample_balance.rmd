@@ -1,0 +1,231 @@
+---
+title: "Check bait/prey balance"
+output: html_notebook
+---
+
+```{r load_data, echo=F}
+library(ggplot2)
+library(tidyverse)
+library(emdist)
+
+wasserstein1D <- function(pos_hist, neg_hist) {
+  # W1 distance
+}
+get_scaling_value <- function(neg_file) {
+  first_line <- readLines(neg_file, n = 1)
+  N <- as.numeric(sub(".*Scaled:\\s*(\\d+).*", "\\1", first_line))
+  return(N)
+}
+
+get_degree <- function(df) {
+  bait_count <- as.data.frame(table(df["bait"]))
+  colnames(bait_count) <- c("gene_name", "degree")
+  bait_count["group"] <- "bait"
+
+  prey_count <- as.data.frame(table(df["prey"]))
+  colnames(prey_count) <- c("gene_name", "degree")
+  prey_count["group"] <- "prey"
+
+  rbind(bait_count, prey_count) %>% return
+}
+
+get_degree_diff <- function(df_degree_pos, df_degree_neg) {
+  df_degree_diff <- merge(
+    df_degree_pos,
+    df_degree_neg,
+    by = c("gene_name", "group"),
+    how = "outer",
+    suffixes = c("_pos", "_neg")
+  )
+
+  df_degree_diff[is.na(df_degree_diff)] <- 0
+  return(df_degree_diff)
+}
+
+get_wasserstein <- function(df_delta, aimed_scaling) {
+  max_degrees <- as.numeric(max(c(max(df_delta$degree_pos * aimed_scaling), max(df_delta$degree_neg))))
+  pos_hist <- rep(0, max_degrees)
+  neg_hist <- rep(0, max_degrees)
+  pos_hist_values <- table(df_delta$degree_pos * aimed_scaling)
+  pos_hist[as.numeric(names(pos_hist_values))] <- pos_hist_values
+  neg_hist_values <- table(df_delta$degree_neg)
+  neg_hist[as.numeric(names(neg_hist_values))] <- neg_hist_values
+  pos_hist <- pos_hist / sum(pos_hist)
+  neg_hist <- neg_hist / sum(neg_hist)
+
+  cdf_pos <- cumsum(pos_hist)
+  cdf_neg <- cumsum(neg_hist)
+  wasserstein_distance <- sum(abs(cdf_pos - cdf_neg))
+
+
+  return(list(wasserstein_distance, cdf_pos, cdf_neg))
+}
+
+plot_wasserstain <- function(df_delta, aimed_scaling) {
+  prey_wasser_list <- df_delta %>%
+    filter(group == "prey") %>%
+    get_wasserstein(aimed_scaling)
+
+  plot_df_prey <- data.frame(
+    degree = seq_along(prey_wasser_list[[2]]),
+    cum_degree_pos = prey_wasser_list[[2]],
+    cum_degree_neg = prey_wasser_list[[3]],
+    group = "prey"
+  )
+
+  bait_wasser_list <- df_delta %>%
+    filter(group == "bait") %>%
+    get_wasserstein(aimed_scaling)
+
+  plot_df_bait <- data.frame(
+    degree = seq_along(bait_wasser_list[[2]]),
+    cum_degree_pos = bait_wasser_list[[2]],
+    cum_degree_neg = bait_wasser_list[[3]],
+    group = "bait"
+  )
+
+  stats_df <- data.frame(
+    x = c(length(bait_wasser_list[[2]]) * .4, length(prey_wasser_list[[2]]) * .4),
+    y = 0.1,
+    group = c("bait", "prey"),
+    label = c(
+      sprintf("Wasserstein: %.3f", bait_wasser_list[[1]]),
+      sprintf("Wasserstein: %.3f", prey_wasser_list[[1]])
+    )
+  )
+
+  plot_df <- rbind(plot_df_prey, plot_df_bait)
+
+  g <- ggplot(plot_df,
+              aes(
+                x = degree
+              )) +
+    ylim(0,1) +
+    geom_line(aes(y = cum_degree_pos, color = "positive cumsum")) +
+    geom_line(aes(y = cum_degree_neg, color = "negative cumsum")) +
+    facet_grid(~group, scales = "free") +
+    geom_text(data = stats_df, aes(x = x, y = y, label = label),
+              inherit.aes = FALSE) +
+    theme_bw() +
+    labs(
+      x = "Positive degree",
+      y = "Negative degree"
+    )
+
+  return(g)
+}
+
+
+
+plot_degree <- function(df_delta, scaling_factor) {
+  df_delta %>%
+    filter(group == "prey") %>%
+  { cor(.$degree_neg, .$degree_pos, method = "spearman") } -> spear_prey
+
+  df_delta %>%
+    filter(group == "prey") %>%
+  { cor(.$degree_neg, .$degree_pos, method = "pearson") } -> pear_prey
+
+  df_delta %>%
+    filter(group == "prey") %>%
+  { lm(degree_pos ~ degree_neg, data = .)$coefficients[2] } -> prey_slope
+
+  df_delta %>%
+    filter(group == "bait") %>%
+  { cor(.$degree_neg, .$degree_pos, method = "spearman") } -> spear_bait
+
+  df_delta %>%
+    filter(group == "bait") %>%
+  { cor(.$degree_neg, .$degree_pos, method = "pearson") } -> pear_bait
+
+  df_delta %>%
+    filter(group == "bait") %>%
+  { lm(degree_pos ~ degree_neg, data = .)$coefficients[2] } -> bait_slope
+
+  bait_y_max <- df_delta %>%
+    filter(group == "bait") %>%
+  { max(.$degree_neg) }
+  bait_x_max <- df_delta %>%
+    filter(group == "bait") %>%
+  { max(.$degree_pos) }
+
+
+  stats_df <- data.frame(
+    group = c("prey", "bait"),
+    x = bait_x_max * .3,
+    y = bait_y_max * 0.9,  # Bottom-left (0-1 scale)
+    label = c(
+      sprintf("Spear: %.3f\nPear: %.3f\nSlope^-1: %.3f\nScaling: %.0f:1",
+              spear_prey, pear_prey, 1 / prey_slope, scaling_factor),
+      sprintf("Spear: %.3f\nPear: %.3f\n1/Slope^-1: %.3f\nScaling: %.0f:1",
+              spear_bait, pear_bait, 1 / bait_slope, scaling_factor)
+    )
+  )
+  g <- ggplot(df_delta,
+              aes(
+                x = degree_pos,
+                y = degree_neg,
+                color = group
+              )) +
+    geom_point() +
+    facet_grid(~group) +
+    geom_abline(slope = scaling_factor, linetype = "dashed") +
+    geom_text(data = stats_df, aes(x = x, y = y, label = label),
+              inherit.aes = FALSE) +
+    theme_bw() +
+    labs(
+      x = "Positive degree",
+      y = "Negative degree"
+    )
+  return(g)
+}
+
+
+pos_df_file_test <- "../../../work_folder/per_gene/subsets/test/maxflow/ms_limit_4_poslim_0.15_pos.edgelist"
+neg_df_file_test <- "../../../work_folder/per_gene/subsets/test/maxflow/ms_limit_4_poslim_0.15_neg.edgelist"
+aimed_scaleing_factor_test <- get_scaling_value(neg_df_file_test)
+df_pos_test <- read.table(pos_df_file_test, sep = "\t", col.names = c("bait", "prey"))
+df_neg_test <- read.table(neg_df_file_test, sep = "\t", col.names = c("bait", "prey"), skip = 1)
+df_degree_pos_test <- get_degree(df_pos_test)
+df_degree_neg_test <- get_degree(df_neg_test)
+df_delta_test <- get_degree_diff(df_degree_pos_test, df_degree_neg_test)
+
+
+pos_df_file_train <- "../../../work_folder/per_gene/subsets/train/maxflow/ms_limit_4_poslim_0.15_pos.edgelist"
+neg_df_file_train <- "../../../work_folder/per_gene/subsets/train/maxflow/ms_limit_4_poslim_0.15_neg.edgelist"
+aimed_scaleing_factor_train <- get_scaling_value(neg_df_file_train)
+df_pos_train <- read.table(pos_df_file_train, sep = "\t", col.names = c("bait", "prey"))
+df_neg_train <- read.table(neg_df_file_train, sep = "\t", col.names = c("bait", "prey"), skip = 1)
+df_degree_pos_train <- get_degree(df_pos_train)
+df_degree_neg_train <- get_degree(df_neg_train)
+df_delta_train <- get_degree_diff(df_degree_pos_train, df_degree_neg_train)
+
+pos_df_file_validation <- "../../../work_folder/per_gene/subsets/validation/maxflow/ms_limit_4_poslim_0.15_pos.edgelist"
+neg_df_file_validation <- "../../../work_folder/per_gene/subsets/validation/maxflow/ms_limit_4_poslim_0.15_neg.edgelist"
+aimed_scaleing_factor_validation <- get_scaling_value(neg_df_file_validation)
+df_pos_validation <- read.table(pos_df_file_validation, sep = "\t", col.names = c("bait", "prey"))
+df_neg_validation <- read.table(neg_df_file_validation, sep = "\t", col.names = c("bait", "prey"), skip = 1)
+df_degree_pos_validation <- get_degree(df_pos_validation)
+df_degree_neg_validation <- get_degree(df_neg_validation)
+df_delta_validation <- get_degree_diff(df_degree_pos_validation, df_degree_neg_validation)
+```
+
+## Train data
+```{r plot_train}
+suppressWarnings(plot_degree(df_delta_train, aimed_scaleing_factor_train))
+plot_wasserstain(df_delta_train, aimed_scaleing_factor_train)
+```
+
+## Validation data
+```{r val_plot}
+suppressWarnings(plot_degree(df_delta_validation, aimed_scaleing_factor_validation))
+plot_wasserstain(df_delta_validation, aimed_scaleing_factor_validation)
+```
+
+
+## Test data
+```{r, test_plot}
+suppressWarnings(plot_degree(df_delta_test, aimed_scaleing_factor_test))
+plot_wasserstain(df_delta_test, aimed_scaleing_factor_test)
+```
+
