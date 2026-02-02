@@ -116,8 +116,8 @@ if __name__ == '__main__':
 
     print("Reading training data ... ")
     X_validate, y_validate = get_dataset(
-        args.validate_ppi_data_pos,
-        args.validate_ppi_data_neg,
+        args.validation_ppi_data_pos,
+        args.validation_ppi_data_neg,
         embed_dict,
         n_embedding
     )

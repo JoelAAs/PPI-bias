@@ -1,6 +1,6 @@
 rule random_forest_max_flow:
     params:
-        script_location = "src/PPIClassification/Classification/ppi_classify_rf"
+        script_location = "src/PPIClassification/Classification/ppi_classify_rf.py"
     input:
         train_ppi_data_pos=f"work_folder{pn}/subsets/train/maxflow/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.edgelist",
         train_ppi_data_neg=f"work_folder{pn}/subsets/train/maxflow/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.edgelist",
