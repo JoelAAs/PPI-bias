@@ -109,7 +109,7 @@ if __name__ == '__main__':
 
             print(f"Flow value: {flow_value}, That being is {percent_output} %")
 
-            if percent_output > min_max_flow:
+            if percent_output > min_max_flow or pai == 1: # Fix this one later
                 S = nx.DiGraph()
                 S.add_nodes_from(negative_diG.nodes())
 
@@ -128,4 +128,4 @@ if __name__ == '__main__':
                 success = True
                 break
     if not success:
-        raise ValueError(f"No possible subsett with flow > {min_max_flow} %")
+        raise ValueError(f"No possible subset with flow > {min_max_flow} %")
