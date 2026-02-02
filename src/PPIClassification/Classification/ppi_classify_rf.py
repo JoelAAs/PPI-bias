@@ -64,24 +64,25 @@ def hyperparameter_tuned_model(X_train, y_train, X_validation, y_validation, n_t
         s = datetime.datetime.now()
         model.fit(X_train, y_train)
         e = datetime.datetime.now()
-        fileout.write(f"Training took {e-s} for with {params['n_estimators']} estimators on {n_threads} threads")
-        fileout.write("Current params:", best_params)
+        fileout.write("---------------------")
+        fileout.write(f"Training took {e - s} for with {params['n_estimators']} estimators on {n_threads} threads\n")
+        fileout.write("Current params: " + str(params) + "\n")
 
         y_test_pred = model.predict(X_validation)
         score = balanced_accuracy_score(y_validation, y_test_pred)
-        fileout.write(f"Current score: {score} for Validation current n_estimators: {model.n_estimators}")
+        fileout.write(f"Current score: {score} for Validation current n_estimators: {model.n_estimators}\n")
 
         y_train_pred = model.predict(X_train)
         t_score = balanced_accuracy_score(y_train, y_train_pred)
-        fileout.write(f"Current score: {t_score} for Train current n_estimators: {model.n_estimators}")
+        fileout.write(f"Current score: {t_score} for Train current n_estimators: {model.n_estimators}\n")
 
         if score > best_score:
             best_score = score
             best_model = model
             best_params = params
 
-    fileout.write("Best validation score:", best_score)
-    fileout.write("Best params:", best_params)
+    fileout.write("Best validation score: " + str(best_score) + "\n")
+    fileout.write("Best params: " + str(best_params) + "\n")
 
     return best_model, score, params
 
@@ -100,11 +101,11 @@ if __name__ == '__main__':
     parser.add_argument("--randomstate", type=int, default=1234, help="")
     args = parser.parse_args()
 
-    RANDOM_STATE=args.randomstate
+    RANDOM_STATE = args.randomstate
     threads = args.threads
 
     print("Creating embedding dict ... ")
-    embed_dict, n_embedding =  get_embedding_dict(args.protein_embeddings)
+    embed_dict, n_embedding = get_embedding_dict(args.protein_embeddings)
 
     print("Reading training data ... ")
     X_train, y_train = get_dataset(
@@ -131,7 +132,7 @@ if __name__ == '__main__':
     )
 
     param_file = open(args.params_out, "w")
-    _, score, parameters = hyperparameter_tuned_model(X_train, y_train, X_validate, y_validate, threads, param_file)
+    _, score, parameters = hyperparameter_tuned_model(X_train, y_train, X_validate, y_validate, threads, param_file, n_iters = 50)
 
     # DON'T TOUCH UNTIL MIDSOMMAR
     # rfc = RandomForestClassifier(
