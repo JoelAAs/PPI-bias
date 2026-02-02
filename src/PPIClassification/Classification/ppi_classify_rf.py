@@ -46,8 +46,8 @@ def hyperparameter_tuned_model(X_train, y_train, X_validation, y_validation, n_t
         "max_depth": randint(4, 12),
         "min_samples_split": randint(20, 200),
         "min_samples_leaf": randint(10, 100),
-        "max_features": "sqrt",
-        "class_weight": "balanced"
+        "max_features": ["sqrt"],
+        "class_weight": ["balanced"]
     }
 
     best_score = -np.inf
