@@ -12,8 +12,8 @@ global RANDOM_STATE
 
 
 def get_dataset(pos_data_file, neg_data_file, embedding_dict, embed_length):
-    df_pos = pd.read_csv(pos_data_file, sep="\t", usecols=[0, 1])
-    df_negative = pd.read_csv(neg_data_file, sep="\t", usecols=[0, 1])
+    df_pos = pd.read_csv(pos_data_file, sep="\t", usecols=[0, 1], header=None)
+    df_negative = pd.read_csv(neg_data_file, sep="\t", usecols=[0, 1], header=None, comment="#")
     df_samples = pd.concat([df_pos, df_negative], ignore_index=True)
 
     baits = df_samples.iloc[:, 0].to_numpy()
@@ -65,6 +65,7 @@ def hyperparameter_tuned_model(X_train, y_train, X_validation, y_validation, n_t
         model.fit(X_train, y_train)
         e = datetime.datetime.now()
         fileout.write(f"Training took {e-s} for with {params['n_estimators']} estimators on {n_threads} threads")
+        fileout.write("Current params:", best_params)
 
         y_test_pred = model.predict(X_validation)
         score = balanced_accuracy_score(y_validation, y_test_pred)

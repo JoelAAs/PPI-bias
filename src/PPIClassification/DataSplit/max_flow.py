@@ -96,7 +96,7 @@ if __name__ == '__main__':
     )
     success = False
     if args.subset == "test":
-        pa = [Fraction(i, 1) for i in range(7,1,-1)]
+        pa = [Fraction(i, 1) for i in range(7,0,-1)]
     else:
         pa = scaling_fractions(len(positive_diG.edges()), len(negative_diG.edges()))
     for pai in pa:
