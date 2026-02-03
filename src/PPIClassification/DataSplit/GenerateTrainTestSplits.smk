@@ -1,6 +1,14 @@
 import pandas as pd
 from itertools import combinations
 
+def get_gene_partition(wc):
+    if wc["partition_name"] == "sequence_similarity":
+        return f"work_folder{pn}/subset/partitions/sequence_similarity_gene_name.txt"
+    elif wc["partition_name"] == "max_pos":
+        return f"work_folder{pn}/subset/partitions/{wc['dataset']}_limit_{wc['pos_limit']}_gene_name.txt"
+    else:
+        raise ValueError(f"unknown partition name = {wc['partition_name']}")
+
 
 def subset_ppi(ppi_df, gene_set):
     ppi_df_ss = ppi_df[
@@ -13,7 +21,7 @@ def subset_ppi(ppi_df, gene_set):
 def get_genes_in_partitions(partition_df, partition_set):
     genes_partition_set = set()
     for c_partition in partition_set:
-        genes_partition_set |= set(partition_df[partition_df["sequence_partition"] == c_partition]["gene_name"])
+        genes_partition_set |= set(partition_df[partition_df["partition"] == c_partition]["gene_name"])
     return genes_partition_set
 
 
@@ -43,7 +51,7 @@ rule get_negative_set:
     input:
         input_pod=f"work_folder{pn}/analysis/POD/POD_{{dataset}}.csv",
     output:
-        full_neg=f"work_folder{pn}/subsets/{{dataset}}_full_neg_{{neg_limit}}_limit.csv"
+        full_neg=f"work_folder{pn}/subsets/{{dataset}}_full_{{neg_limit}}_neg.csv"
     run:
         df_pod = pd.read_csv(input.input_pod,sep="\t")
         df_neg = df_pod[
@@ -55,7 +63,7 @@ rule get_positive_set:
     input:
         input_pod=f"work_folder{pn}/analysis/POD/POD_{{dataset}}.csv",
     output:
-        full_pos = f"work_folder{pn}/subsets/{{dataset}}_full_limit_poslimit_{{pos_limit}}_pos.csv"
+        full_pos = f"work_folder{pn}/subsets/{{dataset}}_full_{{pos_limit}}_pos.csv"
     run:
         df_pod = pd.read_csv(input.input_pod,sep="\t")
         df_pos = df_pod[df_pod["lower_bound_pod"] >= float(wildcards.pos_limit)]
@@ -63,14 +71,14 @@ rule get_positive_set:
 
 rule define_negative_sets:
     input:
-        full_neg=f"work_folder{pn}/subsets/{{dataset}}_full_neg_{{neg_limit}}_limit.csv",
-        train_partition_genes= f"work_folder{pn}/subsets/train/genes/genes_{{dataset}}_{{pos_limit}}.txt",
-        validationq_partition_genes= f"work_folder{pn}/subsets/validation/genes/genes_{{dataset}}_{{pos_limit}}.txt",
-        test_partition_genes= f"work_folder{pn}/subsets/test/genes/genes_{{dataset}}_{{pos_limit}}.txt"
+        full_neg=f"work_folder{pn}/subsets/{{dataset}}_full_{{neg_limit}}_neg.csv",
+        train_partition_genes= f"work_folder{pn}/subsets/train/genes/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt",
+        validationq_partition_genes= f"work_folder{pn}/subsets/validation/genes/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt",
+        test_partition_genes= f"work_folder{pn}/subsets/test/genes/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt"
     output:
-        train_neg = f"work_folder{pn}/subsets/train/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv",
-        val_neg = f"work_folder{pn}/subsets/validation/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv",
-        test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv",
+        train_neg = f"work_folder{pn}/subsets/train/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
+        val_neg = f"work_folder{pn}/subsets/validation/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
+        test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
     run:
         df_neg = pd.read_csv(input.full_neg,sep="\t")
 
@@ -85,15 +93,15 @@ rule define_negative_sets:
 
 rule define_positive_sets:
     input:
-        gene_partition=f"work_folder{pn}/protein_sequences/similarity/{{dataset}}/gene_partition_poslimit_{{pos_limit}}.tsv",
-        full_pos = f"work_folder{pn}/subsets/{{dataset}}_full_limit_poslimit_{{pos_limit}}_pos.csv"
+        gene_partition = lambda wc: get_gene_partition(wc),
+        full_pos = f"work_folder{pn}/subsets/{{dataset}}_full_{{pos_limit}}_pos.csv"
     output:
-        train_pos=f"work_folder{pn}/subsets/train/{{dataset}}_limit_{{pos_limit}}_pos.csv",
-        train_partition_genes = f"work_folder{pn}/subsets/train/genes/genes_{{dataset}}_{{pos_limit}}.txt",
-        val_pos=f"work_folder{pn}/subsets/validation/{{dataset}}_limit_{{pos_limit}}_pos.csv",
-        validate_partition_genes= f"work_folder{pn}/subsets/validation/genes/genes_{{dataset}}_{{pos_limit}}.txt",
-        test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_limit_{{pos_limit}}_pos.csv",
-        test_partition_genes= f"work_folder{pn}/subsets/test/genes/genes_{{dataset}}_{{pos_limit}}.txt",
+        train_pos=f"work_folder{pn}/subsets/train/{{dataset}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv",
+        train_partition_genes = f"work_folder{pn}/subsets/train/genes/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt",
+        val_pos=f"work_folder{pn}/subsets/validation/{{dataset}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv",
+        validate_partition_genes= f"work_folder{pn}/subsets/validation/genes/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt",
+        test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv",
+        test_partition_genes= f"work_folder{pn}/subsets/test/genes/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt",
     run:
         df_pos = pd.read_csv(input.full_pos,sep="\t")
         partitions_df = pd.read_csv(input.gene_partition,sep="\t")
@@ -121,50 +129,3 @@ rule define_positive_sets:
                 output[i * 2],sep="\t",index=False)  # NOTE: If order of output is changed, this breaks
             with open(output[i * 2 + 1], "w") as w:
                 _ = [w.write(gene +"\n") for gene in genes]
-
-rule maxflow_splits:
-    params:
-        script_location="src/PPIClassification/DataSplit/max_flow.py",
-        min_max_flow =65
-    log: "logs/maxflow/maxflow_{settype}_{dataset}_{neg_limit}_poslim_{pos_limit}.log"
-    input:
-        set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_limit_{{pos_limit}}_pos.csv",
-        set_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv"
-    output:
-        set_max_flow_pos=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.edgelist",
-        set_max_flow_neg=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.edgelist"
-    shell:
-        """(
-        python3 {params.script_location} \
-            --positive_data {input.set_pos} \
-            --negative_data {input.set_neg} \
-            --max_flow_positive {output.set_max_flow_pos} \
-            --max_flow_negative {output.set_max_flow_neg} \
-            --min_max_flow {params.min_max_flow} \
-            --subset {wildcards.settype}
-        ) >{log} 2>&1"""
-
-rule ilp:
-    params:
-        script_location="src/PPIClassification/DataSplit/ILP.py",
-        accepted_missmatch = 2
-    threads: 20
-    log: "logs/ilp/ilp_{settype}_{dataset}_{neg_limit}_poslim_{pos_limit}.log"
-    input:
-        set_max_flow_pos=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.edgelist",
-        set_max_flow_neg=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.edgelist"
-    output:
-        balanced_pos=f"work_folder{pn}/subsets/{{settype}}/balanced/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
-        balanced_neg=f"work_folder{pn}/subsets/{{settype}}/balanced/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv"
-    shell:
-        """(
-        
-        python3 {params.script_location} \
-            --positive_data {input.set_max_flow_pos} \
-            --negative_data {input.set_max_flow_neg} \
-            --balanced_positive {output.balanced_pos} \
-            --balanced_negative {output.balanced_neg} \
-            --accepted_error {params.accepted_missmatch} \
-            --threads {threads} \
-            --subset {wildcards.settype}
-        ) >{log} 2>&1"""

@@ -1,0 +1,71 @@
+import pandas as pd
+import re
+import networkx as nx
+
+
+
+rule blast_sequence_similarity:
+    params:
+        n_threads=45
+    input:
+        fasta=f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
+    output:
+        similarity_tsv=f"work_folder{pn}/protein_sequences/similarity/all_vs_all.tsv"
+    shell:
+        """
+        makeblastdb -dbtype prot -in {input.fasta} -title "Gene Name SP DB"
+        blastp -query {input.fasta} -db {input.fasta} \
+        -outfmt "6 qseqid stitle evalue bitscore"  \
+        -max_hsps 1 -num_threads {params.n_threads} -out all_vs_all.tsv
+        ## Eval > 10 not reported
+        """
+
+rule get_metis:
+    params:
+        script_location="src/PPIClassification/DataSplit/METIS_from_graph.py"
+    input:
+        graph = f"work_folder{pn}/subset/graphs/{{graph}}.graphml"
+    output:
+        metis_graph = f"work_folder{pn}/subset/graphs/metis/{{graph}}.graph",
+        metis_id = f"work_folder{pn}/subset/graphs/metis/{{graph}}_gene_id.txt"
+    shell:
+        """
+        python3 {params.script_location} \
+            --graph {input.graph} \
+            --output_metis {output.metis_graph} \
+            --output_int_id {output.metis_id}
+        """
+
+rule get_kahip_partitions:
+    params:
+        kahip_location=config["kahip_location"],
+        seed=config["seed"],
+        k = 12
+    input:
+        metis_graph=f"work_folder{pn}/subset/graphs/metis/{{graph}}.graph"
+    output:
+        partitions=f"work_folder{pn}/subset/partitions/{{graph}}.txt"
+    shell:
+        """
+        {params.kahip_location}  {input.metis_graph} --seed={params.seed} --output_file={output.partitions} --k={params.k} --preconfiguration=strong 
+        """
+
+rule get_gene_to_partition:
+    input:
+        partitions = f"work_folder{pn}/subset/partitions/{{graph}}.txt",
+        gene_int_id= f"work_folder{pn}/subset/graphs/metis/{{graph}}_gene_id.txt"
+    output:
+        gene_partition = f"work_folder{pn}/subset/partitions/{{graph}}_gene_name.txt"
+    run:
+        rows = []
+        int_id = 1
+        with open(input.partitions, "r") as f:
+            for line in f:
+                rows.append({"int_id": int_id, "sequence_partition": line.strip()})
+                int_id += 1
+
+        partition_df = pd.DataFrame(rows)
+        gene_id = pd.read_csv(input.gene_int_id, sep="\t")
+
+        gene_partition_df = gene_id.merge(partition_df, on="int_id")
+        gene_partition_df.to_csv(output.gene_partition, sep="\t", index=False)
