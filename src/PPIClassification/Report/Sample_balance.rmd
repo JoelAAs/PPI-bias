@@ -7,10 +7,10 @@ output: html_notebook
 library(ggplot2)
 library(tidyverse)
 library(emdist)
+library(networkD3)
+library(dplyr)
+library(R.utils)
 
-wasserstein1D <- function(pos_hist, neg_hist) {
-  # W1 distance
-}
 get_scaling_value <- function(neg_file) {
   first_line <- readLines(neg_file, n = 1)
   N <- as.numeric(sub(".*Scaled:\\s*(\\d+).*", "\\1", first_line))
@@ -100,7 +100,7 @@ plot_wasserstain <- function(df_delta, aimed_scaling) {
               aes(
                 x = degree
               )) +
-    ylim(0,1) +
+    ylim(0, 1) +
     geom_line(aes(y = cum_degree_pos, color = "positive cumsum")) +
     geom_line(aes(y = cum_degree_neg, color = "negative cumsum")) +
     facet_grid(~group, scales = "free") +
@@ -181,8 +181,8 @@ plot_degree <- function(df_delta, scaling_factor) {
 }
 
 
-pos_df_file_test <- "../../../work_folder/per_gene/subsets/test/maxflow/ms_limit_4_poslim_0.15_pos.edgelist"
-neg_df_file_test <- "../../../work_folder/per_gene/subsets/test/maxflow/ms_limit_4_poslim_0.15_neg.edgelist"
+pos_df_file_test <- "../../../work_folder/per_gene/subsets/test/maxflow/ms_limit_3_poslim_0.15_pos.edgelist"
+neg_df_file_test <- "../../../work_folder/per_gene/subsets/test/maxflow/ms_limit_3_poslim_0.15_neg.edgelist"
 aimed_scaleing_factor_test <- get_scaling_value(neg_df_file_test)
 df_pos_test <- read.table(pos_df_file_test, sep = "\t", col.names = c("bait", "prey"))
 df_neg_test <- read.table(neg_df_file_test, sep = "\t", col.names = c("bait", "prey"), skip = 1)
@@ -191,8 +191,8 @@ df_degree_neg_test <- get_degree(df_neg_test)
 df_delta_test <- get_degree_diff(df_degree_pos_test, df_degree_neg_test)
 
 
-pos_df_file_train <- "../../../work_folder/per_gene/subsets/train/maxflow/ms_limit_4_poslim_0.15_pos.edgelist"
-neg_df_file_train <- "../../../work_folder/per_gene/subsets/train/maxflow/ms_limit_4_poslim_0.15_neg.edgelist"
+pos_df_file_train <- "../../../work_folder/per_gene/subsets/train/maxflow/ms_limit_3_poslim_0.15_pos.edgelist"
+neg_df_file_train <- "../../../work_folder/per_gene/subsets/train/maxflow/ms_limit_3_poslim_0.15_neg.edgelist"
 aimed_scaleing_factor_train <- get_scaling_value(neg_df_file_train)
 df_pos_train <- read.table(pos_df_file_train, sep = "\t", col.names = c("bait", "prey"))
 df_neg_train <- read.table(neg_df_file_train, sep = "\t", col.names = c("bait", "prey"), skip = 1)
@@ -200,8 +200,8 @@ df_degree_pos_train <- get_degree(df_pos_train)
 df_degree_neg_train <- get_degree(df_neg_train)
 df_delta_train <- get_degree_diff(df_degree_pos_train, df_degree_neg_train)
 
-pos_df_file_validation <- "../../../work_folder/per_gene/subsets/validation/maxflow/ms_limit_4_poslim_0.15_pos.edgelist"
-neg_df_file_validation <- "../../../work_folder/per_gene/subsets/validation/maxflow/ms_limit_4_poslim_0.15_neg.edgelist"
+pos_df_file_validation <- "../../../work_folder/per_gene/subsets/validation/maxflow/ms_limit_3_poslim_0.15_pos.edgelist"
+neg_df_file_validation <- "../../../work_folder/per_gene/subsets/validation/maxflow/ms_limit_3_poslim_0.15_neg.edgelist"
 aimed_scaleing_factor_validation <- get_scaling_value(neg_df_file_validation)
 df_pos_validation <- read.table(pos_df_file_validation, sep = "\t", col.names = c("bait", "prey"))
 df_neg_validation <- read.table(neg_df_file_validation, sep = "\t", col.names = c("bait", "prey"), skip = 1)
@@ -209,6 +209,64 @@ df_degree_pos_validation <- get_degree(df_pos_validation)
 df_degree_neg_validation <- get_degree(df_neg_validation)
 df_delta_validation <- get_degree_diff(df_degree_pos_validation, df_degree_neg_validation)
 ```
+## PPI proportions
+```{r plot_ppi_proportions, echo=FALSE}
+get_n_pairs <- function(file, drop = 0) {
+  n_lines <- countLines(file)[[1]]
+  return(n_lines - drop)
+}
+
+
+all_pos_npair <- get_n_pairs("../../../work_folder/per_gene/subsets/ms_full_limit_poslimit_0.15_pos.csv", 1)
+train_pos_npair <- get_n_pairs("../../../work_folder/per_gene/subsets/train/ms_limit_0.15_pos.csv", 1)
+validation_pos_npair <- get_n_pairs("../../../work_folder/per_gene/subsets/validation/ms_limit_0.15_pos.csv", 1)
+test_pos_npair <- get_n_pairs("../../../work_folder/per_gene/subsets/test/ms_limit_0.15_pos.csv", 1)
+
+mf_train_pos_npair <- get_n_pairs(pos_df_file_train)
+mf_validation_pos_npair <- get_n_pairs(pos_df_file_validation)
+mf_test_pos_npair <- get_n_pairs(pos_df_file_test)
+
+positive_data <- data.frame(
+  source = c("All", "All", "All", "Train", "Validation", "Test", "Train", "Validation", "Test", "All"),
+  target = c("Train", "Validation", "Test", "MF_Train", "MF_Validation", "MF_Test", "Discarded", "Discarded", "Discarded", "Discarded"),
+  value = c(
+    train_pos_npair,
+    validation_pos_npair,
+    test_pos_npair,
+    mf_train_pos_npair,
+    mf_validation_pos_npair,
+    mf_test_pos_npair,
+    (train_pos_npair - mf_train_pos_npair),
+    (validation_pos_npair - mf_validation_pos_npair),
+    (test_pos_npair - mf_test_pos_npair),
+    (all_pos_npair -
+      train_pos_npair -
+      validation_pos_npair -
+      test_pos_npair)
+  )
+)
+nodes <- data.frame(
+  name = c(as.character(positive_data$source),
+           as.character(positive_data$target)) %>% unique()
+)
+
+positive_data$IDsource <- match(positive_data$source, nodes$name) - 1
+positive_data$IDtarget <- match(positive_data$target, nodes$name) - 1
+
+# Make the Network
+p <- sankeyNetwork(
+  Links = positive_data, Nodes = nodes,
+  Source = "IDsource", Target = "IDtarget",
+  Value = "value", NodeID = "name",
+  sinksRight = FALSE,
+  width = 1200,
+  height = 800,
+  fontSize = 32, nodeWidth = 64)
+p
+
+```
+
+
 
 ## Train data
 ```{r plot_train}
