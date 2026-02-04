@@ -45,7 +45,7 @@ rule get_gene_to_partition:
         int_id = 1
         with open(input.partitions, "r") as f:
             for line in f:
-                rows.append({"int_id": int_id, "sequence_partition": line.strip()})
+                rows.append({"int_id": int_id, "partition": line.strip()})
                 int_id += 1
 
         partition_df = pd.DataFrame(rows)
