@@ -11,8 +11,8 @@ rule maxflow_splits:
         set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv",
         set_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv"
     output:
-        set_pos=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_pos.edgelist",
-        set_neg=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.edgelist"
+        set_pos=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_pos.csv",
+        set_neg=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv"
     shell:
         """(
         python3 {params.script_location} \
