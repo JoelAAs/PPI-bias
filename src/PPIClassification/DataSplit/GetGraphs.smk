@@ -28,7 +28,7 @@ rule get_sequence_similarity_graph:
         similarity_tsv=f"work_folder{pn}/protein_sequences/similarity/all_vs_all.tsv",
         aa_seq_fasta=f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
     output:
-        sequence_similarity_graph=f"work_folder{pn}/subset/graphs/sequence_similarity.graphml"
+        sequence_similarity_graph=f"work_folder{pn}/subset/graphs/sequencesimilarity.graphml"
     run:
         gene_seq_dict = read_fasta(input.aa_seq_fasta)
         mean_length = round(sum([len(s) for s in gene_seq_dict.values()]) / len(gene_seq_dict))

@@ -61,7 +61,7 @@ flat:
 models:
   golden_split:
   sequencesimilarity:
-    partition: "sequence_similarity"
+    partition: "sequencesimilarity"
     pos: 0.15
     neg: 3
     balancing: "maxflow"
