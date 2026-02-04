@@ -2,7 +2,7 @@ import argparse
 import networkx as nx
 
 def write_metis(graph_file, output_metis, gene_id_file, node_weights=False):
-    G = nx.load_graphml(graph_file)
+    G = nx.read_graphml(graph_file)
 
     sorted_nodes = list(enumerate(sorted(G.nodes())))
     int_mapping = {node: i + 1 for i, node in sorted_nodes}  # +1 for 1 index
