@@ -55,3 +55,13 @@ y2h:
 flat:
   - "ms"
   - "y2h"
+
+
+# Classifier data configuration:
+models:
+  golden_split:
+  sequence_similarity:
+    partition: "sequence_similarity"
+    pos: 0.15
+    neg: 3
+    balancing: "maxflow"

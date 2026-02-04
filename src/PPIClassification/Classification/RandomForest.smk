@@ -1,26 +1,48 @@
+
+def get_expected_input(wc):
+    if wc.dataset in config["models"]:
+        pos_data = "data"
+        neg_data = "data"
+        selection = wc.dataset
+    else:
+        pos_limit = config["models"][wc.model_configurtation]["pos"]
+        neg_limit = config["models"][wc.model_configurtation]["neg"]
+        selection = config["models"][wc.model_configurtation]["balancing"]
+        partition_name = config["models"][wc.model_configurtation]["partition"]
+        pos_data = f"{wc.dataset}_limit_{pos_limit}_{partition_name}_pos"
+        neg_data =  f"{wc.dataset}_limit_{neg_limit}_poslim_{pos_limit}_{partition_name}_pos"
+
+    return [
+        f"work_folder{pn}/subsets/train/{selection}/{pos_data}_pos.csv",
+        f"work_folder{pn}/subsets/train/{selection}/{neg_data}_neg.csv",
+        f"work_folder{pn}/subsets/validation/{selection}/{pos_data}_pos.csv",
+        f"work_folder{pn}/subsets/validation/{selection}/{neg_data}_neg.csv",
+        f"work_folder{pn}/subsets/test/{selection}/{pos_data}_pos.csv",
+        f"work_folder{pn}/subsets/test/{selection}/{neg_data}_neg.csv"
+    ]
+
+
+
+
+
 rule random_forest:
     params:
         script_location = "src/PPIClassification/Classification/ppi_classify_rf.py"
     input:
-        train_ppi_data_pos=f"work_folder{pn}/subsets/train/{{selection}}/{{dataset}}_{{parameters}}_pos.edgelist",
-        train_ppi_data_neg=f"work_folder{pn}/subsets/train/{{selection}}/{{dataset}}_{{parameters}}_neg.edgelist",
-        validation_ppi_data_pos=f"work_folder{pn}/subsets/validation/{{selection}}/{{dataset}}_{{parameters}}_pos.edgelist",
-        validation_ppi_data_neg=f"work_folder{pn}/subsets/validation/{{selection}}/{{dataset}}_{{parameters}}_neg.edgelist",
-        test_ppi_data_pos=f"work_folder{pn}/subsets/test/{{selection}}/{{dataset}}_{{parameters}}_pos.edgelist",
-        test_ppi_data_neg=f"work_folder{pn}/subsets/test/{{selection}}/{{dataset}}_{{parameters}}_neg.edgelist",
+        data = lambda wc: get_expected_input(wc),
         protein_embeddings=f"work_folder{pn}/embeddings/canonical_embedding.csv.gz"
     output:
-        params= f"work_folder{pn}/classification/randomforest/{{selection}}/{{dataset}}_{{parameters}}_model_parameters.txt"
+        params=f"work_folder{pn}/classification/randomforest/{{dataset}}_{{model_configuration}}_model_parameters.txt"
     threads: 48
     shell:
         """
         python3 {params.script_location} \
-            --train_ppi_data_pos {input.train_ppi_data_pos} \
-            --train_ppi_data_neg {input.train_ppi_data_neg} \
-            --validation_ppi_data_pos {input.validation_ppi_data_pos} \
-            --validation_ppi_data_neg {input.validation_ppi_data_neg} \
-            --test_ppi_data_pos {input.test_ppi_data_pos} \
-            --test_ppi_data_neg {input.test_ppi_data_neg} \
+            --train_ppi_data_pos {input.data[0]} \
+            --train_ppi_data_neg {input.data[1]} \
+            --validation_ppi_data_pos {input.data[2]} \
+            --validation_ppi_data_neg {input.data[3]} \
+            --test_ppi_data_pos {input.data[4]} \
+            --test_ppi_data_neg {input.data[5]} \
             --protein_embeddings {input.protein_embeddings} \
             --params_out {output.params} \
             --threads {threads} \
