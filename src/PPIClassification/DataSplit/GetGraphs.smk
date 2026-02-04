@@ -79,5 +79,5 @@ rule get_min_cut_partitions:
     run:
         pos_df = pd.read_csv(input.full_pos,sep="\t")
         pos_df["edge_weight"] = 1
-        G = nx.from_pandas_edgelist(ava_blast_df,"gene_name_bait","gene_name_prey",edge_attr="edge_weight")
+        G = nx.from_pandas_edgelist(pos_df,"gene_name_bait","gene_name_prey",edge_attr="edge_weight")
         nx.write_graphml(G,output.ppi_graph)

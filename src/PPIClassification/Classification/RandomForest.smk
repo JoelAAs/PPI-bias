@@ -20,9 +20,6 @@ def get_expected_input(wc):
     ]
 
 
-
-
-
 rule random_forest:
     params:
         script_location = "src/PPIClassification/Classification/ppi_classify_rf.py"

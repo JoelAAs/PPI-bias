@@ -59,7 +59,7 @@ flat:
 
 # Classifier data configuration:
 models:
-  golden_split:
+  goldensplit:
   sequencesimilarity:
     partition: "sequencesimilarity"
     pos: 0.15
