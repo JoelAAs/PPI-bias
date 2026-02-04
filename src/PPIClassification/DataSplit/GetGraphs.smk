@@ -73,7 +73,7 @@ rule get_sequence_similarity_graph:
 
 rule get_min_cut_partitions:
     input:
-        full_pos=f"work_folder{pn}/subsets/{{dataset}}_limit_{{pos_limit}}_pos.csv"
+        full_pos=f"work_folder{pn}/subsets/{{dataset}}_full_{{pos_limit}}_pos.csv"
     output:
         ppi_graph=f"work_folder{pn}/subset/graphs/{{dataset}}_limit_{{pos_limit}}.graphml"
     run:

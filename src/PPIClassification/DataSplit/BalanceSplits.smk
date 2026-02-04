@@ -1,7 +1,3 @@
-
-
-
-
 rule maxflow_splits:
     params:
         script_location="src/PPIClassification/DataSplit/max_flow.py",
