@@ -23,6 +23,23 @@ def read_fasta(fasta_filename):
     return gene_name_seq_dict
 
 
+rule blast_sequence_similarity:
+    params:
+        n_threads=45
+    input:
+        fasta=f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
+    output:
+        similarity_tsv=f"work_folder{pn}/protein_sequences/similarity/all_vs_all.tsv"
+    shell:
+        """
+        makeblastdb -dbtype prot -in {input.fasta} -title "Gene Name SP DB"
+        blastp -query {input.fasta} -db {input.fasta} \
+        -outfmt "6 qseqid stitle evalue bitscore"  \
+        -max_hsps 1 -num_threads {params.n_threads} -out all_vs_all.tsv
+        ## Eval > 10 not reported
+        """
+
+
 rule get_sequence_similarity_graph:
     input:
         similarity_tsv=f"work_folder{pn}/protein_sequences/similarity/all_vs_all.tsv",

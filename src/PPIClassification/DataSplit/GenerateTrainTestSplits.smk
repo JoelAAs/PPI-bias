@@ -2,9 +2,9 @@ import pandas as pd
 from itertools import combinations
 
 def get_gene_partition(wc):
-    if wc["partition_name"] == "sequence_similarity":
-        return f"work_folder{pn}/subset/partitions/sequence_similarity_gene_name.txt"
-    elif wc["partition_name"] == "max_pos":
+    if wc["partition_name"] == "sequencesimilarity":
+        return f"work_folder{pn}/subset/partitions/sequencesimilarity_gene_name.txt"
+    elif wc["partition_name"] == "maxpos":
         return f"work_folder{pn}/subset/partitions/{wc['dataset']}_limit_{wc['pos_limit']}_gene_name.txt"
     else:
         raise ValueError(f"unknown partition name = {wc['partition_name']}")
