@@ -25,11 +25,12 @@ def write_metis(graph_file, output_metis, gene_id_file, node_weights=False):
             w.write(line + "\n")
 
 if __name__ == '__main__':
-    args = argparse.ArgumentParser(description="METIS from edge list")
-    args.add_argument("--graph", "-g", required=True, help="edge list")
-    args.add_argument("--output_metis", "-o", required=True, help="mentis output file")
-    args.add_argument("--output_int_id", "-oid", required=True, help="output file")
-    args.add_argument("--node_weights","-w", default=False, action="store_true")
+    parser = argparse.ArgumentParser(description="METIS from edge list")
+    parser.add_argument("--graph", "-g", required=True, help="edge list")
+    parser.add_argument("--output_metis", "-o", required=True, help="mentis output file")
+    parser.add_argument("--output_int_id", "-oid", required=True, help="output file")
+    parser.add_argument("--node_weights","-w", default=False, action="store_true")
+    args = parser.parse_args()
 
     graph = args.graph
     output_metis = args.output_metis
