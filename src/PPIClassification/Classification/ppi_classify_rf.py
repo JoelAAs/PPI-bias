@@ -64,8 +64,8 @@ def hyperparameter_tuned_model(X_train, y_train, X_validation, y_validation, n_t
     best_model = None
     best_params = None
 
-    for params in ParameterSampler(param_dist, n_iter=n_iters, random_state=RANDOM_STATE):
-
+    for i, params in enumerate(ParameterSampler(param_dist, n_iter=n_iters, random_state=RANDOM_STATE)):
+        print(f"{i} of {n_iters} parameter iterations")
         model = RandomForestClassifier(
             **params,
             random_state=RANDOM_STATE,
@@ -125,7 +125,7 @@ if __name__ == '__main__':
         n_embedding
     )
 
-    print("Reading training data ... ")
+    print("Reading validation data ... ")
     X_validate, y_validate = get_dataset(
         args.validation_ppi_data_pos,
         args.validation_ppi_data_neg,
