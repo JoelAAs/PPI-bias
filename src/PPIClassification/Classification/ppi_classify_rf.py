@@ -41,7 +41,7 @@ def get_embedding_dict(protein_embeddings_file):
 
 
 def hyperparameter_tuned_model(X_train, y_train, X_validation, y_validation, n_threads, fileout, n_iters=10):
-    print("Hyperparameter tuning started")
+    print("Hyperparameter tuning started", flush=True)
 
     param_dist = {
         "n_estimators": randint(400, 2000),
@@ -65,7 +65,7 @@ def hyperparameter_tuned_model(X_train, y_train, X_validation, y_validation, n_t
     best_params = None
 
     for i, params in enumerate(ParameterSampler(param_dist, n_iter=n_iters, random_state=RANDOM_STATE)):
-        print(f"{i} of {n_iters} parameter iterations")
+        print(f"{i} of {n_iters} parameter iterations", flush=True)
         model = RandomForestClassifier(
             **params,
             random_state=RANDOM_STATE,
@@ -114,10 +114,10 @@ if __name__ == '__main__':
     RANDOM_STATE = args.randomstate
     threads = args.threads
 
-    print("Creating embedding dict ... ")
+    print("Creating embedding dict ... ", flush=True)
     embed_dict, n_embedding = get_embedding_dict(args.protein_embeddings)
 
-    print("Reading training data ... ")
+    print("Reading training data ... ", flush=True)
     X_train, y_train = get_dataset(
         args.train_ppi_data_pos,
         args.train_ppi_data_neg,
@@ -125,7 +125,7 @@ if __name__ == '__main__':
         n_embedding
     )
 
-    print("Reading validation data ... ")
+    print("Reading validation data ... ", flush=True)
     X_validate, y_validate = get_dataset(
         args.validation_ppi_data_pos,
         args.validation_ppi_data_neg,
@@ -133,7 +133,7 @@ if __name__ == '__main__':
         n_embedding
     )
 
-    print("Reading test data ... ")
+    print("Reading test data ... ", flush=True)
     X_test, y_test = get_dataset(
         args.test_ppi_data_pos,
         args.test_ppi_data_neg,
