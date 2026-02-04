@@ -8,8 +8,7 @@ from src.Analysis.aggregate_support import aggregate_inferred_experiments
 #### Config
 pn = config["project_name"]
 if pn:
-    pn = "/"+ pn
-
+    pn = "/" + pn
 
 datasets = [
     "flat",
@@ -55,7 +54,7 @@ negatome_compare = [
 ]
 negatome_entropy = [
     f"work_folder{pn}/analysis/negatome/test_entropy_{data}_limit_{min_tests}.csv"
-    for min_tests in [3,4,5] for data in ["y2h", "ms"]
+    for min_tests in [3, 4, 5] for data in ["y2h", "ms"]
 ]
 
 expected_output = pods
@@ -92,6 +91,7 @@ include: "src/PPIClassification/DataSplit/GetGraphs.smk"
 include: "src/PPIClassification/DataSplit/GenePartitions.smk"
 include: "src/PPIClassification/DataSplit/GenerateTrainTestSplits.smk"
 include: "src/PPIClassification/DataSplit/BalanceSplits.smk"
+include: "src/PPIClassification/DataSplit/GetGoldenSplit.smk"
 
 include: "src/PPIClassification/Classification/RandomForest.smk"
 include: "src/Plotting/get_plots.smk"
@@ -109,12 +109,11 @@ wildcard_constraints:
 
 rule all:
     input:
-        f"work_folder{pn}/classification/randomforest/ms_sequencesimilarity_model_parameters.txt"
-        #expected_output,
-        #f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
-        #f"work_folder{pn}/plots/degree/GO_enrichment.png",
-        #f"work_folder{pn}/plots/localisation/HuRI_bioplex.png",
-        #f"work_folder{pn}/plots/membrane/HuRI_bioplex.png"
-
-
-
+        expand(
+            f"work_folder{pn}/classification/randomforest/{{data}}_model_parameters.txt",
+            data=["ms_sequencesimilarity", "ms_maxpos", "goldensplit"])
+#expected_output,
+#f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
+#f"work_folder{pn}/plots/degree/GO_enrichment.png",
+#f"work_folder{pn}/plots/localisation/HuRI_bioplex.png",
+#f"work_folder{pn}/plots/membrane/HuRI_bioplex.png"
