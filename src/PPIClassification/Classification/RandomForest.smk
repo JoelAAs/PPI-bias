@@ -1,24 +1,22 @@
 
 def get_expected_input(wc):
     if wc.dataset in config["models"]:
-        pos_data = "data"
-        neg_data = "data"
+        data = "data"
         selection = wc.dataset
     else:
         pos_limit = config["models"][wc.model_configuration]["pos"]
         neg_limit = config["models"][wc.model_configuration]["neg"]
         selection = config["models"][wc.model_configuration]["balancing"]
         partition_name = config["models"][wc.model_configuration]["partition"]
-        pos_data = f"{wc.dataset}_limit_{pos_limit}_{partition_name}"
-        neg_data =  f"{wc.dataset}_limit_{neg_limit}_poslim_{pos_limit}_{partition_name}"
+        data =  f"{wc.dataset}_limit_{neg_limit}_poslim_{pos_limit}_{partition_name}"
 
     return [
-        f"work_folder{pn}/subsets/train/{selection}/{pos_data}_pos.csv",
-        f"work_folder{pn}/subsets/train/{selection}/{neg_data}_neg.csv",
-        f"work_folder{pn}/subsets/validation/{selection}/{pos_data}_pos.csv",
-        f"work_folder{pn}/subsets/validation/{selection}/{neg_data}_neg.csv",
-        f"work_folder{pn}/subsets/test/{selection}/{pos_data}_pos.csv",
-        f"work_folder{pn}/subsets/test/{selection}/{neg_data}_neg.csv"
+        f"work_folder{pn}/subsets/train/{selection}/{data}_pos.csv",
+        f"work_folder{pn}/subsets/train/{selection}/{data}_neg.csv",
+        f"work_folder{pn}/subsets/validation/{selection}/{data}_pos.csv",
+        f"work_folder{pn}/subsets/validation/{selection}/{data}_neg.csv",
+        f"work_folder{pn}/subsets/test/{selection}/{data}_pos.csv",
+        f"work_folder{pn}/subsets/test/{selection}/{data}_neg.csv"
     ]
 
 
