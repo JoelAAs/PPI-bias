@@ -88,8 +88,11 @@ include: "src/Analysis/NegatomeComparison/CompareSharedBaits.smk"
 include: "src/Analysis/CompareLocalisationMethod/MethodLocalisation.smk"
 
 include: "src/PPIClassification/Embeddings/Embeddings.smk"
-include: "src/PPIClassification/DataSplit/SequanceSimilarityPartition.smk"
-include: "src/PPIClassification/DataSplit/GenerateSplits.smk"
+include: "src/PPIClassification/DataSplit/GetGraphs.smk"
+include: "src/PPIClassification/DataSplit/GenePartitions.smk"
+include: "src/PPIClassification/DataSplit/GenerateTrainTestSplits.smk"
+include: "src/PPIClassification/DataSplit/BalanceSplits.smk"
+
 include: "src/PPIClassification/Classification/RandomForest.smk"
 include: "src/Plotting/get_plots.smk"
 
@@ -101,14 +104,12 @@ wildcard_constraints:
     dataset="[_a-zA-Z0-9-]+",
     pid="[:a-zA-Z0-9-]+",
     neg_limit="[0-9.]+",
-    pos_limit="[0-9.]+"
-
+    pos_limit="[0-9.]+",
+    model_configuration="[a-z]+"
 
 rule all:
     input:
-        expand(f"work_folder{pn}/classification/randomforest/parametes_{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.txt",
-            dataset=datasets, neg_limit=4, pos_limit = 0.15
-        )
+        f"work_folder{pn}/classification/randomforest/ms_sequencesimilarity_model_parameters.txt"
         #expected_output,
         #f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
         #f"work_folder{pn}/plots/degree/GO_enrichment.png",

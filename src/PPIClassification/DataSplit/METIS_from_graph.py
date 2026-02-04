@@ -13,7 +13,7 @@ def write_metis(graph_file, output_metis, gene_id_file, node_weights=False):
             w.write(f"{gene}\t{int_id}\n")
 
     with open(output_metis, "w") as w:
-        w.write(f'{G.number_of_nodes()} {G.number_of_edges()} 11\n')  # 11 for node and edge weights
+        w.write(f'{G.number_of_nodes()} {G.number_of_edges()} 1\n')  # 11 for node and edge weights
         for i, node in sorted_nodes:
             if node_weights:
                 line = f"{node["node_weight"]}  "
