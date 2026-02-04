@@ -65,3 +65,8 @@ models:
     pos: 0.15
     neg: 3
     balancing: "maxflow"
+  maxpos:
+    partition: "maxpos"
+    pos: 0.15
+    neg: 3
+    balancing: "maxflow"
