@@ -5,10 +5,10 @@ def get_expected_input(wc):
         neg_data = "data"
         selection = wc.dataset
     else:
-        pos_limit = config["models"][wc.model_configurtation]["pos"]
-        neg_limit = config["models"][wc.model_configurtation]["neg"]
-        selection = config["models"][wc.model_configurtation]["balancing"]
-        partition_name = config["models"][wc.model_configurtation]["partition"]
+        pos_limit = config["models"][wc.model_configuration]["pos"]
+        neg_limit = config["models"][wc.model_configuration]["neg"]
+        selection = config["models"][wc.model_configuration]["balancing"]
+        partition_name = config["models"][wc.model_configuration]["partition"]
         pos_data = f"{wc.dataset}_limit_{pos_limit}_{partition_name}_pos"
         neg_data =  f"{wc.dataset}_limit_{neg_limit}_poslim_{pos_limit}_{partition_name}_pos"
 
