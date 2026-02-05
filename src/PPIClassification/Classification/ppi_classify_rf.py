@@ -90,6 +90,7 @@ def hyperparameter_tuned_model(X_train, y_train, X_validation, y_validation, n_t
         hyper_optimizer.tell(params, -val_score)
 
         e = datetime.datetime.now()
+        print(f"{i+1} iteration of {n_iters} in {e-s}", flush=True)
         fileout.write("---------------------")
         fileout.write(f"Training took {e - s} using {n_threads} threads\n")
         fileout.write("Current params: " + str(params) + "\n")
