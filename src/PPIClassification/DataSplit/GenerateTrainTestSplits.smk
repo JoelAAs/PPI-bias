@@ -105,7 +105,7 @@ rule define_positive_sets:
     run:
         df_pos = pd.read_csv(input.full_pos,sep="\t")
         partitions_df = pd.read_csv(input.gene_partition,sep="\t")
-        partitions = partitions_df["sequence_partition"].unique()
+        partitions = partitions_df["partition"].unique()
         train_combinations = list(combinations(partitions,int(len(partitions) * 0.6)))
         train_partition = sorted(
             train_combinations,key=lambda x: estimate_ppis_kept(df_pos,partitions_df,x),reverse=True

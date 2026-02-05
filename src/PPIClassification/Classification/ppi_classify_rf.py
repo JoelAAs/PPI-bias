@@ -152,7 +152,7 @@ if __name__ == '__main__':
     )
 
     param_file = open(args.params_out, "w")
-    _, score, parameters = hyperparameter_tuned_model(X_train, y_train, X_validate, y_validate, threads, param_file, n_iters = 10)
+    _, score, parameters = hyperparameter_tuned_model(X_train, y_train, X_validate, y_validate, threads, param_file, n_iters = 1000)
 
     # DON'T TOUCH UNTIL MIDSOMMAR
     # rfc = RandomForestClassifier(
