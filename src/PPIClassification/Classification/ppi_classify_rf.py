@@ -44,7 +44,7 @@ def hyperparameter_tuned_model(X_train, y_train, X_validation, y_validation, n_t
     print("Hyperparameter tuning started", flush=True)
 
     param_dist = {
-        "n_estimators": randint(400, 2000),
+        "n_estimators": [48*i for i in range(1,11)],
         "max_depth": [None, 8, 10, 12, 16, 20, 24],
         "min_samples_split": randint(10, 500),
         "min_samples_leaf": randint(20, 300),
@@ -57,7 +57,7 @@ def hyperparameter_tuned_model(X_train, y_train, X_validation, y_validation, n_t
         "bootstrap": [True],
         "max_samples": uniform(0.5, 0.5),
         "min_impurity_decrease": [0.0, 1e-4, 1e-3, 1e-2],
-        "class_weight": ["balanced", "balanced_subsample"]
+        "class_weight": ["balanced"]
     }
 
     best_score = -np.inf
@@ -142,7 +142,7 @@ if __name__ == '__main__':
     )
 
     param_file = open(args.params_out, "w")
-    _, score, parameters = hyperparameter_tuned_model(X_train, y_train, X_validate, y_validate, threads, param_file, n_iters = 2)
+    _, score, parameters = hyperparameter_tuned_model(X_train, y_train, X_validate, y_validate, threads, param_file, n_iters = 100)
 
     # DON'T TOUCH UNTIL MIDSOMMAR
     # rfc = RandomForestClassifier(
