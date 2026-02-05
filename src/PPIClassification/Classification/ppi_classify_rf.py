@@ -3,8 +3,9 @@ import datetime
 
 import numpy as np
 import pandas as pd
+from skopt import Optimizer
+from skopt.space import Integer, Real, Categorical
 from sklearn.ensemble import RandomForestClassifier
-from scipy.stats import randint, uniform
 from sklearn.metrics import accuracy_score, classification_report, balanced_accuracy_score
 from sklearn.model_selection import ParameterSampler
 from sklearn.metrics import f1_score
@@ -44,57 +45,66 @@ def hyperparameter_tuned_model(X_train, y_train, X_validation, y_validation, n_t
     print("Hyperparameter tuning started", flush=True)
 
     param_dist = {
-        "n_estimators": [48*i for i in range(1,11)],
-        "max_depth": [None, 8, 10, 12, 16, 20, 24],
-        "min_samples_split": randint(10, 500),
-        "min_samples_leaf": randint(20, 300),
-        "ccp_alpha": [0.0, 1e-5, 1e-4, 1e-3],
-        "max_features": [
-            "sqrt",
-            "log2",
-            0.05, 0.1, 0.2, 0.3
-        ],
-        "bootstrap": [True],
-        "max_samples": uniform(0.5, 0.5),
-        "min_impurity_decrease": [0.0, 1e-4, 1e-3, 1e-2],
-        "class_weight": ["balanced"]
+        Integer(48, 480, name="n_estimators"),
+        Categorical([None, 8, 10, 12, 16, 20, 24], name="max_depth"),
+        Integer(10, 500, name="min_samples_split"),
+        Integer(20, 300, name="min_samples_leaf"),
+        Real(1e-5, 1e-3, prior="log-uniform", name="ccp_alpha"),
+        Categorical(["sqrt", "log2", 0.05, 0.1, 0.2, 0.3], name="max_features"),
+        Real(0.1, 0.3, name="max_samples"),
+        Real(1e-4, 1e-2, prior="log-uniform", name="min_impurity_decrease"),
     }
 
     best_score = -np.inf
     best_model = None
     best_params = None
 
-    for i, params in enumerate(ParameterSampler(param_dist, n_iter=n_iters, random_state=RANDOM_STATE)):
-        print(f"{i} of {n_iters} parameter iterations", flush=True)
+    hyper_optimizer = Optimizer(
+        dimensions=param_dist,
+        base_estimator="GP",
+        acq_func="gp_hedge",
+        random_state=RANDOM_STATE
+    )
+
+
+    for i in range(n_iters):
+        s = datetime.datetime.now()
+
+        params = hyper_optimizer.ask()
+        params_dict = dict(zip([d.name for d in param_dist], params))
+
         model = RandomForestClassifier(
-            **params,
+            **params_dict,
+            bootstrap=True,
+            class_weight="balanced",
             random_state=RANDOM_STATE,
             n_jobs=n_threads
         )
-        s = datetime.datetime.now()
         model.fit(X_train, y_train)
+        y_train_pred = model.predict(X_train)
+        y_val_pred = model.predict(X_validation)
+        val_score = f1_score(y_validation, y_val_pred, average="macro")
+        val_acc = balanced_accuracy_score(y_train, y_train_pred)
+        train_score = f1_score(y_train, y_train_pred, average="macro")
+        train_acc = balanced_accuracy_score(y_train, y_train_pred)
+        hyper_optimizer.tell(params, -val_score)
+
         e = datetime.datetime.now()
         fileout.write("---------------------")
-        fileout.write(f"Training took {e - s} for with {params['n_estimators']} estimators on {n_threads} threads\n")
+        fileout.write(f"Training took {e - s} using {n_threads} threads\n")
         fileout.write("Current params: " + str(params) + "\n")
+        fileout.write(f"F1 score: {train_score}\t Acc: {train_acc} for Train\n")
+        fileout.write(f"F1 score: {val_score}\t Acc: {val_acc} for Validation\n")
 
-        y_test_pred = model.predict(X_validation)
-        score = f1_score(y_validation, y_test_pred, average="macro")
-        fileout.write(f"Current score: {score} for Validation current n_estimators: {model.n_estimators}\n")
-
-        y_train_pred = model.predict(X_train)
-        t_score = f1_score(y_train, y_train_pred, average="macro")
-        fileout.write(f"Current score: {t_score} for Train current n_estimators: {model.n_estimators}\n")
-
-        if score > best_score:
-            best_score = score
+        if val_score > best_score:
+            best_score = val_score
             best_model = model
             best_params = params
 
     fileout.write("Best validation score: " + str(best_score) + "\n")
     fileout.write("Best params: " + str(best_params) + "\n")
 
-    return best_model, score, params
+    return best_model, best_score, best_params
 
 
 if __name__ == '__main__':
@@ -142,7 +152,7 @@ if __name__ == '__main__':
     )
 
     param_file = open(args.params_out, "w")
-    _, score, parameters = hyperparameter_tuned_model(X_train, y_train, X_validate, y_validate, threads, param_file, n_iters = 100)
+    _, score, parameters = hyperparameter_tuned_model(X_train, y_train, X_validate, y_validate, threads, param_file, n_iters = 10)
 
     # DON'T TOUCH UNTIL MIDSOMMAR
     # rfc = RandomForestClassifier(
