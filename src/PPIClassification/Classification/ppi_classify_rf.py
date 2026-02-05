@@ -44,7 +44,7 @@ def get_embedding_dict(protein_embeddings_file):
 def hyperparameter_tuned_model(X_train, y_train, X_validation, y_validation, n_threads, fileout, n_iters=10):
     print("Hyperparameter tuning started", flush=True)
 
-    param_dist = {
+    param_dist = [
         Integer(48, 480, name="n_estimators"),
         Categorical([None, 8, 10, 12, 16, 20, 24], name="max_depth"),
         Integer(10, 500, name="min_samples_split"),
@@ -53,7 +53,7 @@ def hyperparameter_tuned_model(X_train, y_train, X_validation, y_validation, n_t
         Categorical(["sqrt", "log2", 0.05, 0.1, 0.2, 0.3], name="max_features"),
         Real(0.1, 0.3, name="max_samples"),
         Real(1e-4, 1e-2, prior="log-uniform", name="min_impurity_decrease"),
-    }
+    ]
 
     best_score = -np.inf
     best_model = None
