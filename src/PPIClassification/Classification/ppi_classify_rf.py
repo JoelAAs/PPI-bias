@@ -45,14 +45,12 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
     print("Hyperparameter tuning started", flush=True)
 
     param_dist = [
-        Integer(48, 48000, name="n_estimators"),
+        Integer(48, 5000, prior="log-uniform", name="n_estimators"),
         Categorical([None, 8, 10, 12, 16, 20, 24], name="max_depth"),
         Integer(10, 500, name="min_samples_split"),
         Integer(20, 300, name="min_samples_leaf"),
-        Real(1e-5, 1e-3, prior="log-uniform", name="ccp_alpha"),
         Categorical(["sqrt", "log2", 0.05, 0.1, 0.2, 0.3], name="max_features"),
-        Real(0.1, 0.3, name="max_samples"),
-        Real(1e-4, 1e-2, prior="log-uniform", name="min_impurity_decrease"),
+        Real(0.1, 0.3, name="max_samples")
     ]
 
     best_score = -np.inf
@@ -61,8 +59,8 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
 
     hyper_optimizer = Optimizer(
         dimensions=param_dist,
-        base_estimator="GP",
-        acq_func="gp_hedge",
+        base_estimator="RF",
+        acq_func="EI",
         random_state=RANDOM_STATE
     )
 
@@ -73,8 +71,8 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
     for i in range(n_iters):
         s = datetime.datetime.now()
         if len(y_train_full) > max_samples:
-            positive_index_selected = np.random.choice(positive_index[0], size=max_samples, replace=False)
-            negative_index_selected = np.random.choice(negative_index[0], size=max_samples, replace=False)
+            positive_index_selected = np.random.choice(positive_index[0], size=int(max_samples/2), replace=False)
+            negative_index_selected = np.random.choice(negative_index[0], size=int(max_samples/2), replace=False)
             rmd_index = np.concat([positive_index_selected, negative_index_selected])
             X_train = X_train_full[rmd_index,:]
             y_train = y_train_full[rmd_index]
