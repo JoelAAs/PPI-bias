@@ -15,7 +15,10 @@ class EmbeddWorker:
         inputs = {k: v.to("cuda") for k, v in inputs.items()}  # GPU transfer
         with torch.no_grad():
             outputs = self.model(**inputs)
-        mean_embeddings = outputs.last_hidden_state.mean(dim=1).cpu()
+        mask = inputs["attention_mask"].unsqueeze(-1)
+        emb = outputs.last_hidden_state * mask
+        mean_embeddings = emb.sum(dim=1) / mask.sum(dim=1)
+        mean_embeddings = mean_embeddings.cpu()
         e = datetime.datetime.now()
         print(f"Embedding_time: {e - m2} for sequences {i} / {n} ")
         del inputs, outputs  # Delete tensors
