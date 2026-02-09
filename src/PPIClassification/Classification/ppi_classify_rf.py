@@ -41,7 +41,7 @@ def get_embedding_dict(protein_embeddings_file):
     return embedding_dict, embed_length
 
 
-def hyperparameter_tuned_model(X_train, y_train, X_validation, y_validation, n_threads, fileout, n_iters=10):
+def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_validation, n_threads, fileout, n_iters=10, max_samples=50000):
     print("Hyperparameter tuning started", flush=True)
 
     param_dist = [
@@ -66,9 +66,21 @@ def hyperparameter_tuned_model(X_train, y_train, X_validation, y_validation, n_t
         random_state=RANDOM_STATE
     )
 
+    negative_index = np.where(y_train_full==0)
+    positive_index = np.where(y_train_full==1)
+
 
     for i in range(n_iters):
         s = datetime.datetime.now()
+        if len(y_train_full) > max_samples:
+            positive_index_selected = np.random.chocie(positive_index, size=max_samples, replace=False)
+            negative_index_selected = np.random.chocie(negative_index, size=max_samples, replace=False)
+            rmd_index = np.concat([positive_index_selected, negative_index_selected])
+            X_train = X_train_full[rmd_index,:]
+            y_train = y_train_full[rmd_index]
+        else:
+            X_train = X_train_full
+            y_train = y_train_full
 
         params = hyper_optimizer.ask()
         params_dict = dict(zip([d.name for d in param_dist], params))
@@ -84,7 +96,7 @@ def hyperparameter_tuned_model(X_train, y_train, X_validation, y_validation, n_t
         y_train_pred = model.predict(X_train)
         y_val_pred = model.predict(X_validation)
         val_score = f1_score(y_validation, y_val_pred, average="macro")
-        val_acc = balanced_accuracy_score(y_train, y_train_pred)
+        val_acc = balanced_accuracy_score(y_validation, y_val_pred)
         train_score = f1_score(y_train, y_train_pred, average="macro")
         train_acc = balanced_accuracy_score(y_train, y_train_pred)
         hyper_optimizer.tell(params, -val_score)
