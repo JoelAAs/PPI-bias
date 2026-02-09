@@ -45,7 +45,7 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
     print("Hyperparameter tuning started", flush=True)
 
     param_dist = [
-        Integer(48, 480, name="n_estimators"),
+        Integer(48, 48000, name="n_estimators"),
         Categorical([None, 8, 10, 12, 16, 20, 24], name="max_depth"),
         Integer(10, 500, name="min_samples_split"),
         Integer(20, 300, name="min_samples_leaf"),
@@ -73,8 +73,8 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
     for i in range(n_iters):
         s = datetime.datetime.now()
         if len(y_train_full) > max_samples:
-            positive_index_selected = np.random.choice(positive_index, size=max_samples, replace=False)
-            negative_index_selected = np.random.choice(negative_index, size=max_samples, replace=False)
+            positive_index_selected = np.random.choice(positive_index[0], size=max_samples, replace=False)
+            negative_index_selected = np.random.choice(negative_index[0], size=max_samples, replace=False)
             rmd_index = np.concat([positive_index_selected, negative_index_selected])
             X_train = X_train_full[rmd_index,:]
             y_train = y_train_full[rmd_index]
@@ -103,6 +103,7 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
 
         e = datetime.datetime.now()
         print(f"{i+1} iteration of {n_iters} in {e-s}", flush=True)
+        print("Current params: " + str(params) + "\n", flush=True)
         fileout.write("---------------------")
         fileout.write(f"Training took {e - s} using {n_threads} threads\n")
         fileout.write("Current params: " + str(params) + "\n")
