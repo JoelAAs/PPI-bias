@@ -96,9 +96,9 @@ if __name__ == '__main__':
     )
     success = False
     if args.subset == "test":
-        pa = [Fraction(i, 1) for i in range(7,0,-1)]
+        pa = [Fraction(i, 1) for i in range(3,0,-1)]
     else:
-        pa = scaling_fractions(len(positive_diG.edges()), len(negative_diG.edges()))
+        pa = [Fraction(i, 1) for i in range(10,0,-1)]
     for pai in pa:
         target_in, target_out, success = get_possible_scaling_factors(positive_diG, pai)
         if success:

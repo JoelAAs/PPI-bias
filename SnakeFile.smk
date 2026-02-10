@@ -112,14 +112,13 @@ rule all:
     input:
         expand(
             f"work_folder{pn}/subsets/report/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}.html",
-            dataset=datasets, neg_limit=3, pos_limit=0.15, partition_name=["sequencesimilarity", "maxpos"]
-        )
-
-# expand(
-#     f"work_folder{pn}/classification/randomforest/{{data}}_model_parameters.txt",
-#     data=["ms_sequencesimilarity", "ms_maxpos", "goldensplit"])
-#expected_output,
-#f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
-#f"work_folder{pn}/plots/degree/GO_enrichment.png",
-#f"work_folder{pn}/plots/localisation/HuRI_bioplex.png",
-#f"work_folder{pn}/plots/membrane/HuRI_bioplex.png"
+            dataset=datasets,neg_limit=3,pos_limit=0.15,partition_name=["sequencesimilarity", "maxpos"]
+        ),
+        expand(
+            f"work_folder{pn}/classification/randomforest/{{data}}_model_parameters.txt",
+            data=["ms_sequencesimilarity", "ms_maxpos", "y2h_sequencesimilarity", "y2h_maxpos", "goldensplit"])
+    #expected_output,
+    #f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
+    #f"work_folder{pn}/plots/degree/GO_enrichment.png",
+    #f"work_folder{pn}/plots/localisation/HuRI_bioplex.png",
+    #f"work_folder{pn}/plots/membrane/HuRI_bioplex.png"
