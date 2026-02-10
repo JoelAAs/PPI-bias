@@ -293,8 +293,8 @@ plot_wasserstain(df_delta_train, aimed_scaleing_factor_train)
 
 ## Validation data
 ```{r val_plot}
-suppressWarnings(plot_degree(df_delta_validation, aimed_scaleing_factor_validation))
-plot_wasserstain(df_delta_validation, aimed_scaleing_factor_validation)
+suppressWarnings(plot_degree(df_delta_validate, aimed_scaleing_factor_validate))
+plot_wasserstain(df_delta_validate, aimed_scaleing_factor_validate)
 ```
 
 
