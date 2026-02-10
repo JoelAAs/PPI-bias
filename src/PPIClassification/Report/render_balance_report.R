@@ -1,10 +1,14 @@
+print(snakemake@output$html_report)
+
+print(basename(snakemake@output$html_report))
+print(dirname(snakemake@output$html_report))
+
 rmarkdown::render(
   snakemake@params$rmd_location,
   output_file = basename(snakemake@output$html_report),
   output_dir = dirname(snakemake@output$html_report),
   params = list(
     full_pos_file = snakemake@input$full_pos,
-    full_neg_file = snakemake@input$full_neg,
     full_neg_file = snakemake@input$full_neg,
     train_pos_file = snakemake@input$train_pos,
     train_neg_file = snakemake@input$train_neg,
