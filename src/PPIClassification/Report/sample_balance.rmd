@@ -237,8 +237,8 @@ get_n_pairs <- function(file, drop = 0) {
 
 all_pos_npair <- nrow(full_pos)
 train_pos_npair <- nrow(train_pos)
-validation_pos_npair <- nrow(validaton_pos)
-test_pos_npair <- nrow(validaton_pos)
+validation_pos_npair <- nrow(validate_pos)
+test_pos_npair <- nrow(test_pos)
 mf_train_pos_npair <- nrow(train_maxflow_pos)
 mf_validation_pos_npair <- nrow(validate_maxflow_pos)
 mf_test_pos_npair <- nrow(test_maxflow_pos)
