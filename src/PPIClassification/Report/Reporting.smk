@@ -24,7 +24,8 @@ rule generate_balance_report:
         
         Rscript -e "rmarkdown::render(
           '{params.rmd_location}',
-          output_file = '{output.html_report}',
+          output_file = basename('{output.html_report}'),
+          output_dir = dirname('{output.html_report}'),
           params = list(
             full_pos_file = '{input.full_pos}',
             full_neg_file = '{input.full_neg}',
