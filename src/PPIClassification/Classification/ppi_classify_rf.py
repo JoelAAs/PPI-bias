@@ -167,19 +167,19 @@ if __name__ == '__main__':
     )
 
     param_file = open(args.params_out, "w")
-    _, score, parameters = hyperparameter_tuned_model(X_train, y_train, X_validate, y_validate, threads, param_file, n_iters = 20)
+    _, score, parameters = hyperparameter_tuned_model(X_train, y_train, X_validate, y_validate, threads, param_file, n_iters = 40)
 
-    # DON'T TOUCH UNTIL MIDSOMMAR
-    # rfc = RandomForestClassifier(
-    #     **parameters,
-    #     n_jobs=threads)
-    #
-    # rfc.fit(
-    #     np.vstack((X_train, X_validate)),
-    #     np.concatenate((y_train, y_validate))
-    # )
-    #
-    # y_test_pred = rfc.predict(X_test)
-    #
-    # print("Final test accuracy:", accuracy_score(y_test, y_test_pred))
-    # print(classification_report(y_test, y_test_pred))
+
+    rfc = RandomForestClassifier(
+        **parameters,
+        n_jobs=threads)
+
+    rfc.fit(
+        np.vstack((X_train, X_validate)),
+        np.concatenate((y_train, y_validate))
+    )
+
+    y_test_pred = rfc.predict(X_test)
+
+    param_file.write("-----------------TEST ACCURACY----------------")
+    param_file.write(classification_report(y_test, y_test_pred))

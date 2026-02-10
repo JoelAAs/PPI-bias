@@ -116,7 +116,7 @@ rule all:
         ),
         expand(
             f"work_folder{pn}/classification/randomforest/{{data}}_model_parameters.txt",
-            data=["ms_sequencesimilarity", "ms_maxpos", "y2h_sequencesimilarity", "y2h_maxpos", "goldensplit"])
+            data=["ms_sequencesimilarity", "ms_maxpos", "y2h_sequencesimilarity", "y2h_maxpos", "goldensplit_asis"])
     #expected_output,
     #f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
     #f"work_folder{pn}/plots/degree/GO_enrichment.png",
