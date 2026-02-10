@@ -118,7 +118,7 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
 
     fileout.write("Best validation score: " + str(best_score) + "\n")
     fileout.write("Best params: " + str(best_params) + "\n")
-
+    best_params = dict(zip([d.name for d in param_dist], best_params))
     return best_model, best_score, best_params
 
 
