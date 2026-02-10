@@ -16,7 +16,7 @@ class EmbeddWorker:
         with torch.no_grad():
             outputs = self.model(**inputs)
         mask = inputs["attention_mask"].unsqueeze(-1)
-        emb = outputs.last_hidden_state * mask
+        emb = (outputs.last_hidden_state * mask).float()
         mean_embeddings = emb.sum(dim=1) / mask.sum(dim=1)
         mean_embeddings = mean_embeddings.cpu()
         e = datetime.datetime.now()
