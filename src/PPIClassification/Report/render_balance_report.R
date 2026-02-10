@@ -2,9 +2,10 @@ print(snakemake@output$html_report)
 
 print(basename(snakemake@output$html_report))
 print(dirname(snakemake@output$html_report))
-
+print(snakemake@params$rmd_location)
+d
 rmarkdown::render(
-  snakemake@params$rmd_location,
+  input=snakemake@params$rmd_location,
   output_file = basename(snakemake@output$html_report),
   output_dir = dirname(snakemake@output$html_report),
   params = list(
