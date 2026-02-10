@@ -20,6 +20,8 @@ rule generate_balance_report:
         html_report = f"work_folder{pn}/subsets/report/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}.html"
     shell:
         """
+        mkdir -p $(dirname {output.html_report})
+        
         Rscript -e "rmarkdown::render(
           '{params.rmd_location}',
           output_file = '{output.html_report}',
