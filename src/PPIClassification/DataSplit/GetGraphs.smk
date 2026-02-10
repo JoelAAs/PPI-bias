@@ -45,7 +45,7 @@ rule get_sequence_similarity_graph:
         similarity_tsv=f"work_folder{pn}/protein_sequences/similarity/all_vs_all.tsv",
         aa_seq_fasta=f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
     output:
-        sequence_similarity_graph=f"work_folder{pn}/subset/graphs/sequencesimilarity.graphml"
+        sequence_similarity_graph=f"work_folder{pn}/subsets/s/graphs/sequencesimilarity.graphml"
     run:
         gene_seq_dict = read_fasta(input.aa_seq_fasta)
         mean_length = round(sum([len(s) for s in gene_seq_dict.values()]) / len(gene_seq_dict))
@@ -73,9 +73,9 @@ rule get_sequence_similarity_graph:
 
 rule get_min_cut_partitions:
     input:
-        full_pos=f"work_folder{pn}/subsets/{{dataset}}_full_{{pos_limit}}_pos.csv"
+        full_pos=f"work_folder{pn}/subsets/s/{{dataset}}_full_{{pos_limit}}_pos.csv"
     output:
-        ppi_graph=f"work_folder{pn}/subset/graphs/{{dataset}}_limit_{{pos_limit}}.graphml"
+        ppi_graph=f"work_folder{pn}/subsets//graphs/{{dataset}}_limit_{{pos_limit}}.graphml"
     run:
         pos_df = pd.read_csv(input.full_pos,sep="\t")
         pos_df["edge_weight"] = 1
