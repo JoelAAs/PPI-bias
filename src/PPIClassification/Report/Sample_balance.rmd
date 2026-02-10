@@ -1,7 +1,55 @@
 ---
 title: "Check bait/prey balance"
 output: html_notebook
+params:
+  full_pos_file: NULL
+  full_neg_file: NULL
+  train_pos_file: NULL
+  train_neg_file: NULL
+  train_maxflow_pos_file: NULL
+  train_maxflow_neg_file: NULL
+  validate_pos_file: NULL
+  validate_neg_file: NULL
+  validate_maxflow_pos_file: NULL
+  validate_maxflow_neg_file: NULL
+  test_pos_file: NULL
+  test_neg_file: NULL
+  test_maxflow_pos_file: NULL
+  test_maxflow_neg_file: NULL
 ---
+
+```{r input, echo=F}
+full_pos <- read.table(full_pos_file, sep="\t", header=TRUE)
+full_neg <- read.table(full_neg_file, sep="\t", header=TRUE)
+
+train_pos <- read.table(train_pos_file, sep="\t", header=TRUE)
+train_neg <- read.table(train_neg_file, sep="\t", header=TRUE)
+train_maxflow_pos <- read.table(train_maxflow_pos_file, sep="\t", col.names = c("bait", "prey"))
+train_maxflow_neg <- read.table(train_maxflow_neg_file, sep="\t", col.names = c("bait", "prey"), skip = 1)
+aimed_scaleing_factor_train <- get_scaling_value(train_maxflow_neg_file)
+df_degree_pos_train <- get_degree(train_maxflow_pos)
+df_degree_neg_train <- get_degree(train_maxflow_neg)
+df_delta_train <- get_degree_diff(df_degree_pos_train, df_degree_neg_train)
+
+validate_pos <- read.table(validate_pos_file, sep="\t", header=TRUE)
+validate_neg <- read.table(validate_neg_file, sep="\t", header=TRUE)
+validate_maxflow_pos <- read.table(validate_maxflow_pos_file, sep="\t", col.names = c("bait", "prey"))
+validate_maxflow_neg <- read.table(validate_maxflow_neg_file, sep="\t", col.names = c("bait", "prey"), skip = 1)
+aimed_scaleing_factor_validate <- get_scaling_value(validate_maxflow_neg_file)
+df_degree_pos_validate <- get_degree(validate_maxflow_pos)
+df_degree_neg_validate <- get_degree(validate_maxflow_neg)
+df_delta_validate <- get_degree_diff(df_degree_pos_validate, df_degree_neg_validate)
+
+test_pos <- read.table(test_pos_file, sep="\t", header=TRUE)
+test_neg <- read.table(test_neg_file, sep="\t", header=TRUE)
+test_maxflow_pos <- read.table(test_maxflow_pos_file, sep="\t", col.names = c("bait", "prey"))
+test_maxflow_neg <- read.table(test_maxflow_neg_file, sep="\t", col.names = c("bait", "prey"), skip = 1)
+aimed_scaleing_factor_test <- get_scaling_value(test_maxflow_neg_file)
+df_degree_pos_test <- get_degree(test_maxflow_pos)
+df_degree_neg_test <- get_degree(test_maxflow_neg)
+df_delta_test <- get_degree_diff(df_degree_pos_test, df_degree_neg_test)
+```
+
 
 ```{r load_data, echo=F}
 library(ggplot2)
@@ -179,35 +227,6 @@ plot_degree <- function(df_delta, scaling_factor) {
     )
   return(g)
 }
-
-
-pos_df_file_test <- "../../../work_folder/per_gene/subsets/test/maxflow/ms_limit_3_poslim_0.15_pos.edgelist"
-neg_df_file_test <- "../../../work_folder/per_gene/subsets/test/maxflow/ms_limit_3_poslim_0.15_neg.edgelist"
-aimed_scaleing_factor_test <- get_scaling_value(neg_df_file_test)
-df_pos_test <- read.table(pos_df_file_test, sep = "\t", col.names = c("bait", "prey"))
-df_neg_test <- read.table(neg_df_file_test, sep = "\t", col.names = c("bait", "prey"), skip = 1)
-df_degree_pos_test <- get_degree(df_pos_test)
-df_degree_neg_test <- get_degree(df_neg_test)
-df_delta_test <- get_degree_diff(df_degree_pos_test, df_degree_neg_test)
-
-
-pos_df_file_train <- "../../../work_folder/per_gene/subsets/train/maxflow/ms_limit_3_poslim_0.15_pos.edgelist"
-neg_df_file_train <- "../../../work_folder/per_gene/subsets/train/maxflow/ms_limit_3_poslim_0.15_neg.edgelist"
-aimed_scaleing_factor_train <- get_scaling_value(neg_df_file_train)
-df_pos_train <- read.table(pos_df_file_train, sep = "\t", col.names = c("bait", "prey"))
-df_neg_train <- read.table(neg_df_file_train, sep = "\t", col.names = c("bait", "prey"), skip = 1)
-df_degree_pos_train <- get_degree(df_pos_train)
-df_degree_neg_train <- get_degree(df_neg_train)
-df_delta_train <- get_degree_diff(df_degree_pos_train, df_degree_neg_train)
-
-pos_df_file_validation <- "../../../work_folder/per_gene/subsets/validation/maxflow/ms_limit_3_poslim_0.15_pos.edgelist"
-neg_df_file_validation <- "../../../work_folder/per_gene/subsets/validation/maxflow/ms_limit_3_poslim_0.15_neg.edgelist"
-aimed_scaleing_factor_validation <- get_scaling_value(neg_df_file_validation)
-df_pos_validation <- read.table(pos_df_file_validation, sep = "\t", col.names = c("bait", "prey"))
-df_neg_validation <- read.table(neg_df_file_validation, sep = "\t", col.names = c("bait", "prey"), skip = 1)
-df_degree_pos_validation <- get_degree(df_pos_validation)
-df_degree_neg_validation <- get_degree(df_neg_validation)
-df_delta_validation <- get_degree_diff(df_degree_pos_validation, df_degree_neg_validation)
 ```
 ## PPI proportions
 ```{r plot_ppi_proportions, echo=FALSE}
@@ -217,14 +236,13 @@ get_n_pairs <- function(file, drop = 0) {
 }
 
 
-all_pos_npair <- get_n_pairs("../../../work_folder/per_gene/subsets/ms_full_limit_poslimit_0.15_pos.csv", 1)
-train_pos_npair <- get_n_pairs("../../../work_folder/per_gene/subsets/train/ms_limit_0.15_pos.csv", 1)
-validation_pos_npair <- get_n_pairs("../../../work_folder/per_gene/subsets/validation/ms_limit_0.15_pos.csv", 1)
-test_pos_npair <- get_n_pairs("../../../work_folder/per_gene/subsets/test/ms_limit_0.15_pos.csv", 1)
-
-mf_train_pos_npair <- get_n_pairs(pos_df_file_train)
-mf_validation_pos_npair <- get_n_pairs(pos_df_file_validation)
-mf_test_pos_npair <- get_n_pairs(pos_df_file_test)
+all_pos_npair <- nrow(full_pos)
+train_pos_npair <- nrow(train_pos)
+validation_pos_npair <- nrow(validaton_pos)
+test_pos_npair <- nrow(validaton_pos)
+mf_train_pos_npair <- nrow(train_maxflow_pos)
+mf_validation_pos_npair <- nrow(validate_maxflow_pos)
+mf_test_pos_npair <- nrow(test_maxflow_pos)
 
 positive_data <- data.frame(
   source = c("All", "All", "All", "Train", "Validation", "Test", "Train", "Validation", "Test", "All"),

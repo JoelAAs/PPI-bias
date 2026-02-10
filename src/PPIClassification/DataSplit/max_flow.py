@@ -80,19 +80,19 @@ if __name__ == '__main__':
     positive_bait_prey_df.columns = ["bait", "prey"]
     negative_bait_prey_df.columns = ["bait", "prey"]
 
-    baits = set(negative_bait_prey_df["bait"]) & set(positive_bait_prey_df["bait"])
-    all_prey = set(negative_bait_prey_df["prey"]) & set(positive_bait_prey_df["prey"])
-
-    negative_bp_df = negative_bait_prey_df[
-        negative_bait_prey_df["bait"].isin(baits) & negative_bait_prey_df["prey"].isin(all_prey)].copy()
-    positive_bp_df = positive_bait_prey_df[
-        positive_bait_prey_df["bait"].isin(baits) & positive_bait_prey_df["prey"].isin(all_prey)].copy()
+    # baits = set(negative_bait_prey_df["bait"]) & set(positive_bait_prey_df["bait"])
+    # all_prey = set(negative_bait_prey_df["prey"]) & set(positive_bait_prey_df["prey"])
+    #
+    # negative_bp_df = negative_bait_prey_df[
+    #     negative_bait_prey_df["bait"].isin(baits) & negative_bait_prey_df["prey"].isin(all_prey)].copy()
+    # positive_bp_df = positive_bait_prey_df[
+    #     positive_bait_prey_df["bait"].isin(baits) & positive_bait_prey_df["prey"].isin(all_prey)].copy()
 
     positive_diG = nx.from_pandas_edgelist(
-        positive_bp_df, "bait", "prey", create_using=nx.DiGraph()
+        positive_bait_prey_df, "bait", "prey", create_using=nx.DiGraph()
     )
     negative_diG = nx.from_pandas_edgelist(
-        negative_bp_df, "bait", "prey", create_using=nx.DiGraph()
+        negative_bait_prey_df, "bait", "prey", create_using=nx.DiGraph()
     )
     success = False
     if args.subset == "test":

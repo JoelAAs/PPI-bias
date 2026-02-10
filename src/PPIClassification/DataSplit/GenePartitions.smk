@@ -8,10 +8,10 @@ rule get_metis:
     params:
         script_location="src/PPIClassification/DataSplit/METIS_from_graph.py"
     input:
-        graph = f"work_folder{pn}/subset/graphs/{{graph}}.graphml"
+        graph = f"work_folder{pn}/subsets/graphs/{{graph}}.graphml"
     output:
-        metis_graph = f"work_folder{pn}/subset/graphs/metis/{{graph}}.graph",
-        metis_id = f"work_folder{pn}/subset/graphs/metis/{{graph}}_gene_id.txt"
+        metis_graph = f"work_folder{pn}/subsets/graphs/metis/{{graph}}.graph",
+        metis_id = f"work_folder{pn}/subsets/graphs/metis/{{graph}}_gene_id.txt"
     shell:
         """
         python3 {params.script_location} \
@@ -26,9 +26,9 @@ rule get_kahip_partitions:
         seed=config["seed"],
         k = 12
     input:
-        metis_graph=f"work_folder{pn}/subset/graphs/metis/{{graph}}.graph"
+        metis_graph=f"work_folder{pn}/subsets/graphs/metis/{{graph}}.graph"
     output:
-        partitions=f"work_folder{pn}/subset/partitions/{{graph}}.txt"
+        partitions=f"work_folder{pn}/subsets/partitions/{{graph}}.txt"
     shell:
         """
         {params.kahip_location}  {input.metis_graph} --seed={params.seed} --output_file={output.partitions} --k={params.k} --preconfiguration=strong 
@@ -36,10 +36,10 @@ rule get_kahip_partitions:
 
 rule get_gene_to_partition:
     input:
-        partitions = f"work_folder{pn}/subset/partitions/{{graph}}.txt",
-        gene_int_id= f"work_folder{pn}/subset/graphs/metis/{{graph}}_gene_id.txt"
+        partitions = f"work_folder{pn}/subsets/partitions/{{graph}}.txt",
+        gene_int_id= f"work_folder{pn}/subsets/graphs/metis/{{graph}}_gene_id.txt"
     output:
-        gene_partition = f"work_folder{pn}/subset/partitions/{{graph}}_gene_name.txt"
+        gene_partition = f"work_folder{pn}/subsets/partitions/{{graph}}_gene_name.txt"
     run:
         rows = []
         int_id = 1
