@@ -66,6 +66,6 @@ rule generate_balance_report:
         test_maxflow_pos=f"work_folder{pn}/subsets/test/maxflow/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_pos.csv",
         test_maxflow_neg=f"work_folder{pn}/subsets/test/maxflow/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv"
     output:
-        html_report=f"work_folder{pn}/subsets/report/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}.html"
+        html_report=f"work_folder{pn}/subsets/report/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}.nb.html"
     script:
         "render_balance_report.R"

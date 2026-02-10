@@ -111,7 +111,7 @@ wildcard_constraints:
 rule all:
     input:
         expand(
-            f"work_folder{pn}/subsets/report/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}.html",
+            f"work_folder{pn}/subsets/report/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}.nb.html",
             dataset=datasets,neg_limit=3,pos_limit=0.15,partition_name=["sequencesimilarity", "maxpos"]
         ),
         expand(
