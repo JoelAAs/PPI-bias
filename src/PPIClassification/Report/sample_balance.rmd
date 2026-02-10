@@ -20,7 +20,6 @@ params:
 ```{r functions, echo=F}
 library(ggplot2)
 library(tidyverse)
-library(emdist)
 library(networkD3)
 library(dplyr)
 library(R.utils)
