@@ -48,7 +48,8 @@
 rule generate_balance_report:
     shadow: "shallow"
     params:
-        rmd="src/PPIClassification/Report/sample_balance.rmd"
+        rmd="src/PPIClassification/Report/sample_balance.rmd",
+        main_root = workflow.basedir
     input:
         full_pos=f"work_folder{pn}/subsets/{{dataset}}_full_{{pos_limit}}_pos.csv",
         full_neg=f"work_folder{pn}/subsets/{{dataset}}_full_{{neg_limit}}_neg.csv",
@@ -67,4 +68,4 @@ rule generate_balance_report:
     output:
         html_report=f"work_folder{pn}/subsets/report/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}.html"
     script:
-        "src/PPIClassification/Report/render_balance_report.R"
+        "render_balance_report.R"
