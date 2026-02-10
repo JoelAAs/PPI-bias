@@ -1,6 +1,6 @@
 rule generate_balance_report:
     params:
-        rmd_location = "src/PPIClassification/sample_balance.rmd"
+        rmd_location = "src/PPIClassification/Report/sample_balance.rmd"
     input:
         full_pos = f"work_folder{pn}/subsets/{{dataset}}_full_{{pos_limit}}_pos.csv",
         full_neg=f"work_folder{pn}/subsets/{{dataset}}_full_{{neg_limit}}_neg.csv",
