@@ -1,13 +1,8 @@
-print(snakemake@output$html_report)
-
-print(basename(snakemake@output$html_report))
-print(dirname(snakemake@output$html_report))
-print(snakemake@params$rmd)
-
 rmarkdown::render(
   input=snakemake@params$rmd,
   output_file = basename(snakemake@output$html_report),
   output_dir = dirname(snakemake@output$html_report),
+  knit_root_dir = snakemake@params$main_root,
   params = list(
     full_pos_file = snakemake@input$full_pos,
     full_neg_file = snakemake@input$full_neg,
