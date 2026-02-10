@@ -100,8 +100,11 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
         hyper_optimizer.tell(params, -val_score)
 
         e = datetime.datetime.now()
+        print("------------------------------------------------")
         print(f"{i+1} iteration of {n_iters} in {e-s}", flush=True)
-        print("Current params: " + str(params) + "\n", flush=True)
+        print("Current params: " + str(params), flush=True)
+        print(f"F1 score: {train_score}\t Acc: {train_acc} for Train")
+        print(f"F1 score: {val_score}\t Acc: {val_acc} for Validation")
         fileout.write("---------------------")
         fileout.write(f"Training took {e - s} using {n_threads} threads\n")
         fileout.write("Current params: " + str(params) + "\n")
@@ -180,47 +183,3 @@ if __name__ == '__main__':
     #
     # print("Final test accuracy:", accuracy_score(y_test, y_test_pred))
     # print(classification_report(y_test, y_test_pred))
-
-embed_dict, n_embedding = get_embedding_dict("work_folder/per_gene/embeddings/canonical_embedding.csv.gz")
-
-X_train, y_train = get_dataset(
-    "work_folder/per_gene/subsets/train/goldensplit/data_pos.csv",
-    "work_folder/per_gene/subsets/train/goldensplit/data_neg.csv",
-    embed_dict,
-    n_embedding
-)
-
-X_validate, y_validate = get_dataset(
-    "work_folder/per_gene/subsets/validation/goldensplit/data_pos.csv",
-    "work_folder/per_gene/subsets//validation/goldensplit/data_neg.csv",
-    embed_dict,
-    n_embedding
-)
-
-X_test, y_test = get_dataset(
-"work_folder/per_gene/subsets/test/goldensplit/data_pos.csv",
-"work_folder/per_gene/subsets/test/goldensplit/data_neg.csv",
-        embed_dict,
-        n_embedding
-    )
-
-params = {
-    "n_estimators":5000,
-    "max_depth":None,
-    "min_samples_split":478,
-    "min_samples_leaf":247,
-    "max_features":'sqrt',
-    "max_samples":0.2572244154639411}
-
-rfc = RandomForestClassifier(
-    **params,
-    n_jobs=48)
-
-rfc.fit(
-    np.vstack((X_train, X_validate)),
-    np.concatenate((y_train, y_validate))
-)
-
-y_test_pred = rfc.predict(X_test)
-
-classification_report(y_test, y_test_pred)
