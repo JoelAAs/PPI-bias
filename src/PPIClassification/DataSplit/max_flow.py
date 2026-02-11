@@ -107,9 +107,12 @@ if __name__ == '__main__':
             flow_value, flow_dict = nx.maximum_flow(testF, "source", "sink")
             percent_output = round(flow_value / sum(target_in.values()).numerator * 100)
 
-            print(f"Flow value: {flow_value}, That being is {percent_output} %")
+            print(f"Flow value: {flow_value}, that being {percent_output} % of scaled degree")
 
-            if percent_output > min_max_flow or pai == 1: # Fix this one later
+            min_target_ppis = sum(target_in.values()) / pai
+            min_ppi_target = min_target_ppis*.9 < flow_value < min_target_ppis*1.1
+
+            if percent_output > min_max_flow or pai == 1 or min_ppi_target: # Fix this one later
                 S = nx.DiGraph()
                 S.add_nodes_from(negative_diG.nodes())
 
