@@ -110,7 +110,7 @@ if __name__ == '__main__':
     print("Minimizing degree delta and edges removed ...")
     model.Minimize(sum(bait_error) + sum(prey_error))
     solver = cp_model.CpSolver()
-    #solver.parameters.max_time_in_seconds = 600
+    solver.parameters.max_time_in_seconds = 600
     solver.parameters.log_search_progress = True
     solver.parameters.num_workers = threads
     status = solver.Solve(model)

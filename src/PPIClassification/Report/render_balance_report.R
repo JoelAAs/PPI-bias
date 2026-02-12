@@ -17,6 +17,11 @@ rmarkdown::render(
     test_pos_file = snakemake@input$test_pos,
     test_neg_file = snakemake@input$test_neg,
     test_maxflow_pos_file = snakemake@input$test_maxflow_pos,
-    test_maxflow_neg_file = snakemake@input$test_maxflow_neg
+    test_maxflow_neg_file = snakemake@input$test_maxflow_neg,
+    method=snakemake@wildcards$balance_method,
+    partition_name=snakemake@wildcards$partition_name,
+    dataset=snakemake@wildcards$dataset,
+    pos_limit=snakemake@wildcards$pos_limit,
+    neg_limit=snakemake@wildcards$neg_limit
   )
 )

@@ -2,21 +2,42 @@
 title: "Check bait/prey balance"
 output: html_notebook
 params:
-  full_pos_file: NULL
-  full_neg_file: NULL
-  train_pos_file: NULL
-  train_neg_file: NULL
-  train_maxflow_pos_file: NULL
-  train_maxflow_neg_file: NULL
-  validate_pos_file: NULL
-  validate_neg_file: NULL
-  validate_maxflow_pos_file: NULL
-  validate_maxflow_neg_file: NULL
-  test_pos_file: NULL
-  test_neg_file: NULL
-  test_maxflow_pos_file: NULL
-  test_maxflow_neg_file: NULL
+full_pos_file: NULL
+full_neg_file: NULL
+train_pos_file: NULL
+train_neg_file: NULL
+train_maxflow_pos_file: NULL
+train_maxflow_neg_file: NULL
+validate_pos_file: NULL
+validate_neg_file: NULL
+validate_maxflow_pos_file: NULL
+validate_maxflow_neg_file: NULL
+test_pos_file: NULL
+test_neg_file: NULL
+test_maxflow_pos_file: NULL
+test_maxflow_neg_file: NULL
+method: NULL
+partition_name: NULL
+dataset: NULL
+pos_limit: NULL
+neg_limit: NULL
 ---
+
+```{r info_table, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
+tabl <- paste("| **Parameter**        | Value           |",
+              "|---------------|:-------------:|",
+              paste0("| **Dataset** | ", params$dataset, " |"),
+              paste0("| **Partition** | ", params$partititon_name, " |"),
+              paste0("| **Method** | ", params$method, " |"),
+              paste0("| **Positive Limit** | ", params$pos_limit, " |"),
+              paste0("| **Negative Limit** | ", params$neg_limit, " |"),
+              sep="\n")
+
+cat(tabl) # output the table in a format good for HTML/PDF/docx conversion
+```
+```
+
+
 ```{r functions, echo=F}
 library(ggplot2)
 library(tidyverse)
@@ -194,31 +215,31 @@ plot_degree <- function(df_delta, scaling_factor) {
 }
 ```
 ```{r input, echo=F}
-full_pos <- read.table(params$full_pos_file, sep="\t", header=TRUE)
-full_neg <- read.table(params$full_neg_file, sep="\t", header=TRUE)
+full_pos <- read.table(params$full_pos_file, sep = "\t", header = TRUE)
+full_neg <- read.table(params$full_neg_file, sep = "\t", header = TRUE)
 
-train_pos <- read.table(params$train_pos_file, sep="\t", header=TRUE)
-train_neg <- read.table(params$train_neg_file, sep="\t", header=TRUE)
-train_maxflow_pos <- read.table(params$train_maxflow_pos_file, sep="\t", col.names = c("bait", "prey"))
-train_maxflow_neg <- read.table(params$train_maxflow_neg_file, sep="\t", col.names = c("bait", "prey"), skip = 1)
+train_pos <- read.table(params$train_pos_file, sep = "\t", header = TRUE)
+train_neg <- read.table(params$train_neg_file, sep = "\t", header = TRUE)
+train_maxflow_pos <- read.table(params$train_maxflow_pos_file, sep = "\t", col.names = c("bait", "prey"))
+train_maxflow_neg <- read.table(params$train_maxflow_neg_file, sep = "\t", col.names = c("bait", "prey"), skip = 1)
 aimed_scaleing_factor_train <- get_scaling_value(params$train_maxflow_neg_file)
 df_degree_pos_train <- get_degree(train_maxflow_pos)
 df_degree_neg_train <- get_degree(train_maxflow_neg)
 df_delta_train <- get_degree_diff(df_degree_pos_train, df_degree_neg_train)
 
-validate_pos <- read.table(params$validate_pos_file, sep="\t", header=TRUE)
-validate_neg <- read.table(params$validate_neg_file, sep="\t", header=TRUE)
-validate_maxflow_pos <- read.table(params$validate_maxflow_pos_file, sep="\t", col.names = c("bait", "prey"))
-validate_maxflow_neg <- read.table(params$validate_maxflow_neg_file, sep="\t", col.names = c("bait", "prey"), skip = 1)
+validate_pos <- read.table(params$validate_pos_file, sep = "\t", header = TRUE)
+validate_neg <- read.table(params$validate_neg_file, sep = "\t", header = TRUE)
+validate_maxflow_pos <- read.table(params$validate_maxflow_pos_file, sep = "\t", col.names = c("bait", "prey"))
+validate_maxflow_neg <- read.table(params$validate_maxflow_neg_file, sep = "\t", col.names = c("bait", "prey"), skip = 1)
 aimed_scaleing_factor_validate <- get_scaling_value(params$validate_maxflow_neg_file)
 df_degree_pos_validate <- get_degree(validate_maxflow_pos)
 df_degree_neg_validate <- get_degree(validate_maxflow_neg)
 df_delta_validate <- get_degree_diff(df_degree_pos_validate, df_degree_neg_validate)
 
-test_pos <- read.table(params$test_pos_file, sep="\t", header=TRUE)
-test_neg <- read.table(params$test_neg_file, sep="\t", header=TRUE)
-test_maxflow_pos <- read.table(params$test_maxflow_pos_file, sep="\t", col.names = c("bait", "prey"))
-test_maxflow_neg <- read.table(params$test_maxflow_neg_file, sep="\t", col.names = c("bait", "prey"), skip = 1)
+test_pos <- read.table(params$test_pos_file, sep = "\t", header = TRUE)
+test_neg <- read.table(params$test_neg_file, sep = "\t", header = TRUE)
+test_maxflow_pos <- read.table(params$test_maxflow_pos_file, sep = "\t", col.names = c("bait", "prey"))
+test_maxflow_neg <- read.table(params$test_maxflow_neg_file, sep = "\t", col.names = c("bait", "prey"), skip = 1)
 aimed_scaleing_factor_test <- get_scaling_value(params$test_maxflow_neg_file)
 df_degree_pos_test <- get_degree(test_maxflow_pos)
 df_degree_neg_test <- get_degree(test_maxflow_neg)
