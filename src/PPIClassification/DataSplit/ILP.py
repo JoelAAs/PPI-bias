@@ -1,23 +1,7 @@
-import re
-
 from ortools.sat.python import cp_model
 import pandas as pd
 import networkx as nx
 import argparse
-
-def read_edgelist(file):
-    scaled_to = 1
-    with open(file, "r") as f:
-        for line in f:
-            if line[0] == "#":
-                match = re.search("Scaled: ([0-9]+) : 1", line)
-                if match:
-                    scaled_to = int(match.group(1))
-
-    df = pd.read_csv(file, sep="\t", header=None, comment='#')
-    df = df.rename({0: "bait", 1:"prey"}, axis=1)
-    return df, scaled_to
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Get mean embeddings from protein fasta")
@@ -37,8 +21,14 @@ if __name__ == '__main__':
     missmatch_allowed = args.accepted_error
     threads = args.threads
 
-    positive_df, _ = read_edgelist(positive_data)
-    negative_df, scale = read_edgelist(negative_data)
+    positive_df = pd.read_csv(positive_data, sep="\t")
+    negative_df = pd.read_csv(negative_data, sep="\t")
+
+    positive_df = positive_df.iloc[:,0:2]
+    negative_df = negative_df.iloc[:,0:2]
+
+    positive_df.columns = ["bait", "prey"]
+    negative_df.columns = ["bait", "prey"]
 
     all_baits = set(positive_df["bait"]) | set(negative_df["bait"])
     all_preys = set(positive_df["prey"]) | set(negative_df["prey"])
@@ -88,10 +78,10 @@ if __name__ == '__main__':
     Kn = model.NewIntVar(0, len(negative_edges), "kp")
     model.add(Kp == sum(xp))
     model.add(Kn == sum(xn))
+    min_kept = len(positive_edges)
+    model.add(Kp > int(len(positive_edges)*.9))
+    model.add(Kn >= Kp)
 
-    if args.subset=="test":
-        model.Add(Kp==Kn)
-        scale=1
 
     bait_error = [model.NewIntVar(0, len(negative_edges), f"be_{i}")
                   for i in range(len(bait_int_idx))]
@@ -103,30 +93,29 @@ if __name__ == '__main__':
     for bait, idx in bait_int_idx.items():
         s_n = sum(xn[i] for i in negative_edges_bait_ind[bait])
         s_p = sum(xp[i] for i in positive_edges_bait_ind[bait])
-        diff = s_n - s_p*scale
-        model.Add(bait_error[idx] >= diff - missmatch_allowed)
-        model.Add(bait_error[idx] >= -diff - missmatch_allowed)
-        model.Add(bait_error[idx] >= 0)
-    # prey constraints
+        diff = s_n - s_p
+        model.add(bait_error[idx] >= diff - missmatch_allowed)
+        model.add(bait_error[idx] >= -diff - missmatch_allowed)
+        model.add(bait_error[idx] >= 0)
+        # prey constraints
 
     print("Setting up prey constraints ...")
     for prey, idx in prey_int_idx.items():
         s_n = sum(xn[i] for i in negative_edges_prey_ind[prey])
         s_p = sum(xp[i] for i in positive_edges_prey_ind[prey])
-        diff = s_n - s_p*scale
-        model.Add(prey_error[idx] >= diff - missmatch_allowed)
-        model.Add(prey_error[idx] >= -diff - missmatch_allowed)
-        model.Add(prey_error[idx] >= 0)
+        diff = s_n - s_p
+        model.add(prey_error[idx] >= diff - missmatch_allowed)
+        model.add(prey_error[idx] >= -diff - missmatch_allowed)
+        model.add(prey_error[idx] >= 0)
 
     print("Minimizing degree delta and edges removed ...")
-    model.Minimize(10*sum(bait_error) + 10*sum(prey_error) - Kn*10 - Kp*15)
+    model.Minimize(sum(bait_error) + sum(prey_error))
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = 600
+    #solver.parameters.max_time_in_seconds = 600
     solver.parameters.log_search_progress = True
     solver.parameters.num_workers = threads
     status = solver.Solve(model)
     print("Finished optimization")
-
 
     if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
         total_mismatched_bait = 0
@@ -137,13 +126,13 @@ if __name__ == '__main__':
         for bait, idx in bait_int_idx.items():
             degree_negative = sum(solver.Value(xn[i]) for i, (u, v, d) in enumerate(negative_edges) if u == bait)
             degree_positive = sum(solver.Value(xp[i]) for i, (u, v, d) in enumerate(positive_edges) if u == bait)
-            delta = abs(degree_negative - degree_positive*scale)
+            delta = abs(degree_negative - degree_positive)
             total_mismatched_bait += delta
 
         for prey, idx in prey_int_idx.items():
             degree_negative = sum(solver.Value(xn[i]) for i, (u, v, d) in enumerate(negative_edges) if v == prey)
             degree_positive = sum(solver.Value(xp[i]) for i, (u, v, d) in enumerate(positive_edges) if v == prey)
-            delta = abs(degree_negative - degree_positive*scale)
+            delta = abs(degree_negative - degree_positive)
             total_mismatched_prey += delta
 
         print(f"Summed, bait-degree missmatch: {total_mismatched_bait}")

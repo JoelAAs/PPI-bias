@@ -27,8 +27,8 @@ rule ilp:
     threads: 20
     log: "logs/ilp/{partition_name}/ilp_{settype}_{dataset}_{neg_limit}_poslim_{pos_limit}.log"
     input:
-        set_max_flow_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_pos.edgelist",
-        set_max_flow_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.edgelist"
+        set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv",
+        set_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv"
     output:
         balanced_pos=f"work_folder{pn}/subsets/{{settype}}/balanced/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_pos.csv",
         balanced_neg=f"work_folder{pn}/subsets/{{settype}}/balanced/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv"
