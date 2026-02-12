@@ -30,17 +30,16 @@ rule ilp:
         set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv",
         set_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv"
     output:
-        balanced_pos=f"work_folder{pn}/subsets/{{settype}}/balanced/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_pos.csv",
-        balanced_neg=f"work_folder{pn}/subsets/{{settype}}/balanced/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv"
+        balanced_pos=f"work_folder{pn}/subsets/{{settype}}/ilp/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_pos.csv",
+        balanced_neg=f"work_folder{pn}/subsets/{{settype}}/ilp/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv"
     shell:
         """(
-
         python3 {params.script_location} \
-            --positive_data {input.set_max_flow_pos} \
-            --negative_data {input.set_max_flow_neg} \
+            --positive_data {input.set_pos} \
+            --negative_data {input.set_neg} \
             --balanced_positive {output.balanced_pos} \
             --balanced_negative {output.balanced_neg} \
             --accepted_error {params.accepted_missmatch} \
-            --threads {threads} \
-            --subset {wildcards.settype}
-        ) >{log} 2>&1"""
+            --threads {threads}         
+            ) >{log} 2>&1"""
+        

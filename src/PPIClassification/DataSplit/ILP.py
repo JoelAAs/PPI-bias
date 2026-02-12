@@ -11,7 +11,6 @@ if __name__ == '__main__':
     parser.add_argument("--balanced_positive", required=True, help="Path to output csv file")
     parser.add_argument("--accepted_error", type=int, default=2, help="Path to output csv file")
     parser.add_argument("--threads", type=int, default=8, help="Path to output csv file")
-    parser.add_argument("--subset",default="", help="Yes")
 
     args = parser.parse_args()
     positive_data = args.positive_data
