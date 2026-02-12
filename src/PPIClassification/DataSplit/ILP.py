@@ -54,15 +54,18 @@ if __name__ == '__main__':
     print("Indexing edges ...", flush=True)
     neg_groups_bait = negative_edge_list_df.groupby("bait").groups
     pos_groups_bait = positive_edge_list_df.groupby("bait").groups
-
     negative_edges_bait_ind = {k: list(v) for k, v in neg_groups_bait.items()}
     positive_edges_bait_ind = {k: list(v) for k, v in pos_groups_bait.items()}
+    negative_edges_bait_ind = {b: negative_edges_bait_ind.get(b, []) for b in all_baits}
+    positive_edges_bait_ind = {b: positive_edges_bait_ind.get(b, []) for b in all_baits}
+
 
     neg_groups_prey = negative_edge_list_df.groupby("prey").groups
     pos_groups_prey = positive_edge_list_df.groupby("prey").groups
-
     negative_edges_prey_ind = {k: list(v) for k, v in neg_groups_prey.items()}
     positive_edges_prey_ind = {k: list(v) for k, v in pos_groups_prey.items()}
+    negative_edges_prey_ind = {p: negative_edges_prey_ind.get(p, []) for p in all_preys}
+    positive_edges_prey_ind = {p: positive_edges_prey_ind.get(p, []) for p in all_preys}
 
 
     print("Setting up model ...", flush=True)
