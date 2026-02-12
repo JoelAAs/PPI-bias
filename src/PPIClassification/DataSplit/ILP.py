@@ -50,25 +50,15 @@ if __name__ == '__main__':
     negative_edge_list_df = pd.DataFrame(negative_edges)
     negative_edge_list_df.columns = ["bait", "prey", "data"]
 
-    positive_edges_bait_ind = {}
-    positive_edges_prey_ind = {}
+    # Convert to dict of lists
+    print("Indexing edges ...", flush=True)
+    neg_groups = negative_edge_list_df.groupby("bait").groups
+    pos_groups = positive_edge_list_df.groupby("bait").groups
 
-    negative_edges_bait_ind = {}
-    negative_edges_prey_ind = {}
-
-    print("Indexing baits ...")
-    for j, bait in enumerate(bait_int_idx):  # idx unused
-        #print(f"{j}/{len(prey_int_idx)} ")
-        negative_edges_bait_ind[bait] = negative_edge_list_df[negative_edge_list_df["bait"] == bait].index.to_list()
-        positive_edges_bait_ind[bait] = positive_edge_list_df[positive_edge_list_df["bait"] == bait].index.to_list()
-
-    print("Indexing prey ...")
-    for j, prey in enumerate(prey_int_idx):
-        print(f"{j}/{len(prey_int_idx)} ")
-        negative_edges_prey_ind[prey]= negative_edge_list_df[negative_edge_list_df["prey"] == prey].index.to_list()
-        positive_edges_prey_ind[prey]= positive_edge_list_df[positive_edge_list_df["prey"] == prey].index.to_list()
-
-    print("Setting up model ...")
+    negative_edges_bait_ind = {k: list(v) for k, v in neg_groups.items()}
+    positive_edges_bait_ind = {k: list(v) for k, v in pos_groups.items()}
+    
+    print("Setting up model ...", flush=True)
     model = cp_model.CpModel()
     xn = [model.NewBoolVar(f"xn_{i}") for i in range(len(negative_edges))]
     xp = [model.NewBoolVar(f"xp_{i}") for i in range(len(positive_edges))]
@@ -88,7 +78,7 @@ if __name__ == '__main__':
                   for i in range(len(prey_int_idx))]
 
 
-    print("Setting up bait constraints ...")
+    print("Setting up bait constraints ...", flush=True)
     for bait, idx in bait_int_idx.items():
         s_n = sum(xn[i] for i in negative_edges_bait_ind[bait])
         s_p = sum(xp[i] for i in positive_edges_bait_ind[bait])
@@ -98,7 +88,7 @@ if __name__ == '__main__':
         model.add(bait_error[idx] >= 0)
         # prey constraints
 
-    print("Setting up prey constraints ...")
+    print("Setting up prey constraints ...", flush=True)
     for prey, idx in prey_int_idx.items():
         s_n = sum(xn[i] for i in negative_edges_prey_ind[prey])
         s_p = sum(xp[i] for i in positive_edges_prey_ind[prey])
@@ -107,7 +97,7 @@ if __name__ == '__main__':
         model.add(prey_error[idx] >= -diff - missmatch_allowed)
         model.add(prey_error[idx] >= 0)
 
-    print("Minimizing degree delta and edges removed ...")
+    print("Minimizing degree delta and edges removed ...", flush=True)
     model.Minimize(sum(bait_error) + sum(prey_error))
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = 600
@@ -137,7 +127,7 @@ if __name__ == '__main__':
         print(f"Summed, bait-degree missmatch: {total_mismatched_bait}")
         print(f"Summed, Prey-degree missmatch: {total_mismatched_prey}")
         print(f"Negative edges retained: {n_negative_edges_selected}/{len(negative_edges)}")
-        print(f"Positive edges retained: {n_positive_edges_selected}/{len(positive_edges)}")
+        print(f"Positive edges retained: {n_positive_edges_selected}/{len(positive_edges)}", flush=True)
 
         with open(balanced_negative, "w") as w:
             w.write(f"bait\tprey\n")
