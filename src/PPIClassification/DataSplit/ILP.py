@@ -29,6 +29,17 @@ if __name__ == '__main__':
     positive_df.columns = ["bait", "prey"]
     negative_df.columns = ["bait", "prey"]
 
+    positive_df = positive_df[
+        (positive_df["bait"].isin(negative_df["bait"])) |
+        (positive_df["prey"].isin(negative_df["prey"]))
+    ] # remove negative edges with no negative df representation
+
+    negative_df = negative_df[
+        (negative_df["bait"].isin(positive_df["bait"])) |
+        (negative_df["prey"].isin(positive_df["prey"]))
+    ] # Remove negative edges with no positive df representation
+
+
     all_baits = set(positive_df["bait"]) | set(negative_df["bait"])
     all_preys = set(positive_df["prey"]) | set(negative_df["prey"])
 

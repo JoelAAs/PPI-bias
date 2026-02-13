@@ -34,9 +34,11 @@ def get_possible_scaling_factors(targetG, scaling):
 def build_flow_graph(otherG, scaled_degree_in, scaled_degree_out):
     F = nx.DiGraph()
 
+    overflow = Fraction(10000)
+
     for node in otherG.nodes():  # same nodes in pos/neg
-        F.add_edge("source", ("out", node), capacity=scaled_degree_out.get(node, Fraction(0)).numerator)
-        F.add_edge(("in", node), "sink", capacity=scaled_degree_in.get(node, Fraction(0)).numerator)
+        F.add_edge("source", ("out", node), capacity=scaled_degree_out.get(node, overflow).numerator)
+        F.add_edge(("in", node), "sink", capacity=scaled_degree_in.get(node, overflow).numerator)
 
     for bait, prey in otherG.edges():
         F.add_edge(("out", bait), ("in", prey), capacity=1)
@@ -79,14 +81,6 @@ if __name__ == '__main__':
 
     positive_bait_prey_df.columns = ["bait", "prey"]
     negative_bait_prey_df.columns = ["bait", "prey"]
-
-    # baits = set(negative_bait_prey_df["bait"]) & set(positive_bait_prey_df["bait"])
-    # all_prey = set(negative_bait_prey_df["prey"]) & set(positive_bait_prey_df["prey"])
-    #
-    # negative_bp_df = negative_bait_prey_df[
-    #     negative_bait_prey_df["bait"].isin(baits) & negative_bait_prey_df["prey"].isin(all_prey)].copy()
-    # positive_bp_df = positive_bait_prey_df[
-    #     positive_bait_prey_df["bait"].isin(baits) & positive_bait_prey_df["prey"].isin(all_prey)].copy()
 
     positive_diG = nx.from_pandas_edgelist(
         positive_bait_prey_df, "bait", "prey", create_using=nx.DiGraph()
