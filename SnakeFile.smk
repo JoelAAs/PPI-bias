@@ -112,11 +112,24 @@ rule all:
     input:
         expand(
             f"work_folder{pn}/subsets/report/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}.nb.html",
-            dataset=datasets,neg_limit=3,pos_limit=0.15,partition_name=["sequencesimilarity", "maxpos"]
+            dataset=datasets,neg_limit=[2,3],pos_limit=0.15,partition_name=["sequencesimilarity", "maxpos"]
         ),
         expand(
             f"work_folder{pn}/classification/randomforest/{{data}}_model_parameters.txt",
-            data=["ms_sequencesimilarity", "ms_maxpos", "y2h_sequencesimilarity", "y2h_maxpos", "goldensplit_asis"])
+            data=[
+                "ms_sequencesimilarity2",
+                "ms_maxpos2",
+                "ms_sequencesimilarity3",
+                "ms_maxpos3",
+                "y2h_sequencesimilarity2",
+                "y2h_maxpos2",
+                "y2h_sequencesimilarity3",
+                "y2h_maxpos3",
+                "flat_sequencesimilarity2",
+                "flat_maxpos2",
+                "flat_sequencesimilarity3",
+                "flat_maxpos3",
+                "goldensplit_asis"])
     #expected_output,
     #f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
     #f"work_folder{pn}/plots/degree/GO_enrichment.png",
