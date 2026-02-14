@@ -111,8 +111,8 @@ wildcard_constraints:
 rule all:
     input:
         expand(
-            f"work_folder{pn}/subsets/report/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}.nb.html",
-            dataset=datasets,neg_limit=[2,3],pos_limit=0.15,partition_name=["sequencesimilarity", "maxpos"]
+            f"work_folder{pn}/subsets/report/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_{{balance_method}}.nb.html",
+            dataset=datasets,neg_limit=[2,3],pos_limit=0.15,partition_name=["sequencesimilarity", "maxpos"], balance_method="maxflow"
         ),
         expand(
             f"work_folder{pn}/classification/randomforest/{{dataset}}_{{model_configuration}}_model_parameters.txt",
