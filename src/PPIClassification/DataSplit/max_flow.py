@@ -82,6 +82,11 @@ if __name__ == '__main__':
     positive_bait_prey_df.columns = ["bait", "prey"]
     negative_bait_prey_df.columns = ["bait", "prey"]
 
+    negative_bait_prey_df = negative_bait_prey_df[
+        (negative_bait_prey_df["bait"].isin(positive_bait_prey_df["bait"])) |
+        (negative_bait_prey_df["prey"].isin(positive_bait_prey_df["prey"]))
+    ]
+
     positive_diG = nx.from_pandas_edgelist(
         positive_bait_prey_df, "bait", "prey", create_using=nx.DiGraph()
     )
@@ -90,7 +95,7 @@ if __name__ == '__main__':
     )
     success = False
 
-    pa = [Fraction(i, 1) for i in range(10,0,-1)]
+    pa = [Fraction(i, 1) for i in range(3,0,-1)]
     for pai in pa:
         target_in, target_out, success = get_possible_scaling_factors(positive_diG, pai)
         if success:

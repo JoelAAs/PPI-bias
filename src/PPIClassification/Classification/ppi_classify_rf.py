@@ -71,8 +71,12 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
     for i in range(n_iters):
         s = datetime.datetime.now()
         if len(y_train_full) > max_samples:
-            positive_index_selected = np.random.choice(positive_index[0], size=int(max_samples/2), replace=False)
-            negative_index_selected = np.random.choice(negative_index[0], size=int(max_samples/2), replace=False)
+            n_samples = int(max_samples/2)
+            positive_index_selected = np.random.choice(
+                    positive_index[0], size=(n_samples if n_samples < len(positive_index) else len(positive_index)), replace=False)
+            negative_index_selected = np.random.choice(
+                    negative_index[0], size=(n_samples if n_samples < len(negative_index) else len(negative_index)), replace=False)
+
             rmd_index = np.concat([positive_index_selected, negative_index_selected])
             X_train = X_train_full[rmd_index,:]
             y_train = y_train_full[rmd_index]
