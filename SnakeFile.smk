@@ -106,7 +106,7 @@ wildcard_constraints:
     pid="[:a-zA-Z0-9-]+",
     neg_limit="[0-9.]+",
     pos_limit="[0-9.]+",
-    model_configuration="[a-z]+"
+    model_configuration="[a-z0-9]+"
 
 rule all:
     input:
@@ -115,22 +115,11 @@ rule all:
             dataset=datasets,neg_limit=[2,3],pos_limit=0.15,partition_name=["sequencesimilarity", "maxpos"]
         ),
         expand(
-            f"work_folder{pn}/classification/randomforest/{{data}}_model_parameters.txt",
-            data=[
-                "ms_seqs2",
-                "ms_maxdata2",
-                "ms_seqs3",
-                "ms_maxdata3",
-                "y2h_seqs2",
-                "y2h_maxdata2",
-                "y2h_seqs3",
-                "y2h_maxdata3",
-                "flat_seqs2",
-                "flat_maxdata2",
-                "flat_seqs3",
-                "flat_maxdata3",
-                "goldensplit_asis"])
-    #expected_output,
+            f"work_folder{pn}/classification/randomforest/{{dataset}}_{{model_configuration}}_model_parameters.txt",
+            dataset=["ms", "y2h", "flat"], model_configuration = ["seqs2","seqs3", "maxdata2", "maxdata3"]),
+        f"work_folder{pn}/classification/randomforest/goldensplit_asis_model_parameters.txt"
+
+    #expected_output,,
     #f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
     #f"work_folder{pn}/plots/degree/GO_enrichment.png",
     #f"work_folder{pn}/plots/localisation/HuRI_bioplex.png",
