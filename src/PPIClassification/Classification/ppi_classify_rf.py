@@ -176,6 +176,9 @@ if __name__ == '__main__':
 
     rfc = RandomForestClassifier(
         **parameters,
+        bootstrap=True,
+        class_weight="balanced",
+        random_state=RANDOM_STATE,
         n_jobs=threads)
 
     rfc.fit(
@@ -185,5 +188,5 @@ if __name__ == '__main__':
 
     y_test_pred = rfc.predict(X_test)
 
-    param_file.write("-----------------TEST ACCURACY----------------")
+    param_file.write("-----------------TEST ACCURACY----------------\n")
     param_file.write(classification_report(y_test, y_test_pred))

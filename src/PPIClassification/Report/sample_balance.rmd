@@ -23,22 +23,7 @@ params:
     neg_limit: NULL
 ---
 
-```{r info_table, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
-tabl <- paste("| **Parameter**        | Value           |",
-              "|---------------|:-------------:|",
-              paste0("| **Dataset** | ", params$dataset, " |"),
-              paste0("| **Partition** | ", params$partititon_name, " |"),
-              paste0("| **Method** | ", params$method, " |"),
-              paste0("| **Positive Limit** | ", params$pos_limit, " |"),
-              paste0("| **Negative Limit** | ", params$neg_limit, " |"),
-              sep="\n")
-
-cat(tabl) # output the table in a format good for HTML/PDF/docx conversion
-```
-```
-
-
-```{r functions, echo=F}
+```{r functions, echo=F, message=False}
 library(ggplot2)
 library(tidyverse)
 library(networkD3)
@@ -213,6 +198,18 @@ plot_degree <- function(df_delta, scaling_factor) {
     )
   return(g)
 }
+```
+```{r info_table, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
+tabl <- paste("| **Parameter**        | Value           |",
+              "|---------------|:-------------:|",
+              paste0("| **Dataset** | ", params$dataset, " |"),
+              paste0("| **Partition** | ", params$partititon_name, " |"),
+              paste0("| **Method** | ", params$method, " |"),
+              paste0("| **Positive Limit** | ", params$pos_limit, " |"),
+              paste0("| **Negative Limit** | ", params$neg_limit, " |"),
+              sep="\n")
+
+cat(tabl) # output the table in a format good for HTML/PDF/docx conversion
 ```
 ```{r input, echo=F}
 full_pos <- read.table(params$full_pos_file, sep = "\t", header = TRUE)
