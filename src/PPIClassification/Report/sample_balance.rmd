@@ -23,7 +23,7 @@ params:
     neg_limit: NULL
 ---
 
-```{r functions, echo=F, message=False}
+```{r functions, echo=F, message=F}
 library(ggplot2)
 library(tidyverse)
 library(networkD3)
