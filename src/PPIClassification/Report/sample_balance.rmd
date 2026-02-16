@@ -304,7 +304,7 @@ p
 
 ```
 
-```{r n_ppi_proportions, echo=FALSE}
+```{r info_table_proportions, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
 
 tabl <- paste("| **Balanced Dataset**        | **Positive** | **Negative** |",
               "|---------------|-------------|---------|",
