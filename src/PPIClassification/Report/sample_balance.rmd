@@ -209,8 +209,9 @@ tabl <- paste("| **Parameter**        | Value           |",
               paste0("| **Negative Limit** | ", params$neg_limit, " |"),
               sep="\n")
 
-cat(tabl) # output the table in a format good for HTML/PDF/docx conversion
+cat(tabl)
 ```
+
 ```{r input, echo=F}
 full_pos <- read.table(params$full_pos_file, sep = "\t", header = TRUE)
 full_neg <- read.table(params$full_neg_file, sep = "\t", header = TRUE)
@@ -298,6 +299,15 @@ p <- sankeyNetwork(
   height = 800,
   fontSize = 32, nodeWidth = 64)
 p
+
+tabl <- paste("| **Balanced Dataset**        | **Positive** | **Negative** |",
+              "|---------------|-------------|---------|",
+              paste0("| Train | ", nrow(train_balanced_pos), " | ", nrow(train_balanced_neg), " |"),
+              paste0("| Validate | ", nrow(validate_balanced_pos), " | ", nrow(validate_balanced_neg), " |"),
+              paste0("| Test | ", nrow(test_balanced_pos), " | ", nrow(test_balanced_neg), " |"),
+              sep="\n")
+
+cat(tabl)
 
 ```
 
