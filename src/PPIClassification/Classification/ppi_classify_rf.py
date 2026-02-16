@@ -9,7 +9,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report, balanced_accuracy_score
 from sklearn.model_selection import ParameterSampler
 from sklearn.metrics import f1_score
-
+from sklearn.metrics import roc_auc_score
 global RANDOM_STATE
 
 
@@ -88,10 +88,9 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
             n_jobs=n_threads
         )
         model.fit(X_train, y_train)
-
-        y_val_pred = model.predict(X_validation)
         probs = model.predict_proba(X_validation)[:, 1]
 
+        y_val_pred = np.zeros(len(y_validation))
         best_f1 = 0
         current_t = 0.5
         for t in np.linspace(0.1, 0.9, 50):
@@ -100,6 +99,7 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
             if f1 > best_f1:
                 best_f1 = f1
                 current_t = t
+                y_val_pred = preds
 
         val_acc = balanced_accuracy_score(y_validation, y_val_pred)
         hyper_optimizer.tell(params, -best_f1)
@@ -187,8 +187,9 @@ if __name__ == '__main__':
 
     probs_test = rfc.predict_proba(X_test)[:, 1]
     y_test_pred = (probs_test > best_t).astype(int)
-
+    auc = roc_auc_score(y_test, probs_test)
     param_file.write("-----------------TEST ACCURACY----------------\n")
+    param_file.write(f"AUC: {auc:.4f}\n\n")
     param_file.write(f"Selected t: {best_t}\n")
     param_file.write(classification_report(y_test, y_test_pred))
     param_file.close()
