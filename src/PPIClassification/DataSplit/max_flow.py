@@ -107,11 +107,12 @@ if __name__ == '__main__':
             print(f"Flow value: {flow_value}, that being {percent_output} % of scaled degree")
 
             min_target_ppis = sum(target_in.values()) / pai
-            min_ppi_target = min_target_ppis*.9 < flow_value < min_target_ppis*1.1
+            min_ppi_target = min_target_ppis*.8 < flow_value < min_target_ppis*1.2
 
             save=False
-            if args.subset == "test" and min_ppi_target or pai == 1:
-                save = True
+            if args.subset == "test":
+                if min_ppi_target or pai == 1:
+                    save = True
             elif percent_output > min_max_flow or pai == 1 or min_ppi_target: # Fix this one later
                 save = True
 
