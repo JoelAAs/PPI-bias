@@ -1,6 +1,8 @@
 ---
 title: "Check bait/prey balance"
-output: html_notebook
+output:
+    html_document:
+        self_contained: true
 params:
     full_pos_file: NULL
     full_neg_file: NULL
