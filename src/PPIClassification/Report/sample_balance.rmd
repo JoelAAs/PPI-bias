@@ -24,11 +24,11 @@ params:
 ---
 
 ```{r functions, echo=F, message=F}
-library(ggplot2)
-library(tidyverse)
-library(networkD3)
-library(dplyr)
-library(R.utils)
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(networkD3))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(R.utils))
 
 get_scaling_value <- function(neg_file) {
   first_line <- readLines(neg_file, n = 1)
@@ -203,7 +203,7 @@ plot_degree <- function(df_delta, scaling_factor) {
 tabl <- paste("| **Parameter**        | Value           |",
               "|---------------|:-------------:|",
               paste0("| **Dataset** | ", params$dataset, " |"),
-              paste0("| **Partition** | ", params$partititon_name, " |"),
+              paste0("| **Partition** | ", params$partition_name, " |"),
               paste0("| **Method** | ", params$method, " |"),
               paste0("| **Positive Limit** | ", params$pos_limit, " |"),
               paste0("| **Negative Limit** | ", params$neg_limit, " |"),
@@ -300,6 +300,10 @@ p <- sankeyNetwork(
   fontSize = 32, nodeWidth = 64)
 p
 
+```
+
+```{r n_ppi_proportions, echo=FALSE}
+
 tabl <- paste("| **Balanced Dataset**        | **Positive** | **Negative** |",
               "|---------------|-------------|---------|",
               paste0("| Train | ", nrow(train_balanced_pos), " | ", nrow(train_balanced_neg), " |"),
@@ -310,6 +314,8 @@ tabl <- paste("| **Balanced Dataset**        | **Positive** | **Negative** |",
 cat(tabl)
 
 ```
+
+
 
 
 
