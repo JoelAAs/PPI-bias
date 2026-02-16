@@ -45,7 +45,7 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
     print("Hyperparameter tuning started", flush=True)
 
     param_dist = [
-        Integer(48, 5000, prior="log-uniform", name="n_estimators"),
+        Integer(48, 2000, prior="log-uniform", name="n_estimators"),
         Categorical([None, 8, 10, 12, 16, 20, 24], name="max_depth"),
         Integer(10, 500, name="min_samples_split"),
         Integer(20, 300, name="min_samples_leaf"),
