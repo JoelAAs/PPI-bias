@@ -92,6 +92,7 @@ include: "src/PPIClassification/DataSplit/GenePartitions.smk"
 include: "src/PPIClassification/DataSplit/GenerateTrainTestSplits.smk"
 include: "src/PPIClassification/DataSplit/BalanceSplits.smk"
 include: "src/PPIClassification/DataSplit/GetGoldenSplit.smk"
+include: "src/PPIClassification/ModelEvaluation/Evaluations.smk"
 
 include: "src/PPIClassification/Classification/RandomForest.smk"
 include: "src/PPIClassification/Report/Reporting.smk"
@@ -117,8 +118,11 @@ rule all:
         expand(
             f"work_folder{pn}/classification/randomforest/{{dataset}}_{{model_configuration}}_model_parameters.txt",
             dataset=["ms", "y2h", "flat"], model_configuration = ["seqs2","seqs3", "maxdata2", "maxdata3"]),
-        f"work_folder{pn}/classification/randomforest/goldensplit_asis_model_parameters.txt"
-
+        f"work_folder{pn}/classification/randomforest/goldensplit_asis_model_parameters.txt",
+        expand(
+            f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_{{model_configuration}}_metrics.txt",
+                dataset=["ms", "y2h", "flat"], model_configuration = ["seqs2","seqs3", "maxdata2", "maxdata3"]),
+        f"work_folder{pn}/classification/randomforest/metrics/goldensplit_asis_metrics.txt"
     #expected_output,,
     #f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
     #f"work_folder{pn}/plots/degree/GO_enrichment.png",

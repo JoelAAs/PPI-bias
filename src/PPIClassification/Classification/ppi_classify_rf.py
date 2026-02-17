@@ -10,6 +10,7 @@ from sklearn.metrics import classification_report, balanced_accuracy_score
 from sklearn.metrics import f1_score
 import joblib
 from sklearn.metrics import precision_recall_curve, auc
+from sklearn.dummy import DummyClassifier
 
 global RANDOM_STATE
 
@@ -96,7 +97,7 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
         current_t = 0.5
         for t in np.linspace(0.1, 0.9, 50):
             preds = (probs > t).astype(int)
-            f1 = f1_score(y_validation, preds, average="macro")
+            f1 = f1_score(y_validation, preds, average="weighted")
             if f1 > best_f1:
                 best_f1 = f1
                 current_t = t
@@ -126,6 +127,7 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
     return best_model, best_t, best_score, best_params
 
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("--train_ppi_data_pos", required=True, help="")
@@ -137,6 +139,7 @@ if __name__ == '__main__':
     parser.add_argument("--protein_embeddings", required=True, help="Path to output csv file")
     parser.add_argument("--params_out", required=True, help="Path to output csv file")
     parser.add_argument("--saved_model", required=True, help="Path to output csv file")
+    parser.add_argument("--saved_dummy_classifer", required=True, help="Path to output csv file")
     parser.add_argument("--threads", type=int, default=40, help="")
     parser.add_argument("--randomstate", type=int, default=1234, help="")
     args = parser.parse_args()
@@ -193,10 +196,19 @@ if __name__ == '__main__':
     precision, recall, _ = precision_recall_curve(y_test, probs_test)
     pr_auc = auc(recall, precision)
     y_test_pred = (probs_test > best_t).astype(int)
-    
     param_file.write("-----------------TEST ACCURACY----------------\n")
     param_file.write(f"Precision-Recall AUC: {pr_auc:.4f}\n")
-
     param_file.write(f"Selected t: {best_t}\n")
     param_file.write(classification_report(y_test, y_test_pred))
     param_file.close()
+
+
+    dummy_clf = DummyClassifier(strategy="stratified", random_state=RANDOM_STATE)
+    dummy_clf.fit(
+        np.vstack((X_train, X_validate)),
+        np.concatenate((y_train, y_validate)
+        ))
+    joblib.dump(dummy_clf, args.saved_dummy_classifer)
+    
+
+    

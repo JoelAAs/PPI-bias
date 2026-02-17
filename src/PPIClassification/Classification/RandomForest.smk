@@ -28,7 +28,8 @@ rule random_forest:
         protein_embeddings=f"work_folder{pn}/embeddings/canonical_embedding.csv.gz"
     output:
         params=f"work_folder{pn}/classification/randomforest/{{dataset}}_{{model_configuration}}_model_parameters.txt",
-        saved_model = f"work_folder{pn}/classification/randomforest/model/{{dataset}}_{{model_configuration}}_model_parameters.txt",
+        saved_model = f"work_folder{pn}/classification/randomforest/model/{{dataset}}_{{model_configuration}}_model_parameters.joblib",
+        baseline_model = f"work_folder{pn}/classification/randomforest/model/{{dataset}}_{{model_configuration}}_dummy_model.joblib"
     threads: 48
     shell:
         """
@@ -43,5 +44,6 @@ rule random_forest:
             --params_out {output.params} \
             --threads {threads} \
             --randomstate 1234 \
-            --saved_model {output.saved_model}
+            --saved_model {output.saved_model} \
+            --saved_dummy_classifer {output.baseline_model}
         """
