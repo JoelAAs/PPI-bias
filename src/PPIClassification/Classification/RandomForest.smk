@@ -27,7 +27,8 @@ rule random_forest:
         data = lambda wc: get_expected_input(wc),
         protein_embeddings=f"work_folder{pn}/embeddings/canonical_embedding.csv.gz"
     output:
-        params=f"work_folder{pn}/classification/randomforest/{{dataset}}_{{model_configuration}}_model_parameters.txt"
+        params=f"work_folder{pn}/classification/randomforest/{{dataset}}_{{model_configuration}}_model_parameters.txt",
+        saved_model = f"work_folder{pn}/classification/randomforest/model/{{dataset}}_{{model_configuration}}_model_parameters.txt",
     threads: 48
     shell:
         """
@@ -41,5 +42,6 @@ rule random_forest:
             --protein_embeddings {input.protein_embeddings} \
             --params_out {output.params} \
             --threads {threads} \
-            --randomstate 1234
+            --randomstate 1234 \
+            --saved_model {output.saved_model}
         """

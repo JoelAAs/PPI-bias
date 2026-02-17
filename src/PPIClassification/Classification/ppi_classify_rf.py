@@ -6,10 +6,10 @@ import pandas as pd
 from skopt import Optimizer
 from skopt.space import Integer, Real, Categorical
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report, balanced_accuracy_score
-from sklearn.model_selection import ParameterSampler
+from sklearn.metrics import classification_report, balanced_accuracy_score
 from sklearn.metrics import f1_score
 from sklearn.metrics import roc_auc_score
+import joblib
 global RANDOM_STATE
 
 
@@ -135,6 +135,7 @@ if __name__ == '__main__':
     parser.add_argument("--test_ppi_data_neg", required=True, help="Path to output csv file")
     parser.add_argument("--protein_embeddings", required=True, help="Path to output csv file")
     parser.add_argument("--params_out", required=True, help="Path to output csv file")
+    parser.add_argument("--saved_model", required=True, help="Path to output csv file")
     parser.add_argument("--threads", type=int, default=40, help="")
     parser.add_argument("--randomstate", type=int, default=1234, help="")
     args = parser.parse_args()
@@ -184,6 +185,7 @@ if __name__ == '__main__':
         np.vstack((X_train, X_validate)),
         np.concatenate((y_train, y_validate))
     )
+    joblib.dump(rfc, args.saved_model)
 
     probs_test = rfc.predict_proba(X_test)[:, 1]
     y_test_pred = (probs_test > best_t).astype(int)
