@@ -32,17 +32,18 @@ def estimate_ppis_kept(ppi_df, partition_df, partition_set):
 
 
 def maximise_data_kept(ppi_df, partition_df, remaining_partitions):
-    test_slice = int(len(remaining_partitions) * 2 / 3)
-    validation_slice = len(remaining_partitions) - test_slice
-    test_partitions = list(combinations(remaining_partitions,test_slice))
-    combination_partitions = [b for tp in test_partitions for b in remaining_partitions if b not in tp]
+
+    validation_slice = int(len(remaining_partitions) * 1/2)
+    test_slice = len(remaining_partitions) - validation_slice
+    validation_partitions = list(combinations(remaining_partitions,validation_slice))
+    combination_partitions = [rp for vp in validation_partitions for rp in remaining_partitions if rp not in vp]
     combination_partitions = [
-        combination_partitions[i:(i + validation_slice)] for i in range(0,len(combination_partitions),validation_slice)
+        combination_partitions[i:(i + validation_slice)] for i in range(0,len(combination_partitions),test_slice)
     ]
     test_partitions, validation_partitions = sorted(
-        zip(test_partitions,combination_partitions),
-        key=lambda x: estimate_ppis_kept(ppi_df,partition_df,x[0]) + estimate_ppis_kept(ppi_df,partition_df,
-            x[1]),reverse=True
+        zip(validation_partitions, combination_partitions),
+        key=lambda x: estimate_ppis_kept(
+            ppi_df,partition_df,x[0]) + estimate_ppis_kept(ppi_df,partition_df,x[1]),reverse=True
     )[0]
     return test_partitions, validation_partitions
 
