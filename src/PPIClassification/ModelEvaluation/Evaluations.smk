@@ -28,12 +28,10 @@ rule get_model_metrics:
     shell:
         """
         python3 {params.script_location} \
-            --validation_ppi_data_pos {input.validation_data[0]} \
-            --validation_ppi_data_neg {input.validation_data[1]} \
+            --pos_data_file {input.validation_data[0]} \
+            --neg_data_file {input.validation_data[1]} \
             --protein_embeddings_file {input.protein_embeddings} \
             --model_file {input.saved_model} \
             --dummy_baseline_file {input.dummy_baseline} \
-            --saved_model {input.saved_model} \
-            --output_metrics {output.metrics} \
-            --threads {threads}
+            --output_file {output.metrics} 
         """
