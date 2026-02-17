@@ -10,6 +10,8 @@ from sklearn.metrics import classification_report, balanced_accuracy_score
 from sklearn.metrics import f1_score
 from sklearn.metrics import roc_auc_score
 import joblib
+from sklearn.metrics import precision_recall_curve, auc
+
 global RANDOM_STATE
 
 
@@ -188,10 +190,16 @@ if __name__ == '__main__':
     joblib.dump(rfc, args.saved_model)
 
     probs_test = rfc.predict_proba(X_test)[:, 1]
-    y_test_pred = (probs_test > best_t).astype(int)
     auc = roc_auc_score(y_test, probs_test)
+
+
+    precision, recall, _ = precision_recall_curve(y_test, probs_test)
+    pr_auc = auc(recall, precision)
+    y_test_pred = (probs_test > best_t).astype(int)
+    
     param_file.write("-----------------TEST ACCURACY----------------\n")
-    param_file.write(f"AUC: {auc:.4f}\n\n")
+    param_file.write(f"Precision-Recall AUC: {pr_auc:.4f}\n")
+
     param_file.write(f"Selected t: {best_t}\n")
     param_file.write(classification_report(y_test, y_test_pred))
     param_file.close()
