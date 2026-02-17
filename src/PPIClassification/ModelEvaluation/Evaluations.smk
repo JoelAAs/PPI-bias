@@ -21,7 +21,7 @@ rule get_model_metrics:
     input:
         validation_data = lambda wc: get_model_validation_data(wc),
         saved_model = f"work_folder{pn}/classification/randomforest/model/{{dataset}}_{{model_configuration}}_model_parameters.joblib",
-        dummy_baseline = f"work_folder{pn}/classification/randomforest/model/{{dataset}}_{{model_configuration}}_dummy_baseline_parameters.joblib",
+        dummy_baseline = f"work_folder{pn}/classification/randomforest/model/{{dataset}}_{{model_configuration}}_dummy_model.joblib",
         protein_embeddings = f"work_folder{pn}/embeddings/{{dataset}}_protein_embeddings.csv"
     output:
         metrics=f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_{{model_configuration}}_metrics.txt"
