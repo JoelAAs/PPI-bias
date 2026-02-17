@@ -8,7 +8,6 @@ from skopt.space import Integer, Real, Categorical
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, balanced_accuracy_score
 from sklearn.metrics import f1_score
-from sklearn.metrics import roc_auc_score
 import joblib
 from sklearn.metrics import precision_recall_curve, auc
 
@@ -190,8 +189,6 @@ if __name__ == '__main__':
     joblib.dump(rfc, args.saved_model)
 
     probs_test = rfc.predict_proba(X_test)[:, 1]
-    auc = roc_auc_score(y_test, probs_test)
-
 
     precision, recall, _ = precision_recall_curve(y_test, probs_test)
     pr_auc = auc(recall, precision)
