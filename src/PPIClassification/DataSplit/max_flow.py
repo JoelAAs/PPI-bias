@@ -82,6 +82,11 @@ if __name__ == '__main__':
     positive_bait_prey_df.columns = ["bait", "prey"]
     negative_bait_prey_df.columns = ["bait", "prey"]
 
+    negative_bait_prey_df = negative_bait_prey_df[
+        (negative_bait_prey_df["bait"].isin(positive_bait_prey_df["bait"])) |
+        (negative_bait_prey_df["prey"].isin(positive_bait_prey_df["prey"]))
+    ]
+
     positive_diG = nx.from_pandas_edgelist(
         positive_bait_prey_df, "bait", "prey", create_using=nx.DiGraph()
     )
@@ -90,7 +95,7 @@ if __name__ == '__main__':
     )
     success = False
 
-    pa = [Fraction(i, 1) for i in range(10,0,-1)]
+    pa = [Fraction(i, 1) for i in range(3,0,-1)]
     for pai in pa:
         target_in, target_out, success = get_possible_scaling_factors(positive_diG, pai)
         if success:
@@ -102,9 +107,16 @@ if __name__ == '__main__':
             print(f"Flow value: {flow_value}, that being {percent_output} % of scaled degree")
 
             min_target_ppis = sum(target_in.values()) / pai
-            min_ppi_target = min_target_ppis*.9 < flow_value < min_target_ppis*1.1
+            min_ppi_target = min_target_ppis*.8 < flow_value < min_target_ppis*1.2
 
-            if percent_output > min_max_flow or pai == 1 or min_ppi_target: # Fix this one later
+            save=False
+            if args.subset == "test":
+                if min_ppi_target or pai == 1:
+                    save = True
+            elif percent_output > min_max_flow or pai == 1 or min_ppi_target: # Fix this one later
+                save = True
+
+            if save:
                 S = nx.DiGraph()
                 S.add_nodes_from(negative_diG.nodes())
 

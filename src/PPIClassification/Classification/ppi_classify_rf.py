@@ -9,7 +9,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report, balanced_accuracy_score
 from sklearn.model_selection import ParameterSampler
 from sklearn.metrics import f1_score
-
+from sklearn.metrics import roc_auc_score
 global RANDOM_STATE
 
 
@@ -41,11 +41,12 @@ def get_embedding_dict(protein_embeddings_file):
     return embedding_dict, embed_length
 
 
-def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_validation, n_threads, fileout, n_iters=10, max_samples=50000):
+def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_validation, n_threads, fileout, n_iters=10,
+                               max_samples=50000):
     print("Hyperparameter tuning started", flush=True)
 
     param_dist = [
-        Integer(48, 5000, prior="log-uniform", name="n_estimators"),
+        Integer(48, 2000, prior="log-uniform", name="n_estimators"),
         Categorical([None, 8, 10, 12, 16, 20, 24], name="max_depth"),
         Integer(10, 500, name="min_samples_split"),
         Integer(20, 300, name="min_samples_leaf"),
@@ -56,6 +57,7 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
     best_score = -np.inf
     best_model = None
     best_params = None
+    best_t = 0.5
 
     hyper_optimizer = Optimizer(
         dimensions=param_dist,
@@ -64,18 +66,13 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
         random_state=RANDOM_STATE
     )
 
-    negative_index = np.where(y_train_full==0)
-    positive_index = np.where(y_train_full==1)
-
-
     for i in range(n_iters):
         s = datetime.datetime.now()
         if len(y_train_full) > max_samples:
-            positive_index_selected = np.random.choice(positive_index[0], size=int(max_samples/2), replace=False)
-            negative_index_selected = np.random.choice(negative_index[0], size=int(max_samples/2), replace=False)
-            rmd_index = np.concat([positive_index_selected, negative_index_selected])
-            X_train = X_train_full[rmd_index,:]
-            y_train = y_train_full[rmd_index]
+            rng = np.random.RandomState(RANDOM_STATE + i)
+            indices = rng.choice(len(y_train_full), size=max_samples, replace=False)
+            X_train = X_train_full[indices]
+            y_train = y_train_full[indices]
         else:
             X_train = X_train_full
             y_train = y_train_full
@@ -91,35 +88,41 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
             n_jobs=n_threads
         )
         model.fit(X_train, y_train)
-        y_train_pred = model.predict(X_train)
-        y_val_pred = model.predict(X_validation)
-        val_score = f1_score(y_validation, y_val_pred, average="macro")
+        probs = model.predict_proba(X_validation)[:, 1]
+
+        y_val_pred = np.zeros(len(y_validation))
+        best_f1 = 0
+        current_t = 0.5
+        for t in np.linspace(0.1, 0.9, 50):
+            preds = (probs > t).astype(int)
+            f1 = f1_score(y_validation, preds, average="macro")
+            if f1 > best_f1:
+                best_f1 = f1
+                current_t = t
+                y_val_pred = preds
+
         val_acc = balanced_accuracy_score(y_validation, y_val_pred)
-        train_score = f1_score(y_train, y_train_pred, average="macro")
-        train_acc = balanced_accuracy_score(y_train, y_train_pred)
-        hyper_optimizer.tell(params, -val_score)
+        hyper_optimizer.tell(params, -best_f1)
 
         e = datetime.datetime.now()
         print("------------------------------------------------")
-        print(f"{i+1} iteration of {n_iters} in {e-s}", flush=True)
-        print("Current params: " + str(params), flush=True)
-        print(f"F1 score: {train_score}\t Acc: {train_acc} for Train")
-        print(f"F1 score: {val_score}\t Acc: {val_acc} for Validation")
+        print(f"{i + 1} iteration of {n_iters} in {e - s}")
+        print("Current params: " + str(params))
+        print(f"F1 score: {best_f1}\t t: {current_t} Acc: {val_acc} for Validation", flush=True)
         fileout.write("---------------------")
         fileout.write(f"Training took {e - s} using {n_threads} threads\n")
         fileout.write("Current params: " + str(params) + "\n")
-        fileout.write(f"F1 score: {train_score}\t Acc: {train_acc} for Train\n")
-        fileout.write(f"F1 score: {val_score}\t Acc: {val_acc} for Validation\n")
 
-        if val_score > best_score:
-            best_score = val_score
+        if best_f1 > best_score:
+            best_score = best_f1
+            best_t = current_t
             best_model = model
             best_params = params
 
     fileout.write("Best validation score: " + str(best_score) + "\n")
     fileout.write("Best params: " + str(best_params) + "\n")
     best_params = dict(zip([d.name for d in param_dist], best_params))
-    return best_model, best_score, best_params
+    return best_model, best_t, best_score, best_params
 
 
 if __name__ == '__main__':
@@ -167,11 +170,14 @@ if __name__ == '__main__':
     )
 
     param_file = open(args.params_out, "w")
-    _, score, parameters = hyperparameter_tuned_model(X_train, y_train, X_validate, y_validate, threads, param_file, n_iters = 40)
-
+    _, best_t, score, parameters = hyperparameter_tuned_model(
+        X_train, y_train, X_validate, y_validate, threads, param_file, n_iters=20)
 
     rfc = RandomForestClassifier(
         **parameters,
+        bootstrap=True,
+        class_weight="balanced",
+        random_state=RANDOM_STATE,
         n_jobs=threads)
 
     rfc.fit(
@@ -179,7 +185,11 @@ if __name__ == '__main__':
         np.concatenate((y_train, y_validate))
     )
 
-    y_test_pred = rfc.predict(X_test)
-
-    param_file.write("-----------------TEST ACCURACY----------------")
+    probs_test = rfc.predict_proba(X_test)[:, 1]
+    y_test_pred = (probs_test > best_t).astype(int)
+    auc = roc_auc_score(y_test, probs_test)
+    param_file.write("-----------------TEST ACCURACY----------------\n")
+    param_file.write(f"AUC: {auc:.4f}\n\n")
+    param_file.write(f"Selected t: {best_t}\n")
     param_file.write(classification_report(y_test, y_test_pred))
+    param_file.close()

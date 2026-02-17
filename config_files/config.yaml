@@ -60,13 +60,23 @@ flat:
 # Classifier data configuration:
 models:
   goldensplit:
-  sequencesimilarity:
+  seqs3:
     partition: "sequencesimilarity"
     pos: 0.15
     neg: 3
     balancing: "maxflow"
-  maxpos:
+  maxdata3:
     partition: "maxpos"
     pos: 0.15
     neg: 3
+    balancing: "maxflow"
+  seqs2:
+    partition: "sequencesimilarity"
+    pos: 0.15
+    neg: 2
+    balancing: "maxflow"
+  maxdata2:
+    partition: "maxpos"
+    pos: 0.15
+    neg: 2
     balancing: "maxflow"

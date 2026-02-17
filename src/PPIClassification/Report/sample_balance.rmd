@@ -1,49 +1,36 @@
 ---
 title: "Check bait/prey balance"
-output: html_notebook
+output:
+    html_document:
+        self_contained: true
 params:
-full_pos_file: NULL
-full_neg_file: NULL
-train_pos_file: NULL
-train_neg_file: NULL
-train_maxflow_pos_file: NULL
-train_maxflow_neg_file: NULL
-validate_pos_file: NULL
-validate_neg_file: NULL
-validate_maxflow_pos_file: NULL
-validate_maxflow_neg_file: NULL
-test_pos_file: NULL
-test_neg_file: NULL
-test_maxflow_pos_file: NULL
-test_maxflow_neg_file: NULL
-method: NULL
-partition_name: NULL
-dataset: NULL
-pos_limit: NULL
-neg_limit: NULL
+    full_pos_file: NULL
+    full_neg_file: NULL
+    train_pos_file: NULL
+    train_neg_file: NULL
+    train_balanced_pos_file: NULL
+    train_balanced_neg_file: NULL
+    validate_pos_file: NULL
+    validate_neg_file: NULL
+    validate_balanced_pos_file: NULL
+    validate_balanced_neg_file: NULL
+    test_pos_file: NULL
+    test_neg_file: NULL
+    test_balanced_pos_file: NULL
+    test_balanced_neg_file: NULL
+    method: NULL
+    partition_name: NULL
+    dataset: NULL
+    pos_limit: NULL
+    neg_limit: NULL
 ---
 
-```{r info_table, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
-tabl <- paste("| **Parameter**        | Value           |",
-              "|---------------|:-------------:|",
-              paste0("| **Dataset** | ", params$dataset, " |"),
-              paste0("| **Partition** | ", params$partititon_name, " |"),
-              paste0("| **Method** | ", params$method, " |"),
-              paste0("| **Positive Limit** | ", params$pos_limit, " |"),
-              paste0("| **Negative Limit** | ", params$neg_limit, " |"),
-              sep="\n")
-
-cat(tabl) # output the table in a format good for HTML/PDF/docx conversion
-```
-```
-
-
-```{r functions, echo=F}
-library(ggplot2)
-library(tidyverse)
-library(networkD3)
-library(dplyr)
-library(R.utils)
+```{r functions, echo=F, message=F}
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(networkD3))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(R.utils))
 
 get_scaling_value <- function(neg_file) {
   first_line <- readLines(neg_file, n = 1)
@@ -214,35 +201,48 @@ plot_degree <- function(df_delta, scaling_factor) {
   return(g)
 }
 ```
+```{r info_table, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
+tabl <- paste("| **Parameter**        | Value           |",
+              "|---------------|:-------------:|",
+              paste0("| **Dataset** | ", params$dataset, " |"),
+              paste0("| **Partition** | ", params$partition_name, " |"),
+              paste0("| **Method** | ", params$method, " |"),
+              paste0("| **Positive Limit** | ", params$pos_limit, " |"),
+              paste0("| **Negative Limit** | ", params$neg_limit, " |"),
+              sep="\n")
+
+cat(tabl)
+```
+
 ```{r input, echo=F}
 full_pos <- read.table(params$full_pos_file, sep = "\t", header = TRUE)
 full_neg <- read.table(params$full_neg_file, sep = "\t", header = TRUE)
 
 train_pos <- read.table(params$train_pos_file, sep = "\t", header = TRUE)
 train_neg <- read.table(params$train_neg_file, sep = "\t", header = TRUE)
-train_maxflow_pos <- read.table(params$train_maxflow_pos_file, sep = "\t", col.names = c("bait", "prey"))
-train_maxflow_neg <- read.table(params$train_maxflow_neg_file, sep = "\t", col.names = c("bait", "prey"), skip = 1)
-aimed_scaleing_factor_train <- get_scaling_value(params$train_maxflow_neg_file)
-df_degree_pos_train <- get_degree(train_maxflow_pos)
-df_degree_neg_train <- get_degree(train_maxflow_neg)
+train_balanced_pos <- read.table(params$train_balanced_pos_file, sep = "\t", col.names = c("bait", "prey"))
+train_balanced_neg <- read.table(params$train_balanced_neg_file, sep = "\t", col.names = c("bait", "prey"), skip = 1)
+aimed_scaleing_factor_train <- get_scaling_value(params$train_balanced_neg_file)
+df_degree_pos_train <- get_degree(train_balanced_pos)
+df_degree_neg_train <- get_degree(train_balanced_neg)
 df_delta_train <- get_degree_diff(df_degree_pos_train, df_degree_neg_train)
 
 validate_pos <- read.table(params$validate_pos_file, sep = "\t", header = TRUE)
 validate_neg <- read.table(params$validate_neg_file, sep = "\t", header = TRUE)
-validate_maxflow_pos <- read.table(params$validate_maxflow_pos_file, sep = "\t", col.names = c("bait", "prey"))
-validate_maxflow_neg <- read.table(params$validate_maxflow_neg_file, sep = "\t", col.names = c("bait", "prey"), skip = 1)
-aimed_scaleing_factor_validate <- get_scaling_value(params$validate_maxflow_neg_file)
-df_degree_pos_validate <- get_degree(validate_maxflow_pos)
-df_degree_neg_validate <- get_degree(validate_maxflow_neg)
+validate_balanced_pos <- read.table(params$validate_balanced_pos_file, sep = "\t", col.names = c("bait", "prey"))
+validate_balanced_neg <- read.table(params$validate_balanced_neg_file, sep = "\t", col.names = c("bait", "prey"), skip = 1)
+aimed_scaleing_factor_validate <- get_scaling_value(params$validate_balanced_neg_file)
+df_degree_pos_validate <- get_degree(validate_balanced_pos)
+df_degree_neg_validate <- get_degree(validate_balanced_neg)
 df_delta_validate <- get_degree_diff(df_degree_pos_validate, df_degree_neg_validate)
 
 test_pos <- read.table(params$test_pos_file, sep = "\t", header = TRUE)
 test_neg <- read.table(params$test_neg_file, sep = "\t", header = TRUE)
-test_maxflow_pos <- read.table(params$test_maxflow_pos_file, sep = "\t", col.names = c("bait", "prey"))
-test_maxflow_neg <- read.table(params$test_maxflow_neg_file, sep = "\t", col.names = c("bait", "prey"), skip = 1)
-aimed_scaleing_factor_test <- get_scaling_value(params$test_maxflow_neg_file)
-df_degree_pos_test <- get_degree(test_maxflow_pos)
-df_degree_neg_test <- get_degree(test_maxflow_neg)
+test_balanced_pos <- read.table(params$test_balanced_pos_file, sep = "\t", col.names = c("bait", "prey"))
+test_balanced_neg <- read.table(params$test_balanced_neg_file, sep = "\t", col.names = c("bait", "prey"), skip = 1)
+aimed_scaleing_factor_test <- get_scaling_value(params$test_balanced_neg_file)
+df_degree_pos_test <- get_degree(test_balanced_pos)
+df_degree_neg_test <- get_degree(test_balanced_neg)
 df_delta_test <- get_degree_diff(df_degree_pos_test, df_degree_neg_test)
 ```
 
@@ -260,9 +260,9 @@ all_pos_npair <- nrow(full_pos)
 train_pos_npair <- nrow(train_pos)
 validation_pos_npair <- nrow(validate_pos)
 test_pos_npair <- nrow(test_pos)
-mf_train_pos_npair <- nrow(train_maxflow_pos)
-mf_validation_pos_npair <- nrow(validate_maxflow_pos)
-mf_test_pos_npair <- nrow(test_maxflow_pos)
+mf_train_pos_npair <- nrow(train_balanced_pos)
+mf_validation_pos_npair <- nrow(validate_balanced_pos)
+mf_test_pos_npair <- nrow(test_balanced_pos)
 
 positive_data <- data.frame(
   source = c("All", "All", "All", "Train", "Validation", "Test", "Train", "Validation", "Test", "All"),
@@ -303,6 +303,21 @@ p <- sankeyNetwork(
 p
 
 ```
+
+```{r info_table_proportions, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
+
+tabl <- paste("| **Balanced Dataset**        | **Positive** | **Negative** |",
+              "|---------------|-------------|---------|",
+              paste0("| Train | ", nrow(train_balanced_pos), " | ", nrow(train_balanced_neg), " |"),
+              paste0("| Validate | ", nrow(validate_balanced_pos), " | ", nrow(validate_balanced_neg), " |"),
+              paste0("| Test | ", nrow(test_balanced_pos), " | ", nrow(test_balanced_neg), " |"),
+              sep="\n")
+
+cat(tabl)
+
+```
+
+
 
 
 
