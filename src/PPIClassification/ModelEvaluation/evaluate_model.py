@@ -46,6 +46,20 @@ def evaluate_model(model, dummy_model, X_test, y_test):
         pr_auc = auc(recall, precision) 
         pr_auc_dummy = auc(dummy_recall, dummy_precision)
 
+        # PR AUC negative class
+        y_test_neg = 1 - y_test
+        probs_test_neg = 1 - probs_test
+        probs_test_dummy_neg = 1 - probs_test_dummy
+
+        precision_neg, recall_neg, _ = precision_recall_curve(
+            y_test_neg, probs_test_neg
+        )
+        pr_auc_neg = auc(recall_neg, precision_neg)
+
+        dummy_precision_neg, dummy_recall_neg, _ = precision_recall_curve(
+            y_test_neg, probs_test_dummy_neg
+        )
+        pr_auc_dummy_neg = auc(dummy_recall_neg, dummy_precision_neg)
 
         # ROC AUC
         fpr, tpr, thresholds = roc_curve(y_test, probs_test)
@@ -53,7 +67,7 @@ def evaluate_model(model, dummy_model, X_test, y_test):
         fpr_dummy, tpr_dummy, _ = roc_curve(y_test, probs_test_dummy)
         roc_auc_dummy = auc(fpr_dummy, tpr_dummy)
         
-    return pr_auc, pr_auc_dummy, roc_auc, roc_auc_dummy
+    return pr_auc, pr_auc_dummy, pr_auc_neg, pr_auc_dummy_neg, roc_auc, roc_auc_dummy
 
 
 if __name__ == "__main__":
@@ -73,9 +87,11 @@ if __name__ == "__main__":
     dummy_model = joblib.load(args.dummy_baseline_file) 
     
     with open(args.output_file, "w") as f:
-        pr_auc, pr_auc_dummy, roc_auc, roc_auc_dummy = evaluate_model(model, dummy_model, X_test, y_test)
+        pr_auc, pr_auc_dummy, pr_auc_neg, pr_auc_dummy_neg, roc_auc, roc_auc_dummy = evaluate_model(model, dummy_model, X_test, y_test)
         f.write(f"PR AUC: {pr_auc:.4f}\n")
         f.write(f"PR AUC (Dummy): {pr_auc_dummy:.4f}\n")
+        f.write(f"PR NEG AUC: {pr_auc_neg:.4f}\n")
+        f.write(f"PR NEG AUC (Dummy): {pr_auc_dummy_neg:.4f}\n")
         f.write(f"ROC AUC: {roc_auc:.4f}\n")
         f.write(f"ROC AUC (Dummy): {roc_auc_dummy:.4f}\n")
     
