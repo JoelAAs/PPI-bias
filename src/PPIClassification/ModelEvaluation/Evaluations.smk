@@ -11,8 +11,8 @@ def get_model_validation_data(wc):
         data =  f"{wc.dataset}_limit_{neg_limit}_poslim_{pos_limit}_{partition_name}"
 
     return [
-        f"work_folder{pn}/subsets/validation/{selection}/{data}_pos.csv",
-        f"work_folder{pn}/subsets/validation/{selection}/{data}_neg.csv"
+        f"work_folder{pn}/subsets/test/{selection}/{data}_pos.csv",
+        f"work_folder{pn}/subsets/test/{selection}/{data}_neg.csv"
     ]
 
 rule get_model_metrics:
