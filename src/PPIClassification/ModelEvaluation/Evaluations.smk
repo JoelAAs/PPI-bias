@@ -52,7 +52,7 @@ rule all_metrics:
             w.write("model\tpr_auc\tpr_auc_dummy\troc_auc\troc_auc_dummy\n")
             for metric_file in input.metrics:
                 with open(metric_file, "r") as f:
-                    line_out = [line.split(": ")[1] for line in f]
+                    line_out = [line.strip().split(": ")[1] for line in f]
                     line_out = "\t".join(line_out) 
                     model_name = metric_file.split("/")[-1].replace("_metrics.txt", "")
                     line_out = model_name + "\t" + line_out + "\n"
