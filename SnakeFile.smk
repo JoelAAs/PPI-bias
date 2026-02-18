@@ -10,13 +10,7 @@ pn = config["project_name"]
 if pn:
     pn = "/" + pn
 
-datasets = [
-    "flat",
-    "ms",
-    "y2h",
-    #"abundance_mcmc",
-    #"MI-1314"
-]
+datasets = config["datasets"]
 
 pods = [
     f"work_folder{pn}/analysis/POD/POD_{data}.csv" for data in datasets
@@ -117,12 +111,9 @@ rule all:
         ),
         expand(
             f"work_folder{pn}/classification/randomforest/{{dataset}}_{{model_configuration}}_model_parameters.txt",
-            dataset=["ms", "y2h", "flat"], model_configuration = ["seqs2","seqs3", "maxdata2", "maxdata3"]),
+            dataset=datasets, model_configuration = ["seqs2","seqs3", "maxdata2", "maxdata3"]),
         f"work_folder{pn}/classification/randomforest/goldensplit_asis_model_parameters.txt",
-        expand(
-            f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_{{model_configuration}}_metrics.txt",
-                dataset=["ms", "y2h", "flat"], model_configuration = ["seqs2","seqs3", "maxdata2", "maxdata3"]),
-        f"work_folder{pn}/classification/randomforest/metrics/goldensplit_asis_metrics.txt"
+        f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
     #expected_output,,
     #f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
     #f"work_folder{pn}/plots/degree/GO_enrichment.png",

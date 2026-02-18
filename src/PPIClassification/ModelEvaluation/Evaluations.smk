@@ -1,3 +1,9 @@
+def input_metrics(wc):
+    expected_input = expand(
+        f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_{{model_configuration}}_metrics.txt",
+         dataset=config["datasets"], model_configuration=(c for c in config["model_configurations"] if c != "goldensplit"))
+         )
+    expected_input.append(f"work_folder{pn}/classification/randomforest/metrics/asis_goldensplit_metrics.txt")
 
 def get_model_validation_data(wc):
     if wc.dataset in config["models"]:
@@ -35,3 +41,19 @@ rule get_model_metrics:
             --dummy_baseline_file {input.dummy_baseline} \
             --output_file {output.metrics} 
         """
+
+rule all_metrics:
+    input:
+        metrics = lambda wc: input_metrics(wc)    
+    output:
+        all_models = f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
+    run:
+        with open(output[0], "a") as w:
+            w.write("model\tpr_auc\tpr_auc_dummy\troc_auc\troc_auc_dummy\n")
+            for metric_file in input.metrics:
+                with open(metric_file, "r") as f:
+                    line_out = [line.split(": ")[1] for line in f]
+                    line_out = "\t".join(line_out) 
+                    model_name = metric_file.split("/")[-1].replace("_metrics.txt", "")
+                    line_out = model_name + "\t" + line_out + "\n"
+                    w.write(line_out)
