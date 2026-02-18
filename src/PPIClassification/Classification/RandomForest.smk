@@ -1,8 +1,8 @@
 
 def get_expected_input(wc):
-    if wc.model_configuration == "goldensplit":
+    if wc.dataset == "goldensplit":
         data = "data"
-        selection = wc.model_configuration
+        selection = wc.dataset
     else:
         pos_limit = config["models"][wc.model_configuration]["pos"]
         neg_limit = config["models"][wc.model_configuration]["neg"]

@@ -6,9 +6,9 @@ def input_metrics(wc):
     return expected_input
 
 def get_model_validation_data(wc):
-    if wc.model_configuration == "goldensplit":
+    if wc.dataset == "goldensplit":
         data = "data"
-        selection = wc.model_configuration
+        selection = wc.dataset
     else:
         pos_limit = config["models"][wc.model_configuration]["pos"]
         neg_limit = config["models"][wc.model_configuration]["neg"]
