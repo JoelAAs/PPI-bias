@@ -24,13 +24,13 @@ rule subset_fasta:
        with open(input.partition, "r") as f:
            for line in f:
                partitiongene = [l.strip() for l in f]
-               
-         gene_seq_dict = read_fasta(input.fasta)
-         with open(output.fasta, "w") as w:
-             for gene in partitiongene:
-                 seq = gene_seq_dict.get(gene,"")
-                 if seq:
-                     w.write(f">{gene}\n{seq}\n")
+
+        gene_seq_dict = read_fasta(input.fasta)
+        with open(output.fasta, "w") as w:
+            for gene in partitiongene:
+                seq = gene_seq_dict.get(gene,"")
+                if seq:
+                    w.write(f">{gene}\n{seq}\n")
 
 
 # rule cdhit_2d:
