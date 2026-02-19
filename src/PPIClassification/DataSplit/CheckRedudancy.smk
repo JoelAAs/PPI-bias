@@ -16,10 +16,10 @@ def read_fasta(fasta_filename):
 rule subset_fasta:
     # NOTE: fasta header lost
     input:
-        partition=f"work_folder{pn}/subsets/{{subset}}/genes/genes_{{dataset}}_{{partition_name}}.txt",
+        partition=f"work_folder{pn}/subsets/{{subset}}/genes/genes_{{selected_data}}_{{partition_name}}.txt",
         fasta=f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
     output:
-        fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{dataset}}_{{partition_name}}.fasta"
+        fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}_{{partition_name}}.fasta"
     run:
         with open(input.partition, "r") as f:
             for line in f:
