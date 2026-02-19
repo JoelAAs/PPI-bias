@@ -70,38 +70,14 @@ rule get_positive_set:
         df_pos = df_pod[df_pod["lower_bound_pod"] >= float(wildcards.pos_limit)]
         df_pos.to_csv(output.full_pos, sep="\t", index=False)
 
-rule define_negative_sets:
-    input:
-        full_neg=f"work_folder{pn}/subsets/{{dataset}}_full_{{neg_limit}}_neg.csv",
-        train_partition_genes= f"work_folder{pn}/subsets/train/genes/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt",
-        validationq_partition_genes= f"work_folder{pn}/subsets/validation/genes/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt",
-        test_partition_genes= f"work_folder{pn}/subsets/test/genes/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt"
-    output:
-        train_neg = f"work_folder{pn}/subsets/train/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
-        val_neg = f"work_folder{pn}/subsets/validation/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
-        test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
-    run:
-        df_neg = pd.read_csv(input.full_neg,sep="\t")
 
-        for gene_file, output_file in zip(
-                [input.train_partition_genes, input.validationq_partition_genes, input.test_partition_genes],
-                [output.train_neg, output.val_neg, output.test_neg]):
-            with open(gene_file, "r") as f:
-                genes = {gene.strip() for gene in f}
-            subset_ppi(df_neg,genes).to_csv(
-                output_file,sep="\t",index=False)
-
-
-rule define_positive_sets:
+rule define_partitions:
     input:
         gene_partition = lambda wc: get_gene_partition(wc),
         full_pos = f"work_folder{pn}/subsets/{{dataset}}_full_{{pos_limit}}_pos.csv"
     output:
-        train_pos=f"work_folder{pn}/subsets/train/{{dataset}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv",
         train_partition_genes = f"work_folder{pn}/subsets/train/genes/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt",
-        val_pos=f"work_folder{pn}/subsets/validation/{{dataset}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv",
         validate_partition_genes= f"work_folder{pn}/subsets/validation/genes/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt",
-        test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv",
         test_partition_genes= f"work_folder{pn}/subsets/test/genes/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt",
     run:
         df_pos = pd.read_csv(input.full_pos,sep="\t")
@@ -126,7 +102,49 @@ rule define_positive_sets:
 
         for i, partition in enumerate([train_partition, validation_partition, test_partition]):
             genes = get_genes_in_partitions(partitions_df, partition)
-            subset_ppi(df_pos,genes).to_csv(
-                output[i * 2],sep="\t",index=False)  # NOTE: If order of output is changed, this breaks
-            with open(output[i * 2 + 1], "w") as w:
+            with open(output[i], "w") as w:
                 _ = [w.write(gene +"\n") for gene in genes]
+
+
+rule define_positive_split:
+    input:
+        full_pos = f"work_folder{pn}/subsets/{{dataset}}_full_{{pos_limit}}_pos.csv",
+        train_partition_genes = f"work_folder{pn}/subsets/train/genes/cdhit/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt",
+        validate_partition_genes= f"work_folder{pn}/subsets/validation/genes/cdhit/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt",
+        test_partition_genes= f"work_folder{pn}/subsets/test/genes/cdhit/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt"
+    output:
+        train_pos = f"work_folder{pn}/subsets/train/{{dataset}}_limit_{{pos_limit}}_pos.csv",
+        val_pos = f"work_folder{pn}/subsets/validation/{{dataset}}_limit_{{pos_limit}}_pos.csv",
+        test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_limit_{{pos_limit}}_pos.csv"
+    run:
+        df_pos = pd.read_csv(input.full_pos,sep="\t")
+        for partition_file, output_file in zip(
+            [input.train_partition_genes, input.validate_partition_genes, input.test_partition_genes],
+            [output.train_pos, output.val_pos, output.test_pos]):
+            with open(partition_genes_file, "r") as f:
+                genes = {gene.strip() for gene in f}
+            subset_ppi(df_pos,genes).to_csv(
+                output_file,sep="\t",index=False)
+
+
+
+rule define_negative_sets:
+    input:
+        full_neg=f"work_folder{pn}/subsets/{{dataset}}_full_{{neg_limit}}_neg.csv",
+        train_partition_genes= f"work_folder{pn}/subsets/train/genes/cdhit/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt",
+        validation_partition_genes= f"work_folder{pn}/subsets/validation/cdhit/genes/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt",
+        test_partition_genes= f"work_folder{pn}/subsets/test/genes/cdhit/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt"
+    output:
+        train_neg = f"work_folder{pn}/subsets/train/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
+        val_neg = f"work_folder{pn}/subsets/validation/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
+        test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
+    run:
+        df_neg = pd.read_csv(input.full_neg,sep="\t")
+
+        for gene_file, output_file in zip(
+                [input.train_partition_genes, input.validation_partition_genes, input.test_partition_genes],
+                [output.train_neg, output.val_neg, output.test_neg]):
+            with open(gene_file, "r") as f:
+                genes = {gene.strip() for gene in f}
+            subset_ppi(df_neg,genes).to_csv(
+                output_file,sep="\t",index=False)

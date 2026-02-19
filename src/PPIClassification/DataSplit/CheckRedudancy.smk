@@ -18,16 +18,28 @@ rule subset_fasta:
                     w.write(f">{gene}\n{seq}\n")
 
 
-# rule cdhit_2d:
-#     params:
-#         cdhit_location=config["cdhit_location"],
-#         identity_threshold=0.5
-#     input:
-#         fasta_train=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}_{{partition_name}}.fasta"
-#         fasta_test=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}_{{partition_name}}.fasta"
-#     output:
-        
-#     shell:
-#         """
-#         {params.cdhit_location} -i {input.fasta_train} -i2 {input.fasta_} -o {output.pos} -o2 {output.neg} -c {params.identity_threshold} -n 5 -d 0 -M 16000 -T 8
-#         """
+rule cdhit:
+    params:
+        cdhit_location=config["cdhit_location"],
+        identity_threshold=0.4
+    threads: 20
+    input:
+        fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}_{{partition_name}}.fasta"
+    output:
+        sim_reduced_fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}_{{partition_name}}_cdhit.fasta"
+    shell:
+        """
+        {params.cdhit_location} -i {input.fasta} -o {output.sim_reduced_fasta} -c {params.identity_threshold} -n 2 -T {threads}
+        """
+
+rule cdhit_to_gene_list:
+    input:
+        sim_reduced_fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}_{{partition_name}}_cdhit.fasta"
+    output:
+        gene_list=f"work_folder{pn}/subsets/{{subset}}/genes/cdhit/genes_{{selected_data}}_{{partition_name}}.txt"
+    run:
+        with open(input.sim_reduced_fasta, "r") as f:
+            genes = [line.strip()[1:] for line in f if line.startswith(">")]
+        with open(output.gene_list, "w") as w:
+            for gene in genes:
+                w.write(gene + "\n")

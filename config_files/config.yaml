@@ -26,7 +26,7 @@ hcni_tested:
 
 kahip_location: "/home/ieo7513/software/KaHIP/deploy/kaffpa"
 seed: 18362
-
+cdhit_locationn: "/home/ieo7513/software/cd-hit-v4.8.1-2019-0228/cd-hit"
 embedding_model: "facebook/esm2_t33_650M_UR50D"
 localisation_file: "data/localisation/subcellular_location.tsv"
 
