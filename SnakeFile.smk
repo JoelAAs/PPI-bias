@@ -3,7 +3,7 @@ import pandas as pd
 from collections import defaultdict
 from scipy.stats import fisher_exact, false_discovery_control
 from src.Analysis.aggregate_support import aggregate_inferred_experiments
-
+from src.support_functions import read_fasta
 
 #### Config
 pn = config["project_name"]

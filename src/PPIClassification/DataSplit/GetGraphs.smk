@@ -3,26 +3,6 @@ import re
 import networkx as nx
 
 
-def read_fasta(fasta_filename):
-    gene_name_seq_dict = dict()
-    with open(fasta_filename) as f:
-        gene_name = ""
-        for line in f:
-            if line[0] == ">":
-                if gene_name:
-                    gene_name = gene_name.groups()[0]
-                    gene_name_seq_dict[gene_name] = seq
-                gene_name = re.search(" GN=([A-Za-z/0-9-]+) ",line)
-                seq = ""
-            else:
-                seq += line.strip()
-
-        if gene_name:
-            gene_name = gene_name.groups()[0]
-            gene_name_seq_dict[gene_name] = seq
-    return gene_name_seq_dict
-
-
 rule blast_sequence_similarity:
     params:
         n_threads=45
@@ -35,7 +15,7 @@ rule blast_sequence_similarity:
         makeblastdb -dbtype prot -in {input.fasta} -title "Gene Name SP DB"
         blastp -query {input.fasta} -db {input.fasta} \
         -outfmt "6 qseqid stitle evalue bitscore"  \
-        -max_hsps 1 -num_threads {params.n_threads} -out all_vs_all.tsv
+        -max_hsps 1 -num_threads {params.n_threads} -out {output.similarity_tsv}.tsv
         ## Eval > 10 not reported
         """
 
