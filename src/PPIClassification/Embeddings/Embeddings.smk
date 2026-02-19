@@ -94,6 +94,8 @@ rule swissprot_gn_to_intact_gn:
         rest = duplicated_gene_names[~duplicated_gene_names["sp_gene_name"].isin(sp_keep)]
         print(f"dropped {len(set(rest["sp_gene_name"]))} genes without clear gene annotation")
 
+        written_protiens = set()
+
         with open(output.fasta_dedup, "w") as w:
             with open(input.fasta, "r") as f:
                 write_sequence = False
@@ -107,8 +109,11 @@ rule swissprot_gn_to_intact_gn:
                         intact_match = re.search(r' QGN=([^"]+)',line).groups()[0]
                         if sp_match:
                             sp_match = sp_match.groups()[0]
-                            if sp_match not in all_duplicated or intact_match in sp_keep:
+                            if (sp_match not in all_duplicated or intact_match in sp_keep) and sp_match not in written_protiens:
+                                written_protiens.add(sp_match)
                                 write_sequence = True
+                            else: 
+                                write_sequence = False
                         else:
                             write_sequence = False
                     if write_sequence:

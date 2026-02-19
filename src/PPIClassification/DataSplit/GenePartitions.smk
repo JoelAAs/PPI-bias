@@ -53,3 +53,5 @@ rule get_gene_to_partition:
 
         gene_partition_df = gene_id.merge(partition_df, on="int_id")
         gene_partition_df.to_csv(output.gene_partition, sep="\t", index=False)
+
+        

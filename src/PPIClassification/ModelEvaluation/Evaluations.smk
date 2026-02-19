@@ -57,3 +57,5 @@ rule all_metrics:
                     model_name = metric_file.split("/")[-1].replace("_metrics.txt", "")
                     line_out = model_name + "\t" + line_out + "\n"
                     w.write(line_out)
+
+
