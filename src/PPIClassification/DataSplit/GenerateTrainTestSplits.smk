@@ -113,9 +113,9 @@ rule define_positive_split:
         validate_partition_genes= f"work_folder{pn}/subsets/validation/genes/cdhit/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt",
         test_partition_genes= f"work_folder{pn}/subsets/test/genes/cdhit/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt"
     output:
-        train_pos = f"work_folder{pn}/subsets/train/{{dataset}}_limit_{{pos_limit}}_pos.csv",
-        val_pos = f"work_folder{pn}/subsets/validation/{{dataset}}_limit_{{pos_limit}}_pos.csv",
-        test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_limit_{{pos_limit}}_pos.csv"
+        train_pos = f"work_folder{pn}/subsets/train/{{dataset}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv",
+        val_pos = f"work_folder{pn}/subsets/validation/{{dataset}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv",
+        test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv"
     run:
         df_pos = pd.read_csv(input.full_pos,sep="\t")
         for partition_file, output_file in zip(
