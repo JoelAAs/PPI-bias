@@ -36,7 +36,7 @@ rule cdhit_to_gene_list:
     input:
         sim_reduced_fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}_{{partition_name}}_cdhit.fasta"
     output:
-        gene_list=f"work_folder{pn}/subsets/{{subset}}/genes/cdhit/genes_{{selected_data}}_{{partition_name}}.txt"
+        gene_list=f"work_folder{pn}/subsets/{{subset}}/genes//genes_{{selected_data}}_{{partition_name}}.txt"
     run:
         with open(input.sim_reduced_fasta, "r") as f:
             genes = [line.strip()[1:] for line in f if line.startswith(">")]
