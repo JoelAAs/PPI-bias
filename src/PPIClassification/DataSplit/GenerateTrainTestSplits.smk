@@ -121,7 +121,7 @@ rule define_positive_split:
         for partition_file, output_file in zip(
             [input.train_partition_genes, input.validate_partition_genes, input.test_partition_genes],
             [output.train_pos, output.val_pos, output.test_pos]):
-            with open(partition_genes_file, "r") as f:
+            with open(partition_file, "r") as f:
                 genes = {gene.strip() for gene in f}
             subset_ppi(df_pos,genes).to_csv(
                 output_file,sep="\t",index=False)
