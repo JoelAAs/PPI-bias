@@ -132,7 +132,7 @@ rule define_negative_sets:
     input:
         full_neg=f"work_folder{pn}/subsets/{{dataset}}_full_{{neg_limit}}_neg.csv",
         train_partition_genes= f"work_folder{pn}/subsets/train/genes/cdhit/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt",
-        validation_partition_genes= f"work_folder{pn}/subsets/validation/cdhit/genes/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt",
+        validation_partition_genes= f"work_folder{pn}/subsets/validation/genes/cdhit/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt",
         test_partition_genes= f"work_folder{pn}/subsets/test/genes/cdhit/genes_{{dataset}}_{{pos_limit}}_{{partition_name}}.txt"
     output:
         train_neg = f"work_folder{pn}/subsets/train/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
