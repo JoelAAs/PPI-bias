@@ -21,9 +21,9 @@ rule subset_fasta:
     output:
         fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{dataset}}_{{partition_name}}.fasta"
     run:
-       with open(input.partition, "r") as f:
-           for line in f:
-               partitiongene = [l.strip() for l in f]
+        with open(input.partition, "r") as f:
+            for line in f:
+                partitiongene = [l.strip() for l in f]
 
         gene_seq_dict = read_fasta(input.fasta)
         with open(output.fasta, "w") as w:
