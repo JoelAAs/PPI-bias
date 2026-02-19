@@ -24,9 +24,9 @@ rule cdhit:
         identity_threshold=0.4
     threads: 20
     input:
-        fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}_{{partition_name}}.fasta"
+        fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}.fasta"
     output:
-        sim_reduced_fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}_{{partition_name}}_cdhit.fasta"
+        sim_reduced_fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}_cdhit.fasta"
     shell:
         """
         {params.cdhit_location} -i {input.fasta} -o {output.sim_reduced_fasta} -c {params.identity_threshold} -n 2 -T {threads}
@@ -34,9 +34,9 @@ rule cdhit:
 
 rule cdhit_to_gene_list:
     input:
-        sim_reduced_fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}_{{partition_name}}_cdhit.fasta"
+        sim_reduced_fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}_cdhit.fasta"
     output:
-        gene_list=f"work_folder{pn}/subsets/{{subset}}/genes/cdhit/genes_{{selected_data}}_{{partition_name}}.txt"
+        gene_list=f"work_folder{pn}/subsets/{{subset}}/genes/cdhit/genes_{{selected_data}}.txt"
     run:
         with open(input.sim_reduced_fasta, "r") as f:
             genes = [line.strip()[1:] for line in f if line.startswith(">")]
