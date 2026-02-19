@@ -1,10 +1,10 @@
 rule subset_fasta:
     # NOTE: fasta header lost
     input:
-        partition=f"work_folder{pn}/subsets/{{subset}}/genes/genes_{{selected_data}}_{{partition_name}}.txt",
+        partition=f"work_folder{pn}/subsets/{{subset}}/genes/genes_{{selected_data}}.txt",
         fasta=f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
     output:
-        fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}_{{partition_name}}.fasta"
+        fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}.fasta"
     run:
         with open(input.partition, "r") as f:
             for line in f:
@@ -26,7 +26,7 @@ rule cdhit:
     input:
         fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}.fasta"
     output:
-        sim_reduced_fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}_cdhit.fasta"
+        sim_reduced_fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/cdhit/{{selected_data}}.fasta"
     shell:
         """
         {params.cdhit_location} -i {input.fasta} -o {output.sim_reduced_fasta} -c {params.identity_threshold} -n 2 -T {threads}
@@ -34,7 +34,7 @@ rule cdhit:
 
 rule cdhit_to_gene_list:
     input:
-        sim_reduced_fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}_cdhit.fasta"
+        sim_reduced_fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/cdhit/{{selected_data}}.fasta"
     output:
         gene_list=f"work_folder{pn}/subsets/{{subset}}/genes/cdhit/genes_{{selected_data}}.txt"
     run:

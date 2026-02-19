@@ -86,7 +86,7 @@ include: "src/PPIClassification/DataSplit/GenePartitions.smk"
 include: "src/PPIClassification/DataSplit/GenerateTrainTestSplits.smk"
 include: "src/PPIClassification/DataSplit/BalanceSplits.smk"
 include: "src/PPIClassification/DataSplit/GetGoldenSplit.smk"
-include: "src/PPIClassification/DataSplit/CheckRedudancy.smk"
+include: "src/PPIClassification/DataSplit/CheckRedundancy.smk"
 include: "src/PPIClassification/ModelEvaluation/Evaluations.smk"
 
 
