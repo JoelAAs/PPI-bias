@@ -11,10 +11,6 @@ def read_fasta(fasta_filename):
                 seq = ""
             else:
                 seq += line.strip()
-
-        if gene_name:
-            gene_name = gene_name.groups()[0]
-            gene_name_seq_dict[gene_name] = seq
     return gene_name_seq_dict
 
 rule subset_fasta:
@@ -28,6 +24,7 @@ rule subset_fasta:
        with open(input.partition, "r") as f:
            for line in f:
                partitiongene = [l.strip() for l in f]
+               
          gene_seq_dict = read_fasta(input.fasta)
          with open(output.fasta, "w") as w:
              for gene in partitiongene:
