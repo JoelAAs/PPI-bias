@@ -139,7 +139,6 @@ if __name__ == '__main__':
     parser.add_argument("--protein_embeddings", required=True, help="Path to output csv file")
     parser.add_argument("--params_out", required=True, help="Path to output csv file")
     parser.add_argument("--saved_model", required=True, help="Path to output csv file")
-    parser.add_argument("--saved_dummy_classifer", required=True, help="Path to output csv file")
     parser.add_argument("--threads", type=int, default=40, help="")
     parser.add_argument("--randomstate", type=int, default=1234, help="")
     args = parser.parse_args()
@@ -203,11 +202,7 @@ if __name__ == '__main__':
     param_file.close()
 
 
-    dummy_clf = DummyClassifier(strategy="stratified", random_state=RANDOM_STATE)
-    dummy_clf.fit(
-        np.vstack((X_train, X_validate)),
-        np.concatenate((y_train, y_validate)
-        ))
+
     joblib.dump(dummy_clf, args.saved_dummy_classifer)
     
 
