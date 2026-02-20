@@ -70,7 +70,7 @@ def get_base_line_plot(obs_performance, obs_auc, base_dist, auc_base_dist, outpu
     axes[0].legend()
     
     # AUC distribution
-    axes[1].hist(auc_base_dist, bins=math.sqrt(n_permutations), alpha=0.7, label='Baseline AUC Distribution')
+    axes[1].hist(auc_base_dist, bins=int(math.sqrt(n_permutations)), alpha=0.7, label='Baseline AUC Distribution')
     axes[1].axvline(obs_auc, color='blue', linestyle='--', label=f'Observed AUC: {obs_auc:.4f}')
     axes[1].set_xlabel(f'{eval_method_name} AUC')
     axes[1].set_title(f'{eval_method_name} AUC Distribution with Baseline')
