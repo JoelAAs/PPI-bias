@@ -19,6 +19,7 @@ def generate_and_plot_performace(model, X_test, y_test, pr_png, neg_pr_png, roc_
     )
     base_dist_roc, auc_base_dist_roc = get_baseline_performance(y_pred, y_test, eval_method=roc_curve)
     fpr, tpr, _ = roc_curve(y_test, y_pred)
+    roc_auc = auc(fpr, tpr)
     print("plotting ROC curve", flush=True)
     get_base_line_plot(
         (fpr, tpr), roc_auc, base_dist_roc, auc_base_dist_roc, roc_png, eval_method_name="ROC"
@@ -30,7 +31,7 @@ def generate_and_plot_performace(model, X_test, y_test, pr_png, neg_pr_png, roc_
     base_dist_pr_neg, auc_base_dist_pr_neg = get_baseline_performance(y_pred_neg, 1-y_test)
     print("plotting neg PR curve", flush=True)
     get_base_line_plot(
-        (recall_neg, precision_neg), pr_auc_neg, base_dist_pr_neg, auc_base_dist_pr_neg, neg_pr_png, eval_method_name="PR NEG"
+        (recall_neg, precision_neg), pr_auc_neg, base_dist_pr_neg, auc_base_dist_pr_neg, neg_pr_png, eval_method_name="PR"
     )
 
     return pr_auc, pr_auc_neg, roc_auc, np.mean(auc_base_dist_pr), np.mean(auc_base_dist_pr_neg), np.mean(auc_base_dist_roc)
@@ -40,24 +41,29 @@ def get_baseline_performance(y_pred, y_test, eval_method=precision_recall_curve,
     n_thresholds = len(set(y_pred))+1
     base_dist = np.zeros((n_thresholds*n, 3))
     auc_base_dist = []
+    k = 0
     for i in range(n):
         y_pred_dummy_permut = np.random.permutation(y_pred)
-        precision, recall, _ = eval_method(y_test, y_pred_dummy_permut)
-        base_dist[i*n_thresholds:(i+1)*n_thresholds, :3] =np.column_stack([precision, recall, [i]*n_thresholds])
-        pr_auc = auc(recall, precision)
+        x, y, _ = eval_method(y_test, y_pred_dummy_permut)
+        len_x = len(x)
+        base_dist[k:k+len_x, :3] =np.column_stack([x, y, [i]*len_x])
+        pr_auc = auc(x, y)
         auc_base_dist.append(pr_auc)
+        k += len_x
+    base_dist = base_dist[:k, :]
     return base_dist, auc_base_dist
 
 
 def get_base_line_plot(obs_performance, obs_auc, base_dist, auc_base_dist, output_png, eval_method_name="PR"):
     n_permutations = len(auc_base_dist)
     # Either precision-recall or FDR-TPR
+    random_n_index = np.random.choice(range(base_dist.shape[0]), size=min(1000, base_dist.shape[0]), replace=False)
     
     fig, axes = plt.subplots(1, 2, figsize=(16, 6))
-    axes[0].scatter(base_dist[:, 0], base_dist[:, 1], alpha=0.3, label="Permuted Performance", color='orange')
+    axes[0].scatter(base_dist[random_n_index, 0], base_dist[random_n_index, 1], alpha=0.3, label="Permuted Performance", color='orange')
     axes[0].plot(obs_performance[0], obs_performance[1], color='blue', label='Observed Performance')
-    axes[0].set_xlabel('Recall' if eval_method_name == "PR" else 'TPR')
-    axes[0].set_ylabel('Precision' if eval_method_name == "PR" else 'FDR')
+    axes[0].set_xlabel('Recall' if eval_method_name == "PR" else 'FPR')
+    axes[0].set_ylabel('Precision' if eval_method_name == "PR" else 'TPR')
     axes[0].set_title(f'{eval_method_name} Curve with Baseline')
     axes[0].legend()
     
