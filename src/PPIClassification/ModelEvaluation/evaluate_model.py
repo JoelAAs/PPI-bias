@@ -11,27 +11,29 @@ def generate_and_plot_performace(model, X_test, y_test, pr_png, neg_pr_png, roc_
     y_pred = model.predict_proba(X_test)[:, 1]
     precision, recall, _ = precision_recall_curve(y_test, y_pred)
     pr_auc = auc(recall, precision)
-    
+    random_chance = np.mean(y_test)
+
     base_dist_pr, auc_base_dist_pr = get_baseline_performance(y_pred, y_test)
     print("plotting PR curve", flush=True)
     get_base_line_plot(
-        (recall, precision), pr_auc, base_dist_pr, auc_base_dist_pr, pr_png, eval_method_name="PR"
+        (recall, precision), pr_auc, base_dist_pr, auc_base_dist_pr, pr_png, random_chance eval_method_name="PR"
     )
     base_dist_roc, auc_base_dist_roc = get_baseline_performance(y_pred, y_test, eval_method=roc_curve)
     fpr, tpr, _ = roc_curve(y_test, y_pred)
     roc_auc = auc(fpr, tpr)
     print("plotting ROC curve", flush=True)
     get_base_line_plot(
-        (fpr, tpr), roc_auc, base_dist_roc, auc_base_dist_roc, roc_png, eval_method_name="ROC"
+        (fpr, tpr), roc_auc, base_dist_roc, auc_base_dist_roc, roc_png, None, eval_method_name="ROC"
     )
 
     y_pred_neg = 1 - y_pred
     precision_neg, recall_neg, _ = precision_recall_curve(1-y_test, y_pred_neg)
     pr_auc_neg = auc(recall_neg, precision_neg)
+    random_chance_neg = np.mean(1-y_test)
     base_dist_pr_neg, auc_base_dist_pr_neg = get_baseline_performance(y_pred_neg, 1-y_test)
     print("plotting neg PR curve", flush=True)
     get_base_line_plot(
-        (recall_neg, precision_neg), pr_auc_neg, base_dist_pr_neg, auc_base_dist_pr_neg, neg_pr_png, eval_method_name="PR"
+        (recall_neg, precision_neg), pr_auc_neg, base_dist_pr_neg, auc_base_dist_pr_neg, neg_pr_png, random_chance_neg, eval_method_name="PR"
     )
 
     return pr_auc, pr_auc_neg, roc_auc, np.mean(auc_base_dist_pr), np.mean(auc_base_dist_pr_neg), np.mean(auc_base_dist_roc)
@@ -55,7 +57,7 @@ def get_baseline_performance(y_pred, y_test, eval_method=precision_recall_curve,
     return base_dist, auc_base_dist
 
 
-def get_base_line_plot(obs_performance, obs_auc, base_dist, auc_base_dist, output_png, eval_method_name="PR"):
+def get_base_line_plot(obs_performance, obs_auc, base_dist, auc_base_dist, output_png, random_chance, eval_method_name="PR"):
     n_permutations = len(auc_base_dist)
     # Either precision-recall or FDR-TPR
     random_n_index = np.random.choice(range(base_dist.shape[0]), size=min(1000, base_dist.shape[0]), replace=False)
@@ -63,11 +65,13 @@ def get_base_line_plot(obs_performance, obs_auc, base_dist, auc_base_dist, outpu
     fig, axes = plt.subplots(1, 2, figsize=(16, 6))
     axes[0].scatter(base_dist[random_n_index, 0], base_dist[random_n_index, 1], alpha=0.3, label="Permuted Performance", color='orange')
     axes[0].plot(obs_performance[0], obs_performance[1], color='blue', label='Observed Performance')
+    if random_chance is not None:
+        axes[0].plot([0, 1], [random_chance, random_chance], linestyle='--', label='Prevalence')
     axes[0].set_xlabel('Recall' if eval_method_name == "PR" else 'FPR')
     axes[0].set_ylabel('Precision' if eval_method_name == "PR" else 'TPR')
     axes[0].set_title(f'{eval_method_name} Curve with Baseline')
     axes[0].legend()
-    
+
     # AUC distribution
     axes[1].hist(auc_base_dist, bins=int(math.sqrt(n_permutations)), alpha=0.7, label='Baseline AUC Distribution')
     axes[1].axvline(obs_auc, color='blue', linestyle='--', label=f'Observed AUC: {obs_auc:.4f}')
