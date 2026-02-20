@@ -44,7 +44,7 @@ def get_baseline_performance(y_pred, y_test, eval_method=precision_recall_curve,
         precision, recall, _ = eval_method(y_test, y_pred_dummy_permut)
         base_dist[i*n_thresholds:(i+1)*n_thresholds, :3] =np.column_stack([precision, recall, [i]*n_thresholds])
         pr_auc = auc(recall, precision)
-        auc_base_dist.append(pr_auc_dummy)
+        auc_base_dist.append(pr_auc)
     return base_dist, auc_base_dist
 
 
