@@ -49,6 +49,8 @@ def get_baseline_performance(y_pred, y_test, eval_method=precision_recall_curve,
         xi, yi, _ = eval_method(y_test, y_pred_dummy_permut)
         if eval_method == precision_recall_curve:
                 x, y =  yi, xi # swap for PR curve to have recall on x-axis and precision on y-axis
+        else:
+                x, y = xi, yi
         sorted_idx = np.argsort(x)
         len_x = len(x)
         base_dist[k:k+len_x, :3] =np.column_stack([x, y, [i]*len_x])
