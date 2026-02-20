@@ -16,7 +16,7 @@ def generate_and_plot_performace(model, X_test, y_test, pr_png, neg_pr_png, roc_
     base_dist_pr, auc_base_dist_pr = get_baseline_performance(y_pred, y_test)
     print("plotting PR curve", flush=True)
     get_base_line_plot(
-        (recall, precision), pr_auc, base_dist_pr, auc_base_dist_pr, pr_png, random_chance eval_method_name="PR"
+        (recall, precision), pr_auc, base_dist_pr, auc_base_dist_pr, pr_png, random_chance, eval_method_name="PR"
     )
     base_dist_roc, auc_base_dist_roc = get_baseline_performance(y_pred, y_test, eval_method=roc_curve)
     fpr, tpr, _ = roc_curve(y_test, y_pred)
@@ -46,7 +46,9 @@ def get_baseline_performance(y_pred, y_test, eval_method=precision_recall_curve,
     k = 0
     for i in range(n):
         y_pred_dummy_permut = np.random.permutation(y_pred)
-        x, y, _ = eval_method(y_test, y_pred_dummy_permut)
+        xi, yi, _ = eval_method(y_test, y_pred_dummy_permut)
+        if eval_method == precision_recall_curve:
+                x, y =  yi, xi # swap for PR curve to have recall on x-axis and precision on y-axis
         sorted_idx = np.argsort(x)
         len_x = len(x)
         base_dist[k:k+len_x, :3] =np.column_stack([x, y, [i]*len_x])
@@ -65,7 +67,7 @@ def get_base_line_plot(obs_performance, obs_auc, base_dist, auc_base_dist, outpu
     fig, axes = plt.subplots(1, 2, figsize=(16, 6))
     axes[0].scatter(base_dist[random_n_index, 0], base_dist[random_n_index, 1], alpha=0.3, label="Permuted Performance", color='orange')
     axes[0].plot(obs_performance[0], obs_performance[1], color='blue', label='Observed Performance')
-    if random_chance is not None:
+    if eval_method_name == "PR":
         axes[0].plot([0, 1], [random_chance, random_chance], linestyle='--', label='Prevalence')
     axes[0].set_xlabel('Recall' if eval_method_name == "PR" else 'FPR')
     axes[0].set_ylabel('Precision' if eval_method_name == "PR" else 'TPR')
