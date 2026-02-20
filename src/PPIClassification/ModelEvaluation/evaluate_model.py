@@ -33,6 +33,13 @@ def get_embedding_dict(protein_embeddings_file):
     }
     return embedding_dict, embed_length
 
+def get_dummy_pr_distribution(y_test, pred_dummy, n=1000):
+    for _ in range(n):
+        pred_dummy = np.random.permutation(pred_dummy)
+        precision, recall, _ = precision_recall_curve(y_test, pred_dummy)
+        pr_auc_dummy = auc(recall, precision)
+        yield pr_auc_dummy
+
 
 def evaluate_model(model, dummy_model, X_test, y_test):
     pr_auc, pr_auc_dummy, roc_auc, roc_auc_dummy = None, None, None, None
@@ -40,11 +47,11 @@ def evaluate_model(model, dummy_model, X_test, y_test):
         probs_test = model.predict_proba(X_test)[:, 1]
         precision, recall, _ = precision_recall_curve(y_test, probs_test)
         probs_test_dummy = dummy_model.predict_proba(X_test)[:, 1]
-        dummy_precision, dummy_recall, _ = precision_recall_curve(y_test, probs_test_dummy)
 
         # PR AUC
         pr_auc = auc(recall, precision) 
-        pr_auc_dummy = auc(dummy_recall, dummy_precision)
+        pr_auc_dummy_dist = get_dummy_pr_distribution(y_test, probs_test_dummy)
+        pr_auc_dummy = np.mean(list(pr_auc_dummy_dist))
 
         # PR AUC negative class
         y_test_neg = 1 - y_test
@@ -56,11 +63,9 @@ def evaluate_model(model, dummy_model, X_test, y_test):
         )
         pr_auc_neg = auc(recall_neg, precision_neg)
 
-        dummy_precision_neg, dummy_recall_neg, _ = precision_recall_curve(
-            y_test_neg, probs_test_dummy_neg
-        )
-        pr_auc_dummy_neg = auc(dummy_recall_neg, dummy_precision_neg)
-
+        pr_auc_dummy_neg_dist = get_dummy_pr_distribution(y_test_neg, probs_test_dummy_neg)
+        pr_auc_dummy_neg = np.mean(list(pr_auc_dummy_neg_dist))
+        
         # ROC AUC
         fpr, tpr, thresholds = roc_curve(y_test, probs_test)
         roc_auc = auc(fpr, tpr)
