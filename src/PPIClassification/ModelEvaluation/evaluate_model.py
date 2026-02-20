@@ -45,9 +45,10 @@ def get_baseline_performance(y_pred, y_test, eval_method=precision_recall_curve,
     for i in range(n):
         y_pred_dummy_permut = np.random.permutation(y_pred)
         x, y, _ = eval_method(y_test, y_pred_dummy_permut)
+        sorted_idx = np.argsort(x)
         len_x = len(x)
         base_dist[k:k+len_x, :3] =np.column_stack([x, y, [i]*len_x])
-        pr_auc = auc(x, y)
+        pr_auc = auc(x[sorted_idx], y[sorted_idx])
         auc_base_dist.append(pr_auc)
         k += len_x
     base_dist = base_dist[:k, :]
