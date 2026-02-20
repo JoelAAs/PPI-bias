@@ -3,9 +3,7 @@ import numpy as np
 import argparse
 import joblib
 from sklearn.metrics import precision_recall_curve, auc, roc_curve
-from sklearn.dummy import DummyClassifier
 import matplotlib.pyplot as plt
-from scipy.interpolate import CubicSpline
 import math
 
 
@@ -15,10 +13,13 @@ def generate_and_plot_performace(model, X_test, y_test, pr_png, neg_pr_png, roc_
     pr_auc = auc(recall, precision)
     
     base_dist_pr, auc_base_dist_pr = get_baseline_performance(y_pred, y_test)
+    print("plotting PR curve", flush=True)
     get_base_line_plot(
         (precision, recall), pr_auc, base_dist_pr, auc_base_dist_pr, pr_png, eval_method_name="PR"
     )
     base_dist_roc, auc_base_dist_roc = get_baseline_performance(y_pred, y_test, eval_method=roc_curve)
+    fpr, tpr, _ = roc_curve(y_test, y_pred)
+    print("plotting ROC curve", flush=True)
     get_base_line_plot(
         (fpr, tpr), roc_auc, base_dist_roc, auc_base_dist_roc, roc_png, eval_method_name="ROC"
     )
@@ -27,7 +28,7 @@ def generate_and_plot_performace(model, X_test, y_test, pr_png, neg_pr_png, roc_
     precision_neg, recall_neg, _ = precision_recall_curve(1-y_test, y_pred_neg)
     pr_auc_neg = auc(recall_neg, precision_neg)
     base_dist_pr_neg, auc_base_dist_pr_neg = get_baseline_performance(y_pred_neg, 1-y_test)
-
+    print("plotting neg PR curve", flush=True)
     get_base_line_plot(
         (precision_neg, recall_neg), pr_auc_neg, base_dist_pr_neg, auc_base_dist_pr_neg, neg_pr_png, eval_method_name="PR NEG"
     )
@@ -60,12 +61,12 @@ def get_base_line_plot(obs_performance, obs_auc, base_dist, auc_base_dist, outpu
     p95_prec = np.percentile(splines, 95, axis=0)
 
     fig, axes = plt.subplots(1, 2, figsize=(16, 6))
-    axes[0].scatter(base_dist[:, 1], base_dist[:, 0], alpha=0.3, label="Baseline")
+    axes[0].scatter(base_dist[:, 0], base_dist[:, 1], alpha=0.3,size=.1 label="Baseline")
     axes[0].fill_between(x_distance, p05_prec, p95_prec, color='red', alpha=0.3, label='95% Interval')
     axes[0].plot(x_distance, mean_spline, color='red', label='Mean Baseline')
-    axes[0].scatter(obs_performance[1], obs_performance[0], color='blue', label='Observed Performance')
-    axes[0].set_xlabel('Recall' if eval_method_name == "PR" else 'TPR')
-    axes[0].set_ylabel('Precision' if eval_method_name == "PR" else 'FDR')
+    axes[0].scatter(obs_performance[0], obs_performance[1], color='blue', label='Observed Performance')
+    axes[0].set_ylabel('Recall' if eval_method_name == "PR" else 'TPR')
+    axes[0].set_xlabel('Precision' if eval_method_name == "PR" else 'FDR')
     axes[0].set_title(f'{eval_method_name} Curve with Baseline')
     axes[0].legend()
     
