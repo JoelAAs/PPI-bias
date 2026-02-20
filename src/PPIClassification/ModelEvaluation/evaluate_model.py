@@ -61,7 +61,7 @@ def get_base_line_plot(obs_performance, obs_auc, base_dist, auc_base_dist, outpu
     p95_prec = np.percentile(splines, 95, axis=0)
 
     fig, axes = plt.subplots(1, 2, figsize=(16, 6))
-    axes[0].scatter(base_dist[:, 0], base_dist[:, 1], alpha=0.3,size=.1, label="Baseline")
+    axes[0].scatter(base_dist[:, 0], base_dist[:, 1], alpha=0.3, label="Baseline")
     axes[0].fill_between(x_distance, p05_prec, p95_prec, color='red', alpha=0.3, label='95% Interval')
     axes[0].plot(x_distance, mean_spline, color='red', label='Mean Baseline')
     axes[0].scatter(obs_performance[0], obs_performance[1], color='blue', label='Observed Performance')
