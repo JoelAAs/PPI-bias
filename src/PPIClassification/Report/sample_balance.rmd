@@ -23,9 +23,6 @@ params:
     dataset: NULL
     pos_limit: NULL
     neg_limit: NULL
-    roc_png: NULL
-    pr_png: NULL
-    pr_neg_png: NULL
 ---
 
 ```{r functions, echo=F, message=F}
@@ -344,14 +341,3 @@ plot_wasserstain(df_delta_validate, aimed_scaleing_factor_validate)
 suppressWarnings(plot_degree(df_delta_test, aimed_scaleing_factor_test))
 plot_wasserstain(df_delta_test, aimed_scaleing_factor_test)
 ```
-
-# Classification performance
-
-## ROC
-![ROC](`r params$roc_png`)
-
-## PR AUC
-![pr_plot](`r params$roc_png`)
-
-## PR AUC for negative samples
-![pr_neg_plot](`r params$roc_neg_png`)
