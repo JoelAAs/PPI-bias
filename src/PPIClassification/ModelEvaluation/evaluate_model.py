@@ -5,7 +5,7 @@ import joblib
 from sklearn.metrics import precision_recall_curve, auc, roc_curve
 import matplotlib.pyplot as plt
 import math
-from scipy.interpolate import PchipInterpolator
+from scipy.interpolate import interp1d
 
 def generate_and_plot_performace(model, X_test, y_test, pr_png, neg_pr_png, roc_png):
     y_pred = model.predict_proba(X_test)[:, 1]
@@ -15,7 +15,7 @@ def generate_and_plot_performace(model, X_test, y_test, pr_png, neg_pr_png, roc_
     base_dist_pr, auc_base_dist_pr = get_baseline_performance(y_pred, y_test)
     print("plotting PR curve", flush=True)
     get_base_line_plot(
-        (precision, recall), pr_auc, base_dist_pr, auc_base_dist_pr, pr_png, eval_method_name="PR"
+        (recall, precision), pr_auc, base_dist_pr, auc_base_dist_pr, pr_png, eval_method_name="PR"
     )
     base_dist_roc, auc_base_dist_roc = get_baseline_performance(y_pred, y_test, eval_method=roc_curve)
     fpr, tpr, _ = roc_curve(y_test, y_pred)
@@ -30,7 +30,7 @@ def generate_and_plot_performace(model, X_test, y_test, pr_png, neg_pr_png, roc_
     base_dist_pr_neg, auc_base_dist_pr_neg = get_baseline_performance(y_pred_neg, 1-y_test)
     print("plotting neg PR curve", flush=True)
     get_base_line_plot(
-        (precision_neg, recall_neg), pr_auc_neg, base_dist_pr_neg, auc_base_dist_pr_neg, neg_pr_png, eval_method_name="PR NEG"
+        (recall_neg, precision_neg), pr_auc_neg, base_dist_pr_neg, auc_base_dist_pr_neg, neg_pr_png, eval_method_name="PR NEG"
     )
 
     return pr_auc, pr_auc_neg, roc_auc, np.mean(auc_base_dist_pr), np.mean(auc_base_dist_pr_neg), np.mean(auc_base_dist_roc)
@@ -52,21 +52,10 @@ def get_baseline_performance(y_pred, y_test, eval_method=precision_recall_curve,
 def get_base_line_plot(obs_performance, obs_auc, base_dist, auc_base_dist, output_png, eval_method_name="PR"):
     n_permutations = len(auc_base_dist)
     # Either precision-recall or FDR-TPR
-    recall_distance = np.linspace(0, 1, 100)
-    interpol = np.array([
-        PchipInterpolator(data[:,1], data[:,0]) for data in base_dist[:, :2].reshape(n_permutations, -1, 2)]
-    )
-    splines = np.array([interpol[i](recall_distance) for i in range(n_permutations)])
-
-    mean_spline = np.mean(splines, axis=0)
-    p05_prec = np.percentile(splines, 5, axis=0)
-    p95_prec = np.percentile(splines, 95, axis=0)
-
+    
     fig, axes = plt.subplots(1, 2, figsize=(16, 6))
-    #axes[0].scatter(base_dist[:, 0], base_dist[:, 1], alpha=0.3, label="Baseline")
-    axes[0].fill_between(recall_distance, p05_prec, p95_prec, color='red', alpha=0.3, label='95% Interval')
-    axes[0].plot(recall_distance, mean_spline, color='red', label='Mean Baseline')
-    axes[0].scatter(obs_performance[1], obs_performance[0], color='blue', label='Observed Performance')
+    axes[0].scatter(base_dist[:, 0], base_dist[:, 1], alpha=0.3, label="Permuted Performance", color='orange')
+    axes[0].plot(obs_performance[0], obs_performance[1], color='blue', label='Observed Performance')
     axes[0].set_xlabel('Recall' if eval_method_name == "PR" else 'TPR')
     axes[0].set_ylabel('Precision' if eval_method_name == "PR" else 'FDR')
     axes[0].set_title(f'{eval_method_name} Curve with Baseline')
