@@ -52,11 +52,11 @@ def get_baseline_performance(y_pred, y_test, eval_method=precision_recall_curve,
 def get_base_line_plot(obs_performance, obs_auc, base_dist, auc_base_dist, output_png, eval_method_name="PR"):
     n_permutations = len(auc_base_dist)
     # Either precision-recall or FDR-TPR
-    x_distance = np.linspace(0, 1, 100)
+    recall_distance = np.linspace(0, 1, 100)
     interpol = np.array([
-        PchipInterpolator(data[:,0], data[:,1]) for data in base_dist[:, :2].reshape(n_permutations, -1, 2)]
+        PchipInterpolator(data[:,1], data[:,0]) for data in base_dist[:, :2].reshape(n_permutations, -1, 2)]
     )
-    splines = np.array([interpol[i](x_distance) for i in range(n_permutations)])
+    splines = np.array([interpol[i](recall_distance) for i in range(n_permutations)])
 
     mean_spline = np.mean(splines, axis=0)
     p05_prec = np.percentile(splines, 5, axis=0)
@@ -64,11 +64,11 @@ def get_base_line_plot(obs_performance, obs_auc, base_dist, auc_base_dist, outpu
 
     fig, axes = plt.subplots(1, 2, figsize=(16, 6))
     #axes[0].scatter(base_dist[:, 0], base_dist[:, 1], alpha=0.3, label="Baseline")
-    axes[0].fill_between(x_distance, p05_prec, p95_prec, color='red', alpha=0.3, label='95% Interval')
-    axes[0].plot(x_distance, mean_spline, color='red', label='Mean Baseline')
-    axes[0].scatter(obs_performance[0], obs_performance[1], color='blue', label='Observed Performance')
-    axes[0].set_ylabel('Recall' if eval_method_name == "PR" else 'TPR')
-    axes[0].set_xlabel('Precision' if eval_method_name == "PR" else 'FDR')
+    axes[0].fill_between(recall_distance, p05_prec, p95_prec, color='red', alpha=0.3, label='95% Interval')
+    axes[0].plot(recall_distance, mean_spline, color='red', label='Mean Baseline')
+    axes[0].scatter(obs_performance[1], obs_performance[0], color='blue', label='Observed Performance')
+    axes[0].set_xlabel('Recall' if eval_method_name == "PR" else 'TPR')
+    axes[0].set_ylabel('Precision' if eval_method_name == "PR" else 'FDR')
     axes[0].set_title(f'{eval_method_name} Curve with Baseline')
     axes[0].legend()
     
