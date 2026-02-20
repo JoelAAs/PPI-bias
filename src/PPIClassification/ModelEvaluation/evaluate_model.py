@@ -5,7 +5,7 @@ import joblib
 from sklearn.metrics import precision_recall_curve, auc, roc_curve
 import matplotlib.pyplot as plt
 import math
-
+from scipy.interpolate import PchipInterpolator
 
 def generate_and_plot_performace(model, X_test, y_test, pr_png, neg_pr_png, roc_png):
     y_pred = model.predict_proba(X_test)[:, 1]
@@ -53,15 +53,17 @@ def get_base_line_plot(obs_performance, obs_auc, base_dist, auc_base_dist, outpu
     n_permutations = len(auc_base_dist)
     # Either precision-recall or FDR-TPR
     x_distance = np.linspace(0, 1, 100)
-    splines = np.array([
-        np.interp(x_distance,data[:,0], data[:,1]) for data in base_dist[:, :2].reshape(n_permutations, -1, 2)]
+    interpol = np.array([
+        PchipInterpolator(data[:,0], data[:,1]) for data in base_dist[:, :2].reshape(n_permutations, -1, 2)]
     )
+    splines = np.array([interpol[i](x_distance) for i in range(n_permutations)])
+
     mean_spline = np.mean(splines, axis=0)
     p05_prec = np.percentile(splines, 5, axis=0)
     p95_prec = np.percentile(splines, 95, axis=0)
 
     fig, axes = plt.subplots(1, 2, figsize=(16, 6))
-    axes[0].scatter(base_dist[:, 0], base_dist[:, 1], alpha=0.3, label="Baseline")
+    #axes[0].scatter(base_dist[:, 0], base_dist[:, 1], alpha=0.3, label="Baseline")
     axes[0].fill_between(x_distance, p05_prec, p95_prec, color='red', alpha=0.3, label='95% Interval')
     axes[0].plot(x_distance, mean_spline, color='red', label='Mean Baseline')
     axes[0].scatter(obs_performance[0], obs_performance[1], color='blue', label='Observed Performance')
