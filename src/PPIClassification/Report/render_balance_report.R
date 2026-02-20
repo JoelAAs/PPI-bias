@@ -22,6 +22,9 @@ rmarkdown::render(
     partition_name=snakemake@wildcards$partition_name,
     dataset=snakemake@wildcards$dataset,
     pos_limit=snakemake@wildcards$pos_limit,
-    neg_limit=snakemake@wildcards$neg_limit
+    neg_limit=snakemake@wildcards$neg_limit,
+    roc_png=snakemake@input$roc_png,
+    pr_png=snakemake@input$pr_png,
+    pr_neg_png=snakemake@input$pr_neg_png
   )
 )

@@ -23,6 +23,9 @@ params:
     dataset: NULL
     pos_limit: NULL
     neg_limit: NULL
+    roc_png: NULL
+    pr_png: NULL
+    pr_neg_png: NULL
 ---
 
 ```{r functions, echo=F, message=F}
@@ -64,7 +67,9 @@ get_degree_diff <- function(df_degree_pos, df_degree_neg) {
 }
 
 get_wasserstein <- function(df_delta, aimed_scaling) {
-  max_degrees <- as.numeric(max(c(max(df_delta$degree_pos * aimed_scaling), max(df_delta$degree_neg))))
+  max_degrees <- as.numeric(
+    max(c(max(df_delta$degree_pos * aimed_scaling), max(df_delta$degree_neg)))
+    )
   pos_hist <- rep(0, max_degrees)
   neg_hist <- rep(0, max_degrees)
   pos_hist_values <- table(df_delta$degree_pos * aimed_scaling)
@@ -340,3 +345,13 @@ suppressWarnings(plot_degree(df_delta_test, aimed_scaleing_factor_test))
 plot_wasserstain(df_delta_test, aimed_scaleing_factor_test)
 ```
 
+# Classification performance
+
+## ROC
+![ROC](`r params$roc_png`)
+
+## PR AUC
+![pr_plot](`r params$roc_png`)
+
+## PR AUC for negative samples
+![pr_neg_plot](`r params$roc_neg_png`)
