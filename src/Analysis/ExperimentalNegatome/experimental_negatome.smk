@@ -8,14 +8,28 @@ checkpoint all_methods_filter_out:
         pseudo_n=config["pseudo_n"],
         id_pattern= config["id_pattern"]
     input:
-        method_aggregate=f"work_folder{pn}/inferred_search_space/aggregated/methods/{{data}}_experimental_wise.csv"
+        method_aggregate=f"work_folder{pn}/inferred_search_space/aggregated/methods//{{data}}_experimental_wise.csv"
     output:
-        full_detection=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
+        full_detection=f"work_folder{pn}/analysis/POD/{{direction}}/POD_{{data}}.csv.gz"
     run:
         inferred_negative_df = pd.read_csv(
             input.method_aggregate,
             sep="\t"
         )
+
+        if wildcard.direction == "unidirectional":
+            inferred_negative_df["id_var"] = inferred_negative_df[[f"{params.id_pattern}_bait", f"{params.id_pattern}_prey"]].apply(
+                lamvda x: "_".join(sorted(x)), axis=1)
+        
+            undirectional_negative_df.groupby("id_var").agg({
+                "gene_name_bait": lambda x: sorted(x)[0],
+                "gene_name_prey": lambda x: sorted(x)[1],
+                "n_observed": "sum",
+                "n_tested": "sum",
+                "pubmed_ids": lambda x: ";".join(set(";".join(x).split(";")))
+            }).reset_index(drop=True)
+            inferred_negative_df = undirectional_negative_df.drop(columns=["id_var"])
+
 
         inferred_negative_df = inferred_negative_df[
             inferred_negative_df[f"{params.id_pattern}_bait"] != inferred_negative_df[f"{params.id_pattern}_prey"]
