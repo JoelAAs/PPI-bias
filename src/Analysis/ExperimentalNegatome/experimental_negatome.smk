@@ -10,7 +10,7 @@ checkpoint all_methods_filter_out:
     input:
         method_aggregate=f"work_folder{pn}/inferred_search_space/aggregated/methods/{{data}}_experimental_wise.csv"
     output:
-        full_detection=f"work_folder{pn}/analysis/POD/{{direction}}/POD_{{data}}.csv.gz"
+        full_detection=f"work_folder{pn}/analysis/POD/{{network_type}}/POD_{{data}}.csv.gz"
     run:
         inferred_negative_df = pd.read_csv(
             input.method_aggregate,
