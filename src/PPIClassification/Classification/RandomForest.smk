@@ -7,7 +7,7 @@ def get_expected_input(wc):
         pos_limit = config["models"][wc.model_configuration]["pos"]
         neg_limit = config["models"][wc.model_configuration]["neg"]
         data =  f"{wc.dataset}_{wc.network_type}_limit_{neg_limit}_poslim_{pos_limit}_{wc.partition}"
-        if wc.network_type == "directional"
+        if wc.network_type == "directional":
             selection = "maxflow"
         elif wc.network_type == "undirectional":
             selection="undirectionalbalanced"
