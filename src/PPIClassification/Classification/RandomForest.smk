@@ -14,12 +14,12 @@ def get_expected_input(wc):
         else:
             raise ValueError(f"unkown networktype {wc.network_type}")
     return [
-        f"work_folder{pn}/subsets/train/{selection}/{data}_pos.csv",
-        f"work_folder{pn}/subsets/train/{selection}/{data}_neg.csv",
-        f"work_folder{pn}/subsets/validation/{selection}/{data}_pos.csv",
-        f"work_folder{pn}/subsets/validation/{selection}/{data}_neg.csv",
-        f"work_folder{pn}/subsets/test/{selection}/{data}_pos.csv",
-        f"work_folder{pn}/subsets/test/{selection}/{data}_neg.csv"
+        f"work_folder{pn}/subsets/train/{selection}/{data}_pos.csv.gz",
+        f"work_folder{pn}/subsets/train/{selection}/{data}_neg.csv.gz",
+        f"work_folder{pn}/subsets/validation/{selection}/{data}_pos.csv.gz",
+        f"work_folder{pn}/subsets/validation/{selection}/{data}_neg.csv.gz",
+        f"work_folder{pn}/subsets/test/{selection}/{data}_pos.csv.gz",
+        f"work_folder{pn}/subsets/test/{selection}/{data}_neg.csv.gz"
     ]
 
 
