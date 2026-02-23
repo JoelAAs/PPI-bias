@@ -17,7 +17,7 @@ checkpoint all_methods_filter_out:
             sep="\t"
         )
 
-        if wildcard.direction == "unidirectional":
+        if wildcards.direction == "unidirectional":
             inferred_negative_df["id_var"] = inferred_negative_df[[f"{params.id_pattern}_bait", f"{params.id_pattern}_prey"]].apply(
                 lambda x: "_".join(sorted(x)), axis=1)
         
@@ -28,8 +28,15 @@ checkpoint all_methods_filter_out:
                 "n_tested": "sum",
                 "pubmed_ids": lambda x: ";".join(set(";".join(x).split(";")))
             }).reset_index(drop=True)
-            inferred_negative_df = undirectional_negative_df.drop(columns=["id_var"])
 
+            flipped_df = undirectional_negative_df.copy()
+            flipped_df[["gene_name_bait", "gene_name_prey"]] = (
+                flipped_df[["gene_name_prey", "gene_name_bait"]]
+            )
+
+            inferred_negative_df = (
+                pd.concat([undirectional_negative_df, flipped_df], ignore_index=True)
+            )
 
         inferred_negative_df = inferred_negative_df[
             inferred_negative_df[f"{params.id_pattern}_bait"] != inferred_negative_df[f"{params.id_pattern}_prey"]
