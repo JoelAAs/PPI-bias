@@ -17,16 +17,20 @@ checkpoint all_methods_filter_out:
             sep="\t"
         )
 
-        if wildcards.network_type == "unidirectional":
+        inferred_negative_df = inferred_negative_df[
+            inferred_negative_df[f"{params.id_pattern}_bait"] != inferred_negative_df[f"{params.id_pattern}_prey"]
+            ].copy()  # should be fixed later
+
+        if wildcards.network_type == "undirectional":
             inferred_negative_df["id_var"] = inferred_negative_df[[f"{params.id_pattern}_bait", f"{params.id_pattern}_prey"]].apply(
                 lambda x: "_".join(sorted(x)), axis=1)
         
-            undirectional_negative_df.groupby("id_var").agg({
-                "gene_name_bait": lambda x: sorted(x)[0],
-                "gene_name_prey": lambda x: sorted(x)[1],
+            undirectional_negative_df = inferred_negative_df.groupby("id_var").agg({
+                "gene_name_bait": lambda x: x.min(),
+                "gene_name_prey": lambda x: x.max(),
                 "n_observed": "sum",
                 "n_tested": "sum",
-                "pubmed_ids": lambda x: ";".join(set(";".join(x).split(";")))
+                "pubmed_id": lambda x: ";".join(set(";".join(x).split(";")))
             }).reset_index(drop=True)
 
             flipped_df = undirectional_negative_df.copy()
@@ -38,9 +42,7 @@ checkpoint all_methods_filter_out:
                 pd.concat([undirectional_negative_df, flipped_df], ignore_index=True)
             )
 
-        inferred_negative_df = inferred_negative_df[
-            inferred_negative_df[f"{params.id_pattern}_bait"] != inferred_negative_df[f"{params.id_pattern}_prey"]
-            ].copy()  # should be fixed later
+
         global_pod = inferred_negative_df["n_observed"].sum() / inferred_negative_df[
             "n_tested"].sum()  # if a test is made, probability of interaction
         prior_alpha = params.pseudo_n * global_pod
