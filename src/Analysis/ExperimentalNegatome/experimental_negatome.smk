@@ -17,7 +17,7 @@ checkpoint all_methods_filter_out:
             sep="\t"
         )
 
-        if wildcards.direction == "unidirectional":
+        if wildcards.network_type == "unidirectional":
             inferred_negative_df["id_var"] = inferred_negative_df[[f"{params.id_pattern}_bait", f"{params.id_pattern}_prey"]].apply(
                 lambda x: "_".join(sorted(x)), axis=1)
         
