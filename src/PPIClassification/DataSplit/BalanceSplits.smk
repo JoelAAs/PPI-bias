@@ -48,11 +48,11 @@ rule ilp:
 
 rule balance_undirectional:
     input:
-        set_pos=f"work_folder{pn}/subsets/{{settype}}/{{positive_set}}_pos.csv",
-        set_neg=f"work_folder{pn}/subsets/{{settype}}/{{negative_set}}_neg.csv"
+        set_pos=f"work_folder{pn}/subsets/{{settype}}/{{selected_data}}_pos.csv",
+        set_neg=f"work_folder{pn}/subsets/{{settype}}/{{selected_data}}_neg.csv"
     output:
-        balanced_pos=f"work_folder{pn}/subsets/{{settype}}/undirectional_balanced/{{positive_set}}_and_{{negative_set}}_pos.csv",
-        balanced_neg=f"work_folder{pn}/subsets/{{settype}}/undirectional_balanced/{{positive_set}}_and_{{negative_set}}_neg.csv"
+        balanced_pos=f"work_folder{pn}/subsets/{{settype}}/undirectionalbalanced/{{selected_data}}_pos.csv",
+        balanced_neg=f"work_folder{pn}/subsets/{{settype}}/undirectionalbalanced/{{selected_data}}_neg.csv"
     shell:
         """
         python3 src/PPIClassification/DataSplit/balance_undirectional.py \

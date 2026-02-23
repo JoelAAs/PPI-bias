@@ -111,10 +111,16 @@ rule all:
             f"work_folder{pn}/subsets/report/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_{{balance_method}}.nb.html",
             dataset=datasets,neg_limit=[2,3],pos_limit=0.15,partition_name=["sequencesimilarity", "maxpos"], balance_method="maxflow"
         ),
+        # Directional
         expand(
-            f"work_folder{pn}/classification/randomforest/{{dataset}}_{{model_configuration}}_model_parameters.txt",
-            dataset=datasets, model_configuration = ["seqs2","seqs3", "maxdata2", "maxdata3"]),
-        f"work_folder{pn}/classification/randomforest/goldensplit_asis_model_parameters.txt",
+            f"work_folder{pn}/classification/randomforest/{{dataset}}_directional_{{model_configuration}}_{{partition}}_model_parameters.txt",
+            dataset=datasets, model_configuration = config["models"], partition =["sequencesimilarity", "maxpos"]),
+        # Undirectional
+        expand(
+            f"work_folder{pn}/classification/randomforest/{{dataset}}_undirectional_{{model_configuration}}_{{partition}}_model_parameters.txt",
+            dataset=datasets, model_configuration = config["models"], partition =["sequencesimilarity", "maxpos"]),
+
+        #f"work_folder{pn}/classification/randomforest/goldensplit_asis_model_parameters.txt",
         f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
     #expected_output,,
     #f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
