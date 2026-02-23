@@ -50,9 +50,9 @@ def maximise_data_kept(ppi_df, partition_df, remaining_partitions):
 
 rule get_negative_set:
     input:
-        input_pod=f"work_folder{pn}/analysis/POD/{{network_type}}/POD_{{dataset}}.csv",
+        input_pod=f"work_folder{pn}/analysis/POD/{{network_type}}/POD_{{dataset}}.csv.gz",
     output:
-        full_neg=f"work_folder{pn}/subsets/{{dataset}}_{{network_type}}_full_{{neg_limit}}_neg.csv"
+        full_neg=f"work_folder{pn}/subsets/{{dataset}}_{{network_type}}_full_{{neg_limit}}_neg.csv.gz"
     run:
         df_pod = pd.read_csv(input.input_pod,sep="\t")
         df_neg = df_pod[
@@ -108,14 +108,14 @@ rule define_partitions:
 
 rule define_positive_split:
     input:
-        full_pos = f"work_folder{pn}/subsets/{{dataset}}_{{network_type}}_full_{{pos_limit}}_pos.csv",
+        full_pos = f"work_folder{pn}/subsets/{{dataset}}_{{network_type}}_full_{{pos_limit}}_pos.csv.gz",
         train_partition_genes = f"work_folder{pn}/subsets/train/genes/cdhit/genes_{{dataset}}_{{network_type}}_{{pos_limit}}_{{partition_name}}.txt",
         validate_partition_genes= f"work_folder{pn}/subsets/validation/genes/cdhit/genes_{{dataset}}_{{network_type}}_{{pos_limit}}_{{partition_name}}.txt",
         test_partition_genes= f"work_folder{pn}/subsets/test/genes/cdhit/genes_{{dataset}}_{{network_type}}_{{pos_limit}}_{{partition_name}}.txt"
     output:
-        train_pos = f"work_folder{pn}/subsets/train/{{dataset}}_{{network_type}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv",
-        val_pos = f"work_folder{pn}/subsets/validation/{{dataset}}_{{network_type}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv",
-        test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_{{network_type}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv"
+        train_pos = f"work_folder{pn}/subsets/train/{{dataset}}_{{network_type}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv.gz",
+        val_pos = f"work_folder{pn}/subsets/validation/{{dataset}}_{{network_type}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv.gz",
+        test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_{{network_type}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv.gz"
     run:
         df_pos = pd.read_csv(input.full_pos,sep="\t")
         for partition_file, output_file in zip(
@@ -130,14 +130,14 @@ rule define_positive_split:
 
 rule define_negative_sets:
     input:
-        full_neg=f"work_folder{pn}/subsets/{{dataset}}_{{network_type}}_full_{{neg_limit}}_neg.csv",
+        full_neg=f"work_folder{pn}/subsets/{{dataset}}_{{network_type}}_full_{{neg_limit}}_neg.csv.gz",
         train_partition_genes= f"work_folder{pn}/subsets/train/genes/cdhit/genes_{{dataset}}_{{network_type}}_{{pos_limit}}_{{partition_name}}.txt",
         validation_partition_genes= f"work_folder{pn}/subsets/validation/genes/cdhit/genes_{{dataset}}_{{network_type}}_{{pos_limit}}_{{partition_name}}.txt",
         test_partition_genes= f"work_folder{pn}/subsets/test/genes/cdhit/genes_{{dataset}}_{{network_type}}_{{pos_limit}}_{{partition_name}}.txt"
     output:
-        train_neg = f"work_folder{pn}/subsets/train/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
-        val_neg = f"work_folder{pn}/subsets/validation/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
-        test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
+        train_neg = f"work_folder{pn}/subsets/train/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv.gz",
+        val_neg = f"work_folder{pn}/subsets/validation/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv.gz",
+        test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv.gz",
     run:
         df_neg = pd.read_csv(input.full_neg,sep="\t")
 
