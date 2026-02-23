@@ -104,6 +104,7 @@ wildcard_constraints:
     neg_limit="[0-9.]+",
     pos_limit="[0-9.]+",
     model_configuration="[a-z0-9]+"
+    selected_data="[a-z0-9_.]+"
 
 rule all:
     input:
