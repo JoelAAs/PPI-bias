@@ -200,10 +200,4 @@ if __name__ == '__main__':
     param_file.write(f"Selected t: {best_t}\n")
     param_file.write(classification_report(y_test, y_test_pred))
     param_file.close()
-
-
-
-    joblib.dump(dummy_clf, args.saved_dummy_classifer)
-    
-
     
