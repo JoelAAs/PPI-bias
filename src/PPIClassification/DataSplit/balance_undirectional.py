@@ -11,8 +11,8 @@ def get_network_from_csv(edege_df):
 
 
 def balance_split(df_pos, df_neg, output_pos, output_neg):
-    edge_df_pos = pd.read_csv(df_pos, sep="\t")
-    edge_df_neg = pd.read_csv(df_neg, sep="\t")
+    edge_df_pos = pd.read_parquet(df_pos)
+    edge_df_neg = pd.read_parquet(df_neg)
 
     pos_genes = set(edge_df_pos["gene_name_bait"]) | set(edge_df_pos["gene_name_prey"])
     negative_genes = set(edge_df_neg["gene_name_bait"]) | set(edge_df_neg["gene_name_prey"])

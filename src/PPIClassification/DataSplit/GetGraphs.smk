@@ -53,11 +53,11 @@ rule get_sequence_similarity_graph:
 
 rule get_min_cut_partitions:
     input:
-        full_pos=f"work_folder{pn}/subsets/{{dataset}}_{{network_type}}_full_{{pos_limit}}_pos.csv.gz"
+        full_pos=f"work_folder{pn}/subsets/{{dataset}}_{{network_type}}_full_{{pos_limit}}_pos.pq"
     output:
         ppi_graph=f"work_folder{pn}/subsets/graphs/{{dataset}}_{{network_type}}_limit_{{pos_limit}}.graphml"
     run:
-        pos_df = pd.read_csv(input.full_pos,sep="\t")
+        pos_df = pd.read_parquet(input.full_pos)
         pos_df["edge_weight"] = 1
         G = nx.from_pandas_edgelist(pos_df,"gene_name_bait","gene_name_prey",edge_attr="edge_weight")
         nx.write_graphml(G,output.ppi_graph)

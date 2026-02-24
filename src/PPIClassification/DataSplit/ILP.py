@@ -20,8 +20,8 @@ if __name__ == '__main__':
     missmatch_allowed = args.accepted_error
     threads = args.threads
 
-    positive_df = pd.read_csv(positive_data, sep="\t")
-    negative_df = pd.read_csv(negative_data, sep="\t")
+    positive_df = pd.read_parquet(positive_data)
+    negative_df = pd.read_parquet(negative_data)
 
     positive_df = positive_df.iloc[:,0:2]
     negative_df = negative_df.iloc[:,0:2]

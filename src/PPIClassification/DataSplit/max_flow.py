@@ -73,8 +73,8 @@ if __name__ == '__main__':
     max_flow_negative = args.max_flow_negative
     min_max_flow = args.min_max_flow
 
-    positive_bait_prey_df = pd.read_csv(positive_data, sep="\t")
-    negative_bait_prey_df = pd.read_csv(negative_data, sep="\t")
+    positive_bait_prey_df = pd.read_parquet(positive_data)
+    negative_bait_prey_df = pd.read_parquet(negative_data)
 
     positive_bait_prey_df = positive_bait_prey_df[["gene_name_bait", "gene_name_prey"]]
     negative_bait_prey_df = negative_bait_prey_df[["gene_name_bait", "gene_name_prey"]]

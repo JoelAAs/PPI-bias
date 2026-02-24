@@ -5,8 +5,8 @@ rule maxflow_splits:
         min_max_flow=65
     log: "logs/maxflow/{partition_name}/maxflow_{settype}_{dataset}_{neg_limit}_poslim_{pos_limit}.log"
     input:
-        set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_directional_limit_{{pos_limit}}_{{partition_name}}_pos.csv.gz",
-        set_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv.gz"
+        set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_directional_limit_{{pos_limit}}_{{partition_name}}_pos.pq",
+        set_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.pq"
     output:
         set_pos=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_pos.csv",
         set_neg=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv"
@@ -29,8 +29,8 @@ rule ilp:
     threads: 20
     log: "logs/ilp/{partition_name}/ilp_{settype}_{dataset}_{neg_limit}_poslim_{pos_limit}.log"
     input:
-        set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_directional_limit_{{pos_limit}}_{{partition_name}}_pos.csv.gz",
-        set_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv.gz"
+        set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_directional_limit_{{pos_limit}}_{{partition_name}}_pos.pq",
+        set_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.pq"
     output:
         balanced_pos=f"work_folder{pn}/subsets/{{settype}}/ilp/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_pos.csv",
         balanced_neg=f"work_folder{pn}/subsets/{{settype}}/ilp/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv"
@@ -48,8 +48,8 @@ rule ilp:
 
 rule balance_undirectional:
     input:
-        set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_undirectional_limit_{{pos_limit}}_{{partition_name}}_pos.csv.gz",
-        set_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_undirectional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv.gz"
+        set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_undirectional_limit_{{pos_limit}}_{{partition_name}}_pos.pq",
+        set_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_undirectional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.pq"
     output:
         balanced_pos=f"work_folder{pn}/subsets/{{settype}}/undirectionalbalanced/{{dataset}}_undirectional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_pos.csv",
         balanced_neg=f"work_folder{pn}/subsets/{{settype}}/undirectionalbalanced/{{dataset}}_undirectional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv"

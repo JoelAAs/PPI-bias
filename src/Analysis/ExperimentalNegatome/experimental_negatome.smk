@@ -10,7 +10,7 @@ rule all_methods_filter_out:
     input:
         method_aggregate=f"work_folder{pn}/inferred_search_space/aggregated/methods/{{data}}_experimental_wise.csv"
     output:
-        full_detection=f"work_folder{pn}/analysis/POD/{{network_type}}/POD_{{data}}.csv.gz"
+        full_detection=f"work_folder{pn}/analysis/POD/{{network_type}}/POD_{{data}}.pq"
     run:
         inferred_negative_df = pd.read_csv(
             input.method_aggregate,
@@ -61,9 +61,8 @@ rule all_methods_filter_out:
             inferred_negative_df["alpha_post"],inferred_negative_df["beta_post"])
         inferred_negative_df["pair_id"] = range(inferred_negative_df.shape[0])
 
-        inferred_negative_df.to_csv(
+        inferred_negative_df.to_parquete(
             output.full_detection,
-            sep="\t",
             index=False
         )
 
