@@ -49,7 +49,7 @@ rule get_model_metrics:
 rule all_metrics:
     input:
         metrics = expand(
-            f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_{{model_configuration}}_{{partition}}_metrics.txt",
+            f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_metrics.txt",
             dataset=config["datasets"], model_configuration=config["models"], partition=config["partitions"])    
     output:
         all_models = f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
