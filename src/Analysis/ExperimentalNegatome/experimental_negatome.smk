@@ -19,19 +19,55 @@ rule all_methods_filter_out:
 
         inferred_negative_df = inferred_negative_df[
             inferred_negative_df[f"{params.id_pattern}_bait"] != inferred_negative_df[f"{params.id_pattern}_prey"]
-            ].copy()  # should be fixed later
+            ].copy()
 
         if wildcards.network_type == "undirectional":
             inferred_negative_df["id_var"] = inferred_negative_df[[f"{params.id_pattern}_bait", f"{params.id_pattern}_prey"]].apply(
                 lambda x: "_".join(sorted(x)), axis=1)
-        
-            undirectional_negative_df = inferred_negative_df.groupby("id_var").agg({
-                "gene_name_bait": lambda x: x.min(),
-                "gene_name_prey": lambda x: x.max(),
-                "n_observed": "sum",
-                "n_tested": "sum",
-                "pubmed_id": lambda x: ";".join(set(";".join(x).split(";")))
-            }).reset_index(drop=True)
+
+            s = datetime.now()
+            inferred_negative_df.sort_values("id_var", inplace=True)
+            inferred_negative_mat = inferred_negative_df.to_numpy()
+            aggregated_negative_mat = np.zeros_like(inferred_negative_mat)
+            prev_bait, prev_prey, prev_n_observed, prev_n_tested, prev_pids, _, prev_id = inferred_negative_mat[0]
+            for i in range(1, inferred_negative_mat.shape[0]):
+                c_bait, c_prey, c_n_observed, c_n_tested, c_pid, _, c_id = inferred_negative_mat[i] # CLID is not used yet, but should be fixed later
+                pids = set(c_pid.split(";"),)
+                c_bait, c_prey = order_prot = sorted([c_bait, c_prey])
+                
+                if prev_id == c_id:
+                    prev_n_observed += c_n_observed
+                    prev_n_tested += c_n_tested
+                    prev_pids |= pids 
+                else:
+                    aggregated_negative_mat[i-1] = [
+                        prev_bait,
+                        prev_prey,
+                        prev_n_observed,
+                        prev_n_tested,
+                        ";".join(prev_pids),
+                        "",
+                        prev_id
+                    ]
+                    prev_bait, prev_prey, prev_n_observed, prev_n_tested, prev_pids, prev_id = c_bait, c_prey, c_n_observed, c_n_tested, pids, c_id
+                
+            aggregated_negative_mat[i] = [
+                prev_bait,
+                prev_prey,
+                prev_n_observed,
+                prev_n_tested,
+                ";".join(prev_pids),
+                "",
+                prev_id
+            ]
+
+            ppis_joined_idx = aggregated_negative_mat[:, 1] != 0
+            print(f"joined {-sum(ppis_joined_idx-1)} out of {inferred_negative_mat.shape[0]} rows in {(datetime.now() - s).total_seconds()} seconds", flush=True)
+            aggregated_negative_mat = aggregated_negative_mat[ppis_joined_idx, :]
+            undirectional_negative_df = pd.DataFrame(
+                aggregated_negative_mat,
+                columns=inferred_negative_df.columns
+            )
 
             flipped_df = undirectional_negative_df.copy()
             flipped_df[["gene_name_bait", "gene_name_prey"]] = (
