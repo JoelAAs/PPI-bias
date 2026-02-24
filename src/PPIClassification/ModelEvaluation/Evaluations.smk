@@ -28,13 +28,13 @@ rule get_model_metrics:
         script_location = "src/PPIClassification/ModelEvaluation/evaluate_model.py"
     input:
         validation_data = lambda wc: get_model_validation_data(wc),
-        saved_model = f"work_folder{pn}/classification/randomforest/model/{{dataset}}_{{model_configuration}}_model_parameters.joblib",
+        saved_model = f"work_folder{pn}/classification/randomforest/model/{{dataset}}_{{model_configuration}}_{{partition}}_model_parameters.joblib",
         protein_embeddings = f"work_folder{pn}/embeddings/canonical_embedding.csv.gz"
     output:
-        metrics=f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_{{model_configuration}}_metrics.txt",
-        pr_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_{{model_configuration}}_pr_curve.png",
-        pr_neg_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_{{model_configuration}}_pr_neg_curve.png",
-        roc_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_{{model_configuration}}_roc_curve.png"
+        metrics=f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_{{model_configuration}}_{{partition}}_metrics.txt",
+        pr_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_{{model_configuration}}_{{partition}}_pr_curve.png",
+        pr_neg_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_{{model_configuration}}_{{partition}}_pr_neg_curve.png",
+        roc_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_{{model_configuration}}_{{partition}}_roc_curve.png"
     shell:
         """
         python3 {params.script_location} \
