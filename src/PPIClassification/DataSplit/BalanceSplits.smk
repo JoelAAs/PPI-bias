@@ -58,6 +58,6 @@ rule balance_undirectional:
         python3 src/PPIClassification/DataSplit/balance_undirectional.py \
             --positive_data {input.set_pos} \
             --negative_data {input.set_neg} \
-            --balanced_positive {output.balanced_pos} \
-            --balanced_negative {output.balanced_neg} 
+            --output_positive {output.balanced_pos} \
+            --output_negative {output.balanced_neg} 
         """
