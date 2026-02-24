@@ -1,5 +1,5 @@
 from scipy.stats import beta
-from datetime import datetime
+import datetime
 
 rule all_methods_filter_out:
     """
@@ -26,7 +26,7 @@ rule all_methods_filter_out:
             inferred_negative_df["id_var"] = inferred_negative_df[[f"{params.id_pattern}_bait", f"{params.id_pattern}_prey"]].apply(
                 lambda x: "_".join(sorted(x)), axis=1)
 
-            s = datetime.now()
+            s = datetime.datetime.now()
             inferred_negative_df.sort_values("id_var", inplace=True)
             inferred_negative_mat = inferred_negative_df.to_numpy()
             aggregated_negative_mat = np.zeros_like(inferred_negative_mat)
@@ -63,7 +63,7 @@ rule all_methods_filter_out:
             ]
 
             ppis_joined_idx = aggregated_negative_mat[:, 1] != 0
-            print(f"joined {-sum(ppis_joined_idx-1)} out of {inferred_negative_mat.shape[0]} rows in {(datetime.now() - s).total_seconds()} seconds", flush=True)
+            print(f"joined {-sum(ppis_joined_idx-1)} out of {inferred_negative_mat.shape[0]} rows in {(datetime.datetime.now() - s).total_seconds()} seconds", flush=True)
             aggregated_negative_mat = aggregated_negative_mat[ppis_joined_idx, :]
             undirectional_negative_df = pd.DataFrame(
                 aggregated_negative_mat,
