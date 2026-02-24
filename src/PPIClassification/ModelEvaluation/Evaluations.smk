@@ -12,10 +12,12 @@ def get_model_validation_data(wc):
     else:
         pos_limit = config["models"][wc.model_configuration]["pos"]
         neg_limit = config["models"][wc.model_configuration]["neg"]
-        selection = config["models"][wc.model_configuration]["balancing"]
         partition_name = config["models"][wc.model_configuration]["partition"]
         data =  f"{wc.dataset}_limit_{neg_limit}_poslim_{pos_limit}_{partition_name}"
-
+        if wc.network_type == "directional":
+            selection = "maxflow"
+        elif wc.network_type == "undirectional":
+            selection="undirectionalbalanced"
     return [
         f"work_folder{pn}/subsets/test/{selection}/{data}_pos.csv",
         f"work_folder{pn}/subsets/test/{selection}/{data}_neg.csv"
