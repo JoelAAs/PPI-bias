@@ -79,6 +79,8 @@ rule all_methods_filter_out:
                 pd.concat([undirectional_negative_df, flipped_df], ignore_index=True)
             )
 
+        inferred_negative_df["n_observed"] = inferred_negative_df["n_observed"].astype(int)
+        inferred_negative_df["n_tested"] = inferred_negative_df["n_tested"].astype(int)
 
         global_pod = inferred_negative_df["n_observed"].sum() / inferred_negative_df[
             "n_tested"].sum()  # if a test is made, probability of interaction

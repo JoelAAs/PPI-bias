@@ -10,7 +10,6 @@ from sklearn.metrics import classification_report, balanced_accuracy_score
 from sklearn.metrics import f1_score
 import joblib
 from sklearn.metrics import precision_recall_curve, auc
-from sklearn.dummy import DummyClassifier
 
 global RANDOM_STATE
 
