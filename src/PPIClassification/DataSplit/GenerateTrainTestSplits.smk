@@ -81,7 +81,7 @@ rule define_partitions:
         test_partition_genes= f"work_folder{pn}/subsets/test/genes/genes_{{dataset}}_{{network_type}}_{{pos_limit}}_{{partition_name}}.txt",
     run:
         df_pos = pd.read_parquet(input.full_pos)
-        partitions_df = pd.read_csv(input.gene_partition)
+        partitions_df = pd.read_csv(input.gene_partition, sep="\t")
         partitions = partitions_df["partition"].unique()
         train_combinations = list(combinations(partitions,int(len(partitions) * 0.6)))
         train_partition = sorted(
