@@ -1,6 +1,6 @@
 from scipy.stats import beta
 
-checkpoint all_methods_filter_out:
+rule all_methods_filter_out:
     """
     Get upper and lower bound probability of detection given test/observations of each bait-prey combination
     """

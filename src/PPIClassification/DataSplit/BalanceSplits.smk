@@ -8,8 +8,8 @@ rule maxflow_splits:
         set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_directional_limit_{{pos_limit}}_{{partition_name}}_pos.csv.gz",
         set_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv.gz"
     output:
-        set_pos=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_pos.csv.gz",
-        set_neg=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv.gz"
+        set_pos=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_pos.csv",
+        set_neg=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv"
     shell:
         """(
         python3 {params.script_location} \
@@ -51,8 +51,8 @@ rule balance_undirectional:
         set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_undirectional_limit_{{pos_limit}}_{{partition_name}}_pos.csv.gz",
         set_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_undirectional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv.gz"
     output:
-        balanced_pos=f"work_folder{pn}/subsets/{{settype}}/undirectionalbalanced/{{dataset}}_undirectional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_pos.csv.gz",
-        balanced_neg=f"work_folder{pn}/subsets/{{settype}}/undirectionalbalanced/{{dataset}}_undirectional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv.gz"
+        balanced_pos=f"work_folder{pn}/subsets/{{settype}}/undirectionalbalanced/{{dataset}}_undirectional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_pos.csv",
+        balanced_neg=f"work_folder{pn}/subsets/{{settype}}/undirectionalbalanced/{{dataset}}_undirectional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv"
     shell:
         """
         python3 src/PPIClassification/DataSplit/balance_undirectional.py \
