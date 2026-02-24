@@ -1,7 +1,4 @@
 def input_metrics(wc):
-    expected_input = expand(
-        f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_{{model_configuration}}_metrics.txt",
-         dataset=config["datasets"], model_configuration=(c for c in config["models"].keys() if c != "goldensplit"))
     expected_input.append(f"work_folder{pn}/classification/randomforest/metrics/goldensplit_asis_metrics.txt")
     return expected_input
 
@@ -51,7 +48,9 @@ rule get_model_metrics:
 
 rule all_metrics:
     input:
-        metrics = lambda wc: input_metrics(wc)    
+        metrics = expected_input = expand(
+        f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_{{model_configuration}}_{{partition}}_metrics.txt",
+         dataset=config["datasets"], model_configuration=config["models"], partition=config["partitions"])    
     output:
         all_models = f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
     run:
