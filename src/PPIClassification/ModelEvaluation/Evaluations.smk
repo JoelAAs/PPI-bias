@@ -1,6 +1,6 @@
 def input_metrics(wc):
     expected_input = expand(
-        f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_{{model_configuration}}_metrics.txt",
+        f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_{{model_configuration}}_{{partition}}_metrics.txt",
          dataset=config["datasets"], model_configuration=(c for c in config["models"].keys() if c != "goldensplit"))
     expected_input.append(f"work_folder{pn}/classification/randomforest/metrics/goldensplit_asis_metrics.txt")
     return expected_input
@@ -12,8 +12,7 @@ def get_model_validation_data(wc):
     else:
         pos_limit = config["models"][wc.model_configuration]["pos"]
         neg_limit = config["models"][wc.model_configuration]["neg"]
-        partition_name = config["models"][wc.model_configuration]["partition"]
-        data =  f"{wc.dataset}_limit_{neg_limit}_poslim_{pos_limit}_{partition_name}"
+        data =  f"{wc.dataset}_limit_{neg_limit}_poslim_{pos_limit}_{wc.partition}"
         if wc.network_type == "directional":
             selection = "maxflow"
         elif wc.network_type == "undirectional":
@@ -52,8 +51,10 @@ rule all_metrics:
     input:
         metrics = lambda wc: input_metrics(wc)    
     output:
-        all_models = f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
-    run:
+        expected_input = expand(
+            f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_{{model_configuration}}_{{partition}}_metrics.txt",
+         dataset=config["datasets"], model_configuration=config["models"], partition=config["partitions"])
+        run:
         with open(output[0], "a") as w:
             w.write("model\tpr_auc\tpr_auc_base\tpr_auc_neg\tpr_auc_neg_base\troc_auc\troc_auc_base\n")
             for metric_file in input.metrics:
