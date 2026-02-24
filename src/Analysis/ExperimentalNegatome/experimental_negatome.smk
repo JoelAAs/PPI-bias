@@ -1,4 +1,5 @@
 from scipy.stats import beta
+from datetime import datetime
 
 rule all_methods_filter_out:
     """
