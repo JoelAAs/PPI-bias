@@ -48,9 +48,9 @@ rule get_model_metrics:
 
 rule all_metrics:
     input:
-        metrics = expected_input = expand(
-        f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_{{model_configuration}}_{{partition}}_metrics.txt",
-         dataset=config["datasets"], model_configuration=config["models"], partition=config["partitions"])    
+        metrics = expand(
+            f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_{{model_configuration}}_{{partition}}_metrics.txt",
+            dataset=config["datasets"], model_configuration=config["models"], partition=config["partitions"])    
     output:
         all_models = f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
     run:
