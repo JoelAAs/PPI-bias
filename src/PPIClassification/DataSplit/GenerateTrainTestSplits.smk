@@ -146,8 +146,8 @@ rule define_negative_sets:
         mem_gb=80
     run:
         df_neg = pd.read_parquet(input.full_neg)
-        print("Rows:", len(df_pos))
-        print("Memory GB:", df_pos.memory_usage(deep=True).sum() / 1e9, flush=True)
+        print("Rows:", len(df_neg))
+        print("Memory GB:", df_neg.memory_usage(deep=True).sum() / 1e9, flush=True)
         genes_partitions = [
             {gene.strip() for gene in open(f)} for f in [
                 input.train_partition_genes, input.validation_partition_genes, input.test_partition_genes
