@@ -54,7 +54,7 @@ rule get_negative_set:
     output:
         full_neg=f"work_folder{pn}/subsets/{{dataset}}_{{network_type}}_full_{{neg_limit}}_neg.pq"
     resources:
-        mem_gb: 50
+        mem_gb=50
     run:
         df_pod = pd.read_parquet(input.input_pod)
         df_neg = df_pod[
@@ -68,7 +68,7 @@ rule get_positive_set:
     output:
         full_pos = f"work_folder{pn}/subsets/{{dataset}}_{{network_type}}_full_{{pos_limit}}_pos.pq"
     resources:
-        mem_gb: 50
+        mem_gb=50
     run:
         df_pod = pd.read_parquet(input.input_pod)
         df_pos = df_pod[df_pod["lower_bound_pod"] >= float(wildcards.pos_limit)]
