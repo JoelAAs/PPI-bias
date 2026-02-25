@@ -144,11 +144,25 @@ rule define_negative_sets:
         test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.pq",
     run:
         df_neg = pd.read_parquet(input.full_neg)
+        
+        genes_partitions = [
+            {gene.strip() for gene in open(f)} for f in [
+                input.train_partition_genes, input.validation_partition_genes, input.test_partition_genes
+                ]
+            ]
+        df_pos["gene_name_bait"] = df_pos["gene_name_bait"].astype("category")
+        df_pos["gene_name_prey"] = df_pos["gene_name_prey"].astype("category")
+        baits = df_pos["gene_name_bait"]
+        prey = df_pos["gene_name_prey"]
 
-        for gene_file, output_file in zip(
-                [input.train_partition_genes, input.validation_partition_genes, input.test_partition_genes],
+
+        for set_partition, output_file in zip(
+                gene_partitions
                 [output.train_neg, output.val_neg, output.test_neg]):
-            with open(gene_file, "r") as f:
-                genes = {gene.strip() for gene in f}
-            subset_ppi(df_neg,genes).to_parquet(
+
+            partition_mask = (
+                (baits.isin(set_partition)) &
+                (prey.isin(set_partition))
+            )
+            df_neg,genes[partition_mask].to_parquet(
                 output_file,index=False)
