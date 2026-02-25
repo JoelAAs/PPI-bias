@@ -164,5 +164,5 @@ rule define_negative_sets:
                 (baits.isin(set_partition)) &
                 (prey.isin(set_partition))
             )
-            df_neg,genes[partition_mask].to_parquet(
+            df_neg[partition_mask].to_parquet(
                 output_file,index=False)
