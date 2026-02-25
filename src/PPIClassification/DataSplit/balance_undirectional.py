@@ -48,11 +48,9 @@ def balance_split(df_pos, df_neg, output_pos, output_neg):
                 selected_edges.append((u, v))
 
     selected_edges_df = pd.DataFrame(selected_edges, columns=["gene_name_bait", "gene_name_prey"])
-    selected_edges_df.columns = ["bait", "prey"]
-    selected_edges_df.to_csv(output_neg, sep="\t", index=False)
+    selected_edges_df.to_csv(output_neg, sep="\t", index=False, header=False)
     edge_df_pos = edge_df_pos[["gene_name_bait", "gene_name_prey"]]
-    edge_df_pos.columns = ["bait", "prey"]
-    edge_df_pos.to_csv(output_pos, sep="\t", index=False)
+    edge_df_pos.to_csv(output_pos, sep="\t", index=False, header=False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Balance positive and negative PPI datasets by matching degree distributions.")
