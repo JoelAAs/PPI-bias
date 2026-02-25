@@ -141,19 +141,22 @@ rule define_negative_sets:
     output:
         train_neg = f"work_folder{pn}/subsets/train/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.pq",
         val_neg = f"work_folder{pn}/subsets/validation/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.pq",
-        test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.pq",
+        test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.pq"
+    resources:
+        mem_gb=80
     run:
         df_neg = pd.read_parquet(input.full_neg)
-        
+        print("Rows:", len(df_pos))
+        print("Memory GB:", df_pos.memory_usage(deep=True).sum() / 1e9, flush=True)
         genes_partitions = [
             {gene.strip() for gene in open(f)} for f in [
                 input.train_partition_genes, input.validation_partition_genes, input.test_partition_genes
                 ]
             ]
-        df_pos["gene_name_bait"] = df_pos["gene_name_bait"].astype("category")
-        df_pos["gene_name_prey"] = df_pos["gene_name_prey"].astype("category")
-        baits = df_pos["gene_name_bait"]
-        prey = df_pos["gene_name_prey"]
+        df_neg["gene_name_bait"] = df_neg["gene_name_bait"].astype("category")
+        df_neg["gene_name_prey"] = df_neg["gene_name_prey"].astype("category")
+        baits = df_neg["gene_name_bait"]
+        prey = df_neg["gene_name_prey"]
 
 
         for set_partition, output_file in zip(
