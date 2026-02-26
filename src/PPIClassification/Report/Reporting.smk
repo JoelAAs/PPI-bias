@@ -1,22 +1,6 @@
 import re
 def get_model_data(wc):
     dataset = wc.dataset
-    is_mixed = re.match(r"mixed-(.+)_", dataset)
-    if is_mixed
-        negative_dataset = is_mixed.group(1)
-        neg_selection = "undirectionalbalanced"
-
-
-
-    return [
-        f"work_folder{pn}/subsets/train/{selection}/{data}_pos.csv",
-        f"work_folder{pn}/subsets/train/{selection}/{data}_neg.csv",
-        f"work_folder{pn}/subsets/validation/{selection}/{data}_pos.csv",
-        f"work_folder{pn}/subsets/validation/{selection}/{data}_neg.csv",
-        f"work_folder{pn}/subsets/test/{selection}/{data}_pos.csv",
-        f"work_folder{pn}/subsets/test/{selection}/{data}_neg.csv"
-    ]
-    
     elif wc.dataset == "goldensplit":
         data = f"data_{wc.network_type}"
         selection = wc.dataset
