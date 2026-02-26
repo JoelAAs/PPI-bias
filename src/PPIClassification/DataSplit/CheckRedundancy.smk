@@ -45,6 +45,9 @@ rule cdhit_redudance_between_subsets:
         sim_train=f"work_folder{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_train.out",
         sim_validation=f"work_folder{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_validation.out",
         sim_test=f"work_folder{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_test.out",
+        sim_trainclr=f"work_folder{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_train.out.clstr",
+        sim_validationclr=f"work_folder{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_validation.out.clstr",
+        sim_testclr=f"work_folder{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_test.out.clstr",
         redundant_proteins=f"work_folder{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_redundant_proteins.txt"
     shell:
         """
@@ -55,9 +58,9 @@ rule cdhit_redudance_between_subsets:
         {params.cdhit_location}/cd-hit-2d -i {input.validation_sim_reduced_fasta} -i2 {input.test_sim_reduced_fasta} \
             -o {output.sim_test} -c 0.4 -n 2 -T {threads}
 
-        sed -nE 's/.*>([A-Za-z0-9-]+)\.\.\..*%$/\1/p' -o {output.sim_train}.clstr > {output.redundant_proteins}
-        sed -nE 's/.*>([A-Za-z0-9-]+)\.\.\..*%$/\1/p' -o {output.sim_validation}.clstr >> {output.redundant_proteins}
-        sed -nE 's/.*>([A-Za-z0-9-]+)\.\.\..*%$/\1/p' -o {output.sim_test}.clstr >> {output.redundant_proteins}
+        sed -nE 's/.*>([A-Za-z0-9-]+)....*%$/\1/p' -o {output.sim_train}.clstr > {output.redundant_proteins}
+        sed -nE 's/.*>([A-Za-z0-9-]+)....*%$/\1/p' -o {output.sim_validation}.clstr >> {output.redundant_proteins}
+        sed -nE 's/.*>([A-Za-z0-9-]+)....*%$/\1/p' -o {output.sim_test}.clstr >> {output.redundant_proteins}
         """
 
 
