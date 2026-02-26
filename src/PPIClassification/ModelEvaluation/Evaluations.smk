@@ -6,10 +6,14 @@ def get_model_validation_data(wc):
     if wc.dataset == "goldensplit":
         data = "data"
         selection = wc.dataset
-    elif re.search(wc.partition, "-random"):
+    elif re.search("-random",wc.partition):
         pos_limit = config["models"][wc.model_configuration]["pos"]
         posdata =  f"{wc.dataset}_{wc.network_type}_limit_{pos_limit}_{wc.partition.split("-")[0]}"
         negdata =  f"{wc.dataset}_{wc.network_type}_limit_{pos_limit}_{wc.partition}"
+        return[
+            f"work_folder{pn}/subsets/test/{posdata}_pos.pq",
+            f"work_folder{pn}/subsets/test/randomnegative/{negdata}_neg.pq"
+        ]
     else:
         pos_limit = config["models"][wc.model_configuration]["pos"]
         neg_limit = config["models"][wc.model_configuration]["neg"]
