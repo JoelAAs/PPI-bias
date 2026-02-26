@@ -23,13 +23,13 @@ def get_negative_data_undir(G_pos):
     n_random_edges = 0
     chosen_edges = []
     while n_random_edges < n_edges:
-        u = np.random.choice(nodes, probs)
-        v = np.random.choice(nodes, probs)
+        u = np.random.choice(nodes, p=probs)
+        v = np.random.choice(nodes, p=probs)
         
         if u == v:
             continue
         
-        neg_edge = tuple(sorted(u,v))
+        neg_edge = tuple(sorted((u,v)))
         
         if neg_edge not in pos_edges and neg_edge not in chosen_edges:
             chosen_edges.append(neg_edge)
@@ -45,7 +45,6 @@ def write_edges(edges, output):
 
 
 if __name__ == "main":
-    
     parser = argparse.ArgumentParser(description="Balance positive and negative PPI datasets by matching degree distributions.")
     parser.add_argument("--positive_data", type=str, required=True, help="Path to the positive PPI dataset (CSV format).")
     parser.add_argument("--negative_data", type=str, required=True, help="Path to the negative PPI output.")
