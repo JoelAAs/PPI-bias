@@ -41,7 +41,7 @@ def get_negative_data_undir(G_pos):
 
 def write_edges(edges, output):
     df_neg = pd.DataFrame(edges, columns=["gene_name_bait", "gene_name_prey"])
-    df_neg.to_parquet(output, index=False, header=False)
+    df_neg.to_parquet(output, index=False)
 
 
 if __name__ == '__main__':
