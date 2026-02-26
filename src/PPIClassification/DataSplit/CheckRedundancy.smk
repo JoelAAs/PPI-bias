@@ -67,7 +67,7 @@ rule get_redundant_list:
     output:
         redundant_proteins=f"work_folder{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_redundant_proteins.txt"
     shell:
-        """
+        r"""
         sed -nE 's/.*>([A-Za-z0-9-]+)....*%$/\1/p' {input.sim_trainclr} > {output.redundant_proteins}
         sed -nE 's/.*>([A-Za-z0-9-]+)....*%$/\1/p' {input.sim_validationclr} >> {output.redundant_proteins}
         sed -nE 's/.*>([A-Za-z0-9-]+)....*%$/\1/p' {input.sim_testclr} >> {output.redundant_proteins}

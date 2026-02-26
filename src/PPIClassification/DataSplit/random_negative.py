@@ -54,7 +54,7 @@ if __name__ == "main":
     args = parser.parse_args()
     df_pos = pd.read_parquet(args.positive_data)
     G_pos = get_positive_graph(df_pos)
-    if args.network_type == "undirected":
+    if args.network_type == "undirectional":
         edges = get_negative_data_undir(G_pos)
 
     write_edges(edges, args.negative_data)
