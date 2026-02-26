@@ -44,7 +44,7 @@ def write_edges(edges, output):
     df_neg.to_parquet(output, index=False, header=False)
 
 
-if __name__ == "main":
+if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Balance positive and negative PPI datasets by matching degree distributions.")
     parser.add_argument("--positive_data", type=str, required=True, help="Path to the positive PPI dataset (CSV format).")
     parser.add_argument("--negative_data", type=str, required=True, help="Path to the negative PPI output.")
