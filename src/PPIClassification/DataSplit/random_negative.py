@@ -49,13 +49,14 @@ if __name__ == "main":
     parser = argparse.ArgumentParser(description="Balance positive and negative PPI datasets by matching degree distributions.")
     parser.add_argument("--positive_data", type=str, required=True, help="Path to the positive PPI dataset (CSV format).")
     parser.add_argument("--negative_data", type=str, required=True, help="Path to the negative PPI output.")
-    parser.add_argument("--networkt_type", type=str, required=True, help="Networktype either directed or undirected")
+    parser.add_argument("--network_type", type=str, required=True, help="Networktype either directed or undirected")
     
     args = parser.parse_args()
     df_pos = pd.read_parquet(args.positive_data)
     G_pos = get_positive_graph(df_pos)
     if args.network_type == "undirectional":
         edges = get_negative_data_undir(G_pos)
-
+    else:
+        raise ValueError("Wrong")
     write_edges(edges, args.negative_data)
     
