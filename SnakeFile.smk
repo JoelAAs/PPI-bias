@@ -115,8 +115,8 @@ rule all:
         ),
         # Directional
         expand(
-            f"work_folder{pn}/classification/randomforest/{{dataset}}_directional_{{model_configuration}}_{{partition}}_model_parameters.txt",
-            dataset=datasets, model_configuration = config["models"], partition =["sequencesimilarity", "maxpos"]),
+            f"work_folder{pn}/classification/randomforest/{{dataset}}_directional_{{model_configuration}}_{{partition}}{{random}}_model_parameters.txt",
+            dataset=datasets, model_configuration = config["models"], partition =["sequencesimilarity", "maxpos"], random=["-random", ""]),
         # Undirectional
         expand(
             f"work_folder{pn}/classification/randomforest/{{dataset}}_undirectional_{{model_configuration}}_{{partition}}_model_parameters.txt",

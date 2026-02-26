@@ -63,4 +63,15 @@ rule balance_undirectional:
         """
 
 
-rule generate_random_
+rule generate_random_negative_set:
+    input:
+        set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_{{network_type}}_limit_{{pos_limit}}_{{partition_name}}_pos.pq"
+    output:
+        set_neg=f"work_folder{pn}/subsets/{{settype}}/randomnegative/{{dataset}}_{{network_type}}_limit_{{pos_limit}}_{{partition_name}}-random_neg.pq"
+    shell:
+        """
+        python3 src/PPIClassification/DataSplit/random_negative.py \
+            --positive_data {input.set_pos} \
+            --negative_data {output.set_neg} \
+            --networkt_type {wildcards.network_type}
+        """
