@@ -4,7 +4,7 @@ def get_expected_input(wc):
         data = f"data_{wc.network_type}"
         selection = wc.dataset
     elif re.search(wc.partition, "-random"):
-
+        pos_limit = config["models"][wc.model_configuration]["pos"]
         posdata =  f"{wc.dataset}_{wc.network_type}_limit_{pos_limit}_{wc.partition.split("-")[0]}"
         negdata =  f"{wc.dataset}_{wc.network_type}_limit_{pos_limit}_{wc.partition}"
         return [
