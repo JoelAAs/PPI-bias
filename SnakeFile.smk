@@ -116,11 +116,11 @@ rule all:
         # Directional
         expand(
             f"work_folder{pn}/classification/randomforest/{{dataset}}_directional_{{model_configuration}}_{{partition}}{{random}}_model_parameters.txt",
-            dataset=datasets, model_configuration = config["models"], partition =["sequencesimilarity", "maxpos"], random=["-random", ""]),
+            dataset=datasets, model_configuration = config["models"], partition =["sequencesimilarity", "maxpos"]),
         # Undirectional
         expand(
             f"work_folder{pn}/classification/randomforest/{{dataset}}_undirectional_{{model_configuration}}_{{partition}}_model_parameters.txt",
-            dataset=datasets, model_configuration = config["models"], partition =["sequencesimilarity", "maxpos"]),
+            dataset=datasets, model_configuration = config["models"], partition =["sequencesimilarity", "maxpos"], random=["-random", ""]),
 
         #f"work_folder{pn}/classification/randomforest/goldensplit_asis_model_parameters.txt",
         f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"

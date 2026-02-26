@@ -1,5 +1,6 @@
 
 def get_expected_input(wc):
+    print(wc.partition)
     if wc.dataset == "goldensplit":
         data = f"data_{wc.network_type}"
         selection = wc.dataset
