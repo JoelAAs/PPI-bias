@@ -43,8 +43,8 @@ rule cdhit_redudance_between_subsets:
         test_sim_reduced_fasta=f"work_folder{pn}/subsets/test/genes/fasta/cdhit/{{selected_data}}.fasta"
     output:
         sim_train=f"work_folder{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_train.out",
-        sim_validation=f"work_folder{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_train.out",
-        sim_test=f"work_folder{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_train.out",
+        sim_validation=f"work_folder{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_validation.out",
+        sim_test=f"work_folder{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_test.out",
         redundant_proteins=f"work_folder{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_redundant_proteins.txt"
     shell:
         """
