@@ -16,9 +16,7 @@ def get_model_data(wc):
         f"work_folder{pn}/subsets/test/{selection}/{data}_pos.csv",
         f"work_folder{pn}/subsets/test/{selection}/{data}_neg.csv"
     ]
-
-
-
+    
     elif wc.dataset == "goldensplit":
         data = f"data_{wc.network_type}"
         selection = wc.dataset
