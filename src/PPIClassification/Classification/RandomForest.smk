@@ -1,20 +1,19 @@
 
 def get_expected_input(wc):
-    print(wc.partition)
     if wc.dataset == "goldensplit":
         data = f"data_{wc.network_type}"
         selection = wc.dataset
-    elif re.search(wc.partition, "-random"):
+    elif re.search("-random",wc.partition):
         pos_limit = config["models"][wc.model_configuration]["pos"]
         posdata =  f"{wc.dataset}_{wc.network_type}_limit_{pos_limit}_{wc.partition.split("-")[0]}"
         negdata =  f"{wc.dataset}_{wc.network_type}_limit_{pos_limit}_{wc.partition}"
         return [
-            f"work_folder{pn}/subsets/train/{posdata}_pos.csv",
-            f"work_folder{pn}/subsets/train/randomnegative/{negdata}_neg.csv",
-            f"work_folder{pn}/subsets/validation/{posdata}_pos.csv",
-            f"work_folder{pn}/subsets/validation/randomnegative/{negdata}_neg.csv",
-            f"work_folder{pn}/subsets/test/{posdata}_pos.csv",
-            f"work_folder{pn}/subsets/test/randomnegative/{negdata}_neg.csv"
+            f"work_folder{pn}/subsets/train/{posdata}_pos.pq",
+            f"work_folder{pn}/subsets/train/randomnegative/{negdata}_neg.pq",
+            f"work_folder{pn}/subsets/validation/{posdata}_pos.pq",
+            f"work_folder{pn}/subsets/validation/randomnegative/{negdata}_neg.pq",
+            f"work_folder{pn}/subsets/test/{posdata}_pos.pq",
+            f"work_folder{pn}/subsets/test/randomnegative/{negdata}_neg.pq"
         ]
 
     else:
