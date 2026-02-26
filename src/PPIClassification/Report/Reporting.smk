@@ -1,7 +1,7 @@
 import re
 def get_model_data(wc):
     dataset = wc.dataset
-    elif wc.dataset == "goldensplit":
+    if wc.dataset == "goldensplit":
         data = f"data_{wc.network_type}"
         selection = wc.dataset
     else:
