@@ -19,8 +19,8 @@ def get_dataset(pos_data_file, neg_data_file, embedding_dict, embed_length):
         df_pos = pd.read_csv(pos_data_file, sep="\t", usecols=[0, 1], header=None)
         df_negative = pd.read_csv(neg_data_file, sep="\t", usecols=[0, 1], header=None, comment="#")
     else:
-        df_pos = pd.read_parquet(pos_data_file, usecols=[0, 1])
-        df_negative = pd.read_parquet(neg_data_file, usecols=[0, 1])
+        df_pos = pd.read_parquet(pos_data_file).iloc[:,0:2]
+        df_negative = pd.read_parquet(neg_data_file, usecols=[0, 1]).iloc[:,0:2]
     df_samples = pd.concat([df_pos, df_negative], ignore_index=True)
 
     baits = df_samples.iloc[:, 0].to_numpy()

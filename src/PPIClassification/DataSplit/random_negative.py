@@ -41,6 +41,14 @@ def get_negative_data_undir(G_pos):
 
 def write_edges(edges, output):
     df_neg = pd.DataFrame(edges, columns=["gene_name_bait", "gene_name_prey"])
+    flipped_df = df_neg.copy()
+    flipped_df[["gene_name_bait", "gene_name_prey"]] = (
+        flipped_df[["gene_name_prey", "gene_name_bait"]]
+    )
+
+    df_neg = (
+        pd.concat([df_neg, flipped_df], ignore_index=True)
+    )
     df_neg.to_parquet(output, index=False)
 
 
