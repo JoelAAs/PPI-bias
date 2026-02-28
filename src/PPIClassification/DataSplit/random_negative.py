@@ -99,7 +99,7 @@ if __name__ == '__main__':
         G_pos = nx.from_pandas_edgelist(df_pos, source="gene_name_bait", target="gene_name_prey", create_using=nx.Graph())
         edges = get_negative_data_undir(G_pos)
         write_edges(edges, True, args.negative_data)
-    elif args.networktype == "directional":
+    elif args.network_type == "directional":
         G_pos = nx.from_pandas_edgelist(df_pos, source="gene_name_bait", target="gene_name_prey", create_using=nx.DiGraph())
         edges = get_negative_data_dir(G_pos)
         write_edges(edges, False, args.negative_data)
