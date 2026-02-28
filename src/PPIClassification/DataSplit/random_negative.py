@@ -95,7 +95,6 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     df_pos = pd.read_parquet(args.positive_data)
-    G_pos = get_positive_graph(df_pos)
     if args.network_type == "undirectional":
         G_pos = nx.from_pandas_edgelist(df_pos, source="gene_name_bait", target="gene_name_prey", create_using=nx.Graph())
         edges = get_negative_data_undir(G_pos)
