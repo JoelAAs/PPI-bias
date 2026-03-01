@@ -65,7 +65,7 @@ rule all_metrics:
         all_models = f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
     run:
         with open(output[0], "a") as w:
-            w.write("model\tpr_auc\tpr_auc_base\tpr_auc_neg\tpr_auc_neg_base\troc_auc\troc_auc_base\n")
+            w.write("model\tpr_auc\tpr_auc_base\tpr_auc_neg\tpr_auc_neg_base\troc_auc\troc_auc_base\tce_obs\tce_baseline\tsamples\n")
             for metric_file in input.metrics:
                 with open(metric_file, "r") as f:
                     line_out = [line.strip().split(": ")[1] for line in f]
