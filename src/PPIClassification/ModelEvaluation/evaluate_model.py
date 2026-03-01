@@ -2,12 +2,12 @@ import pandas as pd
 import numpy as np 
 import argparse
 import joblib
-from sklearn.metrics import precision_recall_curve, auc, roc_curve
+from sklearn.metrics import precision_recall_curve, auc, roc_curve, log_loss
 import matplotlib.pyplot as plt
 import math
 from scipy.interpolate import interp1d
 
-def generate_and_plot_performace(model, X_test, y_test, pr_png, neg_pr_png, roc_png):
+def generate_and_plot_performace(model, X_test, y_test, pr_png, neg_pr_png, roc_png, ce_png):
     y_pred = model.predict_proba(X_test)[:, 1]
     precision, recall, _ = precision_recall_curve(y_test, y_pred)
     pr_auc = auc(recall, precision)
@@ -36,7 +36,34 @@ def generate_and_plot_performace(model, X_test, y_test, pr_png, neg_pr_png, roc_
         (recall_neg, precision_neg), pr_auc_neg, base_dist_pr_neg, auc_base_dist_pr_neg, neg_pr_png, random_chance_neg, eval_method_name="PR"
     )
 
-    return pr_auc, pr_auc_neg, roc_auc, np.mean(auc_base_dist_pr), np.mean(auc_base_dist_pr_neg), np.mean(auc_base_dist_roc)
+    dist_ce, obs_ce = get_baseline_log_loss(y_pred, y_test)
+    get_cross_entropy_plot(dist_ce, obs_ce, ce_png)
+
+    return pr_auc, pr_auc_neg, roc_auc, obs_ce, np.mean(auc_base_dist_pr), np.mean(auc_base_dist_pr_neg), np.mean(auc_base_dist_roc), np.mean(dist_ce)
+
+
+def get_baseline_log_loss(y_pred, y_test, n = 1000):
+    baseline_logloss = np.zeroes(n, type=float)
+    for i in range(n):
+        y_pred_permut = np.random.permutation(y_pred)        
+        baseline_logloss[i] = log_loss(y_test, y_pred_permut)
+    
+    return baseline_logloss, log_loss(y_test, y_pred)
+
+
+def get_cross_entropy_plot(baseline_ce, obs_ce, ce_output):
+    n_permutations = len(baseline_ce)
+
+    fig, axes = plt.subplots(1, 1, figsize=(8, 6))
+    axes[1].hist(baseline_ce, bins=int(math.sqrt(n_permutations)), alpha=0.7, label='Baseline CE Distribution')
+    axes[1].axvline(obs_ce, color='blue', linestyle='--', label=f'Observed CE: {obs_ce:.4f}')
+    axes[1].set_xlabel('Cross entropy')
+    axes[1].set_title('Cross entropy Distribution Baseline')
+    axes[1].legend()
+    plt.tight_layout()
+    plt.savefig(ce_output)
+    plt.close()
+     
 
 
 def get_baseline_performance(y_pred, y_test, eval_method=precision_recall_curve, n=1000):
@@ -129,7 +156,9 @@ if __name__ == "__main__":
     parser.add_argument("--plot_pr_png", type=str)   
     parser.add_argument("--plot_neg_pr_png", type=str)   
     parser.add_argument("--plot_roc_png", type=str)   
-    
+    parser.add_argument("--plot_ce_png", type=str)   
+
+
     args = parser.parse_args()
 
 
@@ -137,7 +166,7 @@ if __name__ == "__main__":
     X_test, y_test = get_dataset(args.pos_data_file, args.neg_data_file, embedding_dict, embed_length)
     model = joblib.load(args.model_file)
 
-    pr_auc, pr_auc_neg, roc_auc, base_pr_auc, base_pr_auc_neg, base_roc_auc = generate_and_plot_performace(
+    pr_auc, pr_auc_neg, roc_auc, obs_ce, base_pr_auc, base_pr_auc_neg, base_roc_auc, base_ce = generate_and_plot_performace(
         model, X_test, y_test, args.plot_pr_png,  args.plot_neg_pr_png,  args.plot_roc_png)
     
     with open(args.output_file, "w") as f:
@@ -147,4 +176,5 @@ if __name__ == "__main__":
         f.write(f"PR NEG AUC (baseline): {base_pr_auc_neg:.4f}\n")
         f.write(f"ROC AUC: {roc_auc:.4f}\n")
         f.write(f"ROC AUC (baseline): {base_roc_auc:.4f}\n")
-    
+        f.write(f"CE: {obs_ce:.4f}\n")
+        f.write(f"CE (baseline): {base_ce:.4f}\n")

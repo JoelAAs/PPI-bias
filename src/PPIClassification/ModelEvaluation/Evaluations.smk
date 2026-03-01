@@ -40,7 +40,8 @@ rule get_model_metrics:
         metrics=f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_metrics.txt",
         pr_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_pr_curve.png",
         pr_neg_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_pr_neg_curve.png",
-        roc_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_roc_curve.png"
+        roc_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_roc_curve.png",
+        ce_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_ce.png",
     shell:
         """
         python3 {params.script_location} \
@@ -51,7 +52,8 @@ rule get_model_metrics:
             --output_file {output.metrics} \
             --plot_pr_png {output.pr_png} \
             --plot_neg_pr_png {output.pr_neg_png} \
-            --plot_roc_png {output.roc_png}
+            --plot_roc_png {output.roc_png} \
+            --plot_ce_png {output.ce_png}
         """
 
 rule all_metrics:
