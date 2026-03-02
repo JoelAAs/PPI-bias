@@ -63,7 +63,7 @@ include: "src/ExperimentalSearchSpace/experimental_search_space.smk"
 include: "src/ExperimentalSearchSpace/CountProteinPairs.smk"
 
 include: "src/Analysis/CellLine/cell_line_analysis.smk"
-include: "src/Analysis/CellLine/GetCellLineAnnotations.smk"
+include: "src/Analysis/CellLine/GetCellLineAnnotation.smk"
 include: "src/Analysis/DetectionMethod/detection_method.smk"
 include: "src/Analysis/ExperimentalNegatome/experimental_negatome.smk"
 include: "src/Analysis/AbundanceAwareDetection/MCMC_abundance.smk"

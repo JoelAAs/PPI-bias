@@ -3,6 +3,8 @@ formated_ppi: "work_folder/per_gene/formated/bait_prey_publications.csv"
 cell_line_ppis: "/home/joel/Projects/Cl-annotated-ppis/work_folder/CL_annotated_bait_prey.csv"
 
 remove_single_publications: True
+pid_to_remove:
+  - "33961781"
 min_total_tests: 30
 min_total_observed: 4
 part_or_difference_cutoff: 50
@@ -26,7 +28,7 @@ hcni_tested:
 
 kahip_location: "/home/ieo7513/software/KaHIP/deploy/kaffpa"
 seed: 18362
-cdhit_location: "/home/ieo7513/software/cd-hit-v4.8.1-2019-0228/cd-hit"
+cdhit_location: "/home/ieo7513/software/cd-hit-v4.8.1-2019-0228"
 embedding_model: "facebook/esm2_t33_650M_UR50D"
 localisation_file: "data/localisation/subcellular_location.tsv"
 
