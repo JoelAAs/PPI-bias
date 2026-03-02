@@ -5,16 +5,6 @@ import pandas as pd
 import numpy as np
 from src.Analysis.Annotation.localisation_support import add_localisation
 
-rule get_bioplex:
-    output:
-        cvcl_0291_bp=f"work_folder{pn}/data/bioplex/CVCL_0291.csv",
-        cvcl_0063_bp=f"work_folder{pn}/data/bioplex/CVCL_0063.csv"
-    shell:
-        """
-        wget https://bioplex.hms.harvard.edu/data/BioPlex_3.0_293T_DirectedEdges.tsv -O {output.cvcl_0063_bp}
-        wget https://bioplex.hms.harvard.edu/data/BioPlex_3.0_HCT116_DirectedEdges.tsv -O {output.cvcl_0291_bp}
-        """
-
 rule get_huri:
     """
     must be annotated on gene name as bioplex is reported on gene name 
