@@ -167,7 +167,7 @@ if __name__ == "__main__":
     model = joblib.load(args.model_file)
 
     pr_auc, pr_auc_neg, roc_auc, obs_ce, base_pr_auc, base_pr_auc_neg, base_roc_auc, base_ce = generate_and_plot_performace(
-        model, X_test, y_test, args.plot_pr_png,  args.plot_neg_pr_png,  args.plot_roc_png)
+        model, X_test, y_test, args.plot_pr_png,  args.plot_neg_pr_png,  args.plot_roc_png, args.plot_ce_png)
     
     with open(args.output_file, "w") as f:
         f.write(f"PR AUC: {pr_auc:.4f}\n")
