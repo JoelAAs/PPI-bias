@@ -37,7 +37,7 @@ def write_observed(tested_dict, obs_dict, output_file, id_pattern, detection_met
         "n_observed",
         "detection_method",
         "pubmed_id",
-        "cl_id"
+        "CVCL"
     ]) + "\n"
     with open(output_file,"w") as w:
         w.write(header)
@@ -85,7 +85,7 @@ checkpoint infer_experimental_search_space:
                 "pubmed_id", "detection_method"
             ]
             if wildcards.cell_line == "_cell_line":
-                id_cols.append("cl_id")
+                id_cols.append("CVCL")
             bait_prey_df = bait_prey_df[
                 ~bait_prey_df[id_cols].duplicated(keep="first")]  # Isoforms iof gene name gives more observed than tested
 
@@ -99,9 +99,9 @@ checkpoint infer_experimental_search_space:
                 ]
 
                 if wildcards.cell_line == "_cell_line":
-                    for cl_id in method_pid_ss["cl_id"].unique():
+                    for cl_id in method_pid_ss["CVCL"].unique():
                         output_file = f"{output[0]}/{pid}_{detection_method}_{cl_id}.csv"
-                        cl_method_pid_ss = method_pid_ss[method_pid_ss["cl_id"] == cl_id]
+                        cl_method_pid_ss = method_pid_ss[method_pid_ss["CVCL"] == cl_id]
                         tested_dict, obs_dict = get_tested_observed_dicts(cl_method_pid_ss, params.id_pattern)
                         write_observed(
                             tested_dict=tested_dict, obs_dict=obs_dict,
