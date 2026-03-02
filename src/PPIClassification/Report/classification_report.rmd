@@ -5,6 +5,9 @@ output:
         self_contained: true
 params:
     metric_file: NULL
+    directional_metrics: NULL
+    undirectional_metric: NULL
+
 ---
 
 ```{r functions, echo=F, message=F}
@@ -12,8 +15,6 @@ suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(tidyverse))
 
 full_metric <- read.table(params$metric_file, sep = "\t", header = TRUE)
-
-
 
 full_metric$delta_pr_auc <- full_metric$pr_auc - full_metric$pr_auc_base
 full_metric$delta_pr_auc_neg <- full_metric$pr_auc_neg - full_metric$pr_auc_neg_base
@@ -31,10 +32,12 @@ full_metric$selection <- sapply(
 full_metric$partition <- sapply(
   full_metric$model, function(x) strsplit(x, "_")[[1]][4])
 
+directional_metrics  <- read.table(params$directional_metrics, sep = "\t", header = TRUE)
+undirectional_metrics <- read.table(params$undirectional_metrics, sep = "\t", header = TRUE)
 
 ```
 ```{r info_table, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
-
+full_metric[,c("dataset")]
 
 ```
 

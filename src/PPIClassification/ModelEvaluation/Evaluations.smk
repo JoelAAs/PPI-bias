@@ -81,7 +81,7 @@ rule get_all_degree_delta:
             f"work_folder{pn}/subsets/degree_balance/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}{{random}}.csv",
             dataset=config["datasets"], network_type=["undirectional", "directional"], model_configuration=config["models"], partition=config["partitions"], random=["", "-random"])
     output:
-        directional_metrics = f"work_folder{pn}/subsets/degree_balance/all_directional.csv"
+        directional_metrics = f"work_folder{pn}/subsets/degree_balance/all_directional.csv",
         undirectional_metrics = f"work_folder{pn}/subsets/degree_balance/all_undirectional.csv"
 
     shell:

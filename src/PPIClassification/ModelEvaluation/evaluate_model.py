@@ -43,7 +43,7 @@ def generate_and_plot_performace(model, X_test, y_test, pr_png, neg_pr_png, roc_
 
 
 def get_baseline_log_loss(y_pred, y_test, n = 1000):
-    baseline_logloss = np.zeros(n, type=float)
+    baseline_logloss = np.zeros(n, dtype=float)
     for i in range(n):
         y_pred_permut = np.random.permutation(y_pred)        
         baseline_logloss[i] = log_loss(y_test, y_pred_permut)

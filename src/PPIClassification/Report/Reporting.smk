@@ -54,7 +54,9 @@ rule generate_classification_report:
     params:
         rmd="src/PPIClassification/Report/classification_report.rmd",
     input:
-        all_models = f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
+        all_models = f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv",
+        directional_metrics = f"work_folder{pn}/subsets/degree_balance/all_directional.csv",
+        undirectional_metrics = f"work_folder{pn}/subsets/degree_balance/all_undirectional.csv"
     output:
         html_report=f"work_folder{pn}/subsets/report/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_roc_curve.nb.html"
     script:
