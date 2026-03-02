@@ -111,7 +111,7 @@ wildcard_constraints:
 rule all:
     input:
         f"work_folder{pn}/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv",
-        f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
+    #    f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
     #expected_output,,
     #f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
     #f"work_folder{pn}/plots/degree/GO_enrichment.png",
