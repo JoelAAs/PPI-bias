@@ -51,16 +51,10 @@ rule generate_balance_report:
 
 
 rule generate_classification_report:
-    shadow: "shallow"
     params:
         rmd="src/PPIClassification/Report/classification_report.rmd",
-        main_root = workflow.basedir
     input:
-        data = lambda wc: get_model_data(wc),
-        pr_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_pr_curve.png",
-        pr_neg_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_pr_neg_curve.png",
-        roc_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_roc_curve.png"
-
+        all_models = f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
     output:
         html_report=f"work_folder{pn}/subsets/report/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_roc_curve.nb.html"
     script:

@@ -61,3 +61,25 @@ rule random_forest:
             --randomstate 1234 \
             --saved_model {output.saved_model} 
         """
+
+
+
+rule get_tvt_degree_balance:
+    params:
+        script_location = "PPIClassification/ModelEvaluation/degree_balance_metrics.py"
+    input:    
+        data = lambda wc: get_expected_input(wc)
+    output:
+        degree_balance = f"work_folder{pn}/subsets/degree_balance/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}.csv"
+    shell:
+        """
+        python3 {params.script_location} \
+            --pos_train {input.data[0]} \
+            --neg_train {input.data[1]} \
+            --pos_val {input.data[2]} \
+            --neg_val {input.data[3]} \
+            --pos_test {input.data[4]} \
+            --neg_test  {input.data[5]} \
+            --output_file {output.degree_balance} \
+            --network_type {wildcards.network_type}
+        """

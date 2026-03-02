@@ -1,0 +1,45 @@
+---
+title: "Check bait/prey balance"
+output:
+    html_document:
+        self_contained: true
+params:
+    metric_file: NULL
+---
+
+```{r functions, echo=F, message=F}
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(tidyverse))
+
+full_metric <- read.table(params$metric_file, sep = "\t", header = TRUE)
+
+
+
+full_metric$delta_pr_auc <- full_metric$pr_auc - full_metric$pr_auc_base
+full_metric$delta_pr_auc_neg <- full_metric$pr_auc_neg - full_metric$pr_auc_neg_base
+full_metric$delta_roc_auc <- full_metric$roc_auc - full_metric$roc_auc_base
+full_metric$delta_ce <- full_metric$ce_obs - full_metric$tce_baseline
+
+full_metric$pos_sample <- as.numeric(
+  sapply(full_metric$samples, function(x) strsplit(x, "/")[[1]][1]))
+full_metric$neg_sample <- as.numeric(
+  sapply(full_metric$samples, function(x) strsplit(x, "/")[[1]][2]))
+aucfull_metric_data$network_type <- sapply(
+  full_metric$model, function(x) strsplit(x, "_")[[1]][2])
+full_metric$selection <- sapply(
+  full_metric$model, function(x) strsplit(x, "_")[[1]][3])
+full_metric$partition <- sapply(
+  full_metric$model, function(x) strsplit(x, "_")[[1]][4])
+
+
+```
+```{r info_table, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
+
+
+```
+
+```{r input, echo=F}
+full_pos <- read.table(params$full_pos_file, sep = "\t", header = TRUE)
+
+```
+

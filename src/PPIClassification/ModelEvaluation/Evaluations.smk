@@ -75,3 +75,30 @@ rule all_metrics:
                     w.write(line_out)
 
 
+rule get_all_degree_delta:
+    input:
+        degree_delta = expand(
+            f"work_folder{pn}/subsets/degree_balance/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}{{random}}.csv",
+            dataset=config["datasets"], network_type=["undirectional", "directional"], model_configuration=config["models"], partition=config["partitions"], random=["", "-random"])
+    output:
+        directional_metrics = f"work_folder{pn}/subsets/degree_balance/all_directional.csv"
+        undirectional_metrics = f"work_folder{pn}/subsets/degree_balance/all_undirectional.csv"
+
+    shell:
+        """
+        # write headers first (from first file of each type)
+        first_undir=$(ls {input.degree_delta} | grep undirectional | head -n 1)
+        first_dir=$(ls {input.degree_delta} | grep directional | head -n 1)
+
+        head -n 1 "$first_undir" > {output.undirectional_metrics}
+        head -n 1 "$first_dir" > {output.directional_metrics}
+
+        for current_file in {input.degree_delta}; do
+            if [[ "$current_file" == *"undirectional"* ]]; then
+                tail -n +2 "$current_file" >> {output.undirectional_metrics}
+            else
+                tail -n +2 "$current_file" >> {output.directional_metrics}
+            fi
+        done
+        """
+    
