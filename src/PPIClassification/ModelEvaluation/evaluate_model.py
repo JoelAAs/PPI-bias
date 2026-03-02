@@ -177,4 +177,5 @@ if __name__ == "__main__":
         f.write(f"ROC AUC (baseline): {base_roc_auc:.4f}\n")
         f.write(f"CE: {obs_ce:.4f}\n")
         f.write(f"CE (baseline): {base_ce:.4f}\n")
-        f.write(f"Samples (pos/neg): {sum(y_test)} / {len(y_test)-sum(y_test)}")
+        y_test = y_test.astype(np.int32)
+        f.write(f"Samples (pos( {sum(y_test)} / {len(y_test)-sum(y_test)}")
