@@ -55,15 +55,14 @@ def get_cross_entropy_plot(baseline_ce, obs_ce, ce_output):
     n_permutations = len(baseline_ce)
 
     fig, axes = plt.subplots(1, 1, figsize=(8, 6))
-    axes[1].hist(baseline_ce, bins=int(math.sqrt(n_permutations)), alpha=0.7, label='Baseline CE Distribution')
-    axes[1].axvline(obs_ce, color='blue', linestyle='--', label=f'Observed CE: {obs_ce:.4f}')
-    axes[1].set_xlabel('Cross entropy')
-    axes[1].set_title('Cross entropy Distribution Baseline')
-    axes[1].legend()
+    axes.hist(baseline_ce, bins=int(math.sqrt(n_permutations)), alpha=0.7, label='Baseline CE Distribution')
+    axes.axvline(obs_ce, color='blue', linestyle='--', label=f'Observed CE: {obs_ce:.4f}')
+    axes.set_xlabel('Cross entropy')
+    axes.set_title('Cross entropy Distribution Baseline')
+    axes.legend()
     plt.tight_layout()
     plt.savefig(ce_output)
     plt.close()
-     
 
 
 def get_baseline_performance(y_pred, y_test, eval_method=precision_recall_curve, n=1000):
