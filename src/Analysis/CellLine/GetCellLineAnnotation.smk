@@ -120,7 +120,7 @@ rule join_to_pid:
         manual_df = manual_df.dropna()
         
         intact_df = pd.read_csv(input.formatted_intact,sep="\t",dtype={"pubmed_id": object})
-        intact_df = intact_df[intact_df["pubmed_id"] not in params.pid_to_drop] # Remove merged bioplex
+        intact_df = intact_df[~intact_df["pubmed_id"].isin(params.pid_to_drop)] # Remove merged bioplex
 
         ppi_cvcl_df = intact_df.merge(single_pid_df, on="pubmed_id", how="left")
         ppi_cvcl_df = ppi_cvcl_df.merge(manual_df, on="pubmed_id", how="left", suffixes=("_pubtator", "_manual"))
