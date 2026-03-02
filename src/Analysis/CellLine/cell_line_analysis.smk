@@ -46,7 +46,7 @@ rule aggregate_inferred_studies_cell_line:
     output:
         cell_line_counts = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
     run:
-        aggregate_inferred_experiments(input.cl_pids, output.cell_line_counts, cl=True)
+        aggregate_inferred_experiments(input.cl_pids, output.cell_line_counts, single=True)
 
 rule infer_bait_wise_tests_cell_line:
     """
