@@ -13,8 +13,8 @@ def nested_dict():
     return defaultdict(nested_dict)
 
 def get_input_for_aggregation(wc, filename):
-    CL_FOLDER = checkpoints.infer_experimental_search_space.get(cell_line="_cell_line").output[0]
-
+    ckpt = checkpoints.infer_experimental_search_space.get(cell_line="_cell_line").output[0]
+    CL_FOLDER = f"work_folder{pn}/inferred_search_space/experimental_cell_line" # Explicit since it doesn't work otherwise
     cl_df = pd.read_csv(filename, sep="\t")
     cl_df = cl_df[
         cl_df[f"gene_name_bait"] != cl_df[f"gene_name_prey"]
