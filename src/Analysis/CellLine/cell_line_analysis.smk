@@ -3,9 +3,9 @@ def reformat_long_cl(df, pattern, col_name, id_column="gene_name_prey"):
     df_col = [c for c in df.columns if pattern in c]
     df_long = pd.melt(
         df[[id_column,] + df_col],
-        id_vars=id_column,var_name="cl_id",value_name=col_name
+        id_vars=id_column,var_name="CVCL",value_name=col_name
     )
-    df_long["cl_id"] = df_long["cl_id"].apply(lambda x: x.replace(pattern,""))
+    df_long["CVCL"] = df_long["CVCL"].apply(lambda x: x.replace(pattern,""))
 
     return df_long
 
@@ -23,10 +23,10 @@ def get_input_for_aggregation(wc, filename):
     cl_df = cl_df[
         ~cl_df[[
             "gene_name_bait", "gene_name_prey",
-            "pubmed_id", "detection_method", "cl_id"
+            "pubmed_id", "detection_method", "CVCL"
         ]].duplicated(keep="first")] # remove isoforms
 
-    cl_df = cl_df[["pubmed_id", "detection_method", "cl_id"]]
+    cl_df = cl_df[["pubmed_id", "detection_method", "CVCL"]]
     cl_df = cl_df[cl_df.duplicated(keep=False)]
 
     expected_input = {
@@ -41,7 +41,7 @@ rule aggregate_inferred_studies_cell_line:
     Aggregate experiments assuming that any prey observed in studies is tested against all baits 
     """
     input:
-        ppi_file = config["cell_line_ppis"],
+        ppi_file = f"work_folder{pn}/formated/bait_prey_CVCL.csv",
         cl_pids = lambda wc: get_input_for_aggregation(wc, config["cell_line_ppis"])
     output:
         cell_line_counts = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
@@ -58,7 +58,7 @@ rule infer_bait_wise_tests_cell_line:
     params:
         remove_single_ppi_papers = config["remove_single_publications"]
     input:
-        df = config["cell_line_ppis"],
+        df = f"work_folder{pn}/formated/bait_prey_CVCL.csv",
 
     output:
         baitwise_infered = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_bait_wise.csv"
@@ -68,7 +68,7 @@ rule infer_bait_wise_tests_cell_line:
         
         # TODO: remove isoforms and bait-bait interactions
         ppi_df = ppi_df[
-            ~ppi_df[["gene_name_bait", "gene_name_prey", "pubmed_id", "detection_method", "cl_id"]].duplicated()
+            ~ppi_df[["gene_name_bait", "gene_name_prey", "pubmed_id", "detection_method", "CVCL"]].duplicated()
         ].copy()
         ppi_df["study_id"] = ppi_df.apply(lambda row: str(row["pubmed_id"]) + row["detection_method"], axis=1)
 
@@ -76,18 +76,18 @@ rule infer_bait_wise_tests_cell_line:
             single_experiment = ppi_df.groupby("study_id",as_index=False).size()
             single_experiment = single_experiment[single_experiment["size"] == 1]["study_id"]
             ppi_df = ppi_df[~ppi_df["study_id"].isin(single_experiment)]
-        n_experiments = ppi_df.groupby(["gene_name_bait", "cl_id"], as_index=False)["study_id"].nunique()
+        n_experiments = ppi_df.groupby(["gene_name_bait", "CVCL"], as_index=False)["study_id"].nunique()
         n_experiments = n_experiments.rename({
             "study_id": "n_tested"
         }, axis=1)
 
         combinations = ppi_df[~ppi_df[["gene_name_bait", "gene_name_prey"]].duplicated()][["gene_name_bait", "gene_name_prey"]]
         combinations = combinations.merge(n_experiments, on="gene_name_bait")
-        n_observed = ppi_df.groupby(["gene_name_bait", "gene_name_prey", "cl_id"], as_index=False).size()
+        n_observed = ppi_df.groupby(["gene_name_bait", "gene_name_prey", "CVCL"], as_index=False).size()
         n_observed = n_observed.rename({
             "size": "n_observed"
         }, axis=1)
-        full_df = combinations.merge(n_observed, on=["gene_name_bait", "gene_name_prey", "cl_id"], how="left").fillna(0)
+        full_df = combinations.merge(n_observed, on=["gene_name_bait", "gene_name_prey", "CVCL"], how="left").fillna(0)
 
         tested = full_df[[
             'gene_name_bait', 'gene_name_prey', 'cl_id', 'n_tested'
@@ -189,22 +189,22 @@ rule filter_tests:
         p_value_df_long = pd.melt(
             results_df[["gene_name_prey"] + p_columns],
             id_vars='gene_name_prey',
-            var_name="cl_id",
+            var_name="CVCL",
             value_name="p_value"
         )
-        p_value_df_long["cl_id"] = p_value_df_long["cl_id"].apply(lambda x: x.replace("_p_value", ""))
+        p_value_df_long["CVCL"] = p_value_df_long["CVCL"].apply(lambda x: x.replace("_p_value", ""))
         p_value_df_long["p_value_adjusted"] = false_discovery_control(p_value_df_long["p_value"], method="by")
 
         or_columns = [c for c in results_df.columns if "_odds_ratio" in c]
         or_df_long = pd.melt(
             results_df[["gene_name_prey"] + or_columns],
             id_vars='gene_name_prey',
-            var_name="cl_id",
+            var_name="CVCL",
             value_name="odds_ratio"
         )
-        or_df_long["cl_id"] = or_df_long["cl_id"].apply(lambda x: x.replace("_odds_ratio", ""))
+        or_df_long["CVCL"] = or_df_long["CVCL"].apply(lambda x: x.replace("_odds_ratio", ""))
 
-        results_filtered_long = or_df_long.merge(p_value_df_long, on=["gene_name_prey", "cl_id"])
+        results_filtered_long = or_df_long.merge(p_value_df_long, on=["gene_name_prey", "CVCL"])
         results_filtered_long = results_filtered_long[
             (results_filtered_long["p_value_adjusted"] < params.min_fdr_pval)
         ]
@@ -249,7 +249,7 @@ rule create_cell_line_negatome_HCL:
         hcl_cell_line = experimental_df[experimental_df["p"] > params.top_fraction]
         hcl_cell_line = hcl_cell_line.merge(
             cl_diff,
-            on=["gene_name_prey", "cl_id"]
+            on=["gene_name_prey", "CVCL"]
         )
         hcl_cell_line.to_csv(
             output.hcl,
@@ -261,7 +261,7 @@ rule create_cell_line_negatome_HCL:
             ]
         negatome = negatome.merge(
             cl_diff,
-            on=["gene_name_prey", "cl_id"]
+            on=["gene_name_prey", "CVCL"]
         )
         negatome.to_csv(output.cell_line_negatome,sep="\t",index=False)
 
@@ -321,8 +321,8 @@ rule marginalised_prey_probability:
             tested_long.merge(
                 observed_long.merge(
                     n_tests, on="gene_name_prey"
-                ), on = ["gene_name_prey", "cl_id"]
-            ),on=["gene_name_prey", "cl_id"]
+                ), on = ["gene_name_prey", "CVCL"]
+            ),on=["gene_name_prey", "CVCL"]
         )
 
         df_long.to_csv(

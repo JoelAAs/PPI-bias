@@ -44,7 +44,7 @@ def aggregate_inferred_experiments(pids, output_file, id_pattern, single=True):
 
 
     with open(output_file, "w") as w:
-        header_line = f"{id_pattern}_bait\t{id_pattern}_prey\tn_tested\tn_observed\tpubmed_id\tcl_id\n"
+        header_line = f"{id_pattern}_bait\t{id_pattern}_prey\tn_tested\tn_observed\tpubmed_id\tCVCL\n"
         w.write(header_line)
         for keys, observed_tested_pids in ppi_dict.items():
             pids = ";".join(sorted(
