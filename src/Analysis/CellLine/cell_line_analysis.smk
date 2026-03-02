@@ -58,11 +58,14 @@ rule infer_bait_wise_tests_cell_line:
     params:
         remove_single_ppi_papers = config["remove_single_publications"]
     input:
-        df = config["cell_line_ppis"]
+        df = config["cell_line_ppis"],
+
     output:
         baitwise_infered = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_bait_wise.csv"
     run:
         ppi_df = pd.read_csv(input.df, sep="\t")
+
+        
         # TODO: remove isoforms and bait-bait interactions
         ppi_df = ppi_df[
             ~ppi_df[["gene_name_bait", "gene_name_prey", "pubmed_id", "detection_method", "cl_id"]].duplicated()

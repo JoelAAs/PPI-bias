@@ -56,9 +56,10 @@ def write_observed(tested_dict, obs_dict, output_file, id_pattern, detection_met
 
 def get_input_ppi_file(cell_line_wc):
     if cell_line_wc == "_cell_line":
-        return config["cell_line_ppis"]
+        return f"work_folder{pn}/formated/bait_prey_CVCL.csv"
+
     else:
-        return config["formated_ppi"]
+        return f"work_folder{pn}/formated/bait_prey_publications.csv"
 
 
 checkpoint infer_experimental_search_space:
@@ -77,7 +78,7 @@ checkpoint infer_experimental_search_space:
         bait_prey_df = pd.read_csv(input.bait_prey_file, sep="\t")
         bait_prey_df = bait_prey_df[
             bait_prey_df[f"{params.id_pattern}_bait"] != bait_prey_df[f"{params.id_pattern}_prey"]
-        ] # Checked before for proteins, not for gene names
+        ] 
         if params.id_pattern == "gene_name":
             id_cols = [
                 f"{params.id_pattern}_bait", f"{params.id_pattern}_prey",

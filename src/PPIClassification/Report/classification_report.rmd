@@ -37,12 +37,10 @@ undirectional_metrics <- read.table(params$undirectional_metrics, sep = "\t", he
 
 ```
 ```{r info_table, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
-full_metric[,c("dataset")]
 
 ```
 
 ```{r input, echo=F}
-full_pos <- read.table(params$full_pos_file, sep = "\t", header = TRUE)
 
 ```
 
