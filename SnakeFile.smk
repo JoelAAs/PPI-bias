@@ -63,6 +63,7 @@ include: "src/ExperimentalSearchSpace/experimental_search_space.smk"
 include: "src/ExperimentalSearchSpace/CountProteinPairs.smk"
 
 include: "src/Analysis/CellLine/cell_line_analysis.smk"
+include: "src/Analysis/CellLine/GetCellLineAnnotations.smk"
 include: "src/Analysis/DetectionMethod/detection_method.smk"
 include: "src/Analysis/ExperimentalNegatome/experimental_negatome.smk"
 include: "src/Analysis/AbundanceAwareDetection/MCMC_abundance.smk"
@@ -109,10 +110,7 @@ wildcard_constraints:
 
 rule all:
     input:
-        expand(
-            f"work_folder{pn}/subsets/report/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_{{balance_method}}.nb.html",
-            dataset=datasets,neg_limit=[2,3],pos_limit=0.15,partition_name=["sequencesimilarity", "maxpos"], balance_method="maxflow"
-        ),
+        "work_folder/per_gene/inferred_search_space/experimental_cell_line",
         # Directional
         expand(
             f"work_folder{pn}/classification/randomforest/{{dataset}}_directional_{{model_configuration}}_{{partition}}{{random}}_model_parameters.txt",
