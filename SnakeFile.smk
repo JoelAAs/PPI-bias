@@ -110,17 +110,7 @@ wildcard_constraints:
 
 rule all:
     input:
-        "work_folder/per_gene/inferred_search_space/experimental_cell_line",
-        # Directional
-        expand(
-            f"work_folder{pn}/classification/randomforest/{{dataset}}_directional_{{model_configuration}}_{{partition}}{{random}}_model_parameters.txt",
-            dataset=datasets, model_configuration = config["models"], partition =["sequencesimilarity", "maxpos"]),
-        # Undirectional
-        expand(
-            f"work_folder{pn}/classification/randomforest/{{dataset}}_undirectional_{{model_configuration}}_{{partition}}_model_parameters.txt",
-            dataset=datasets, model_configuration = config["models"], partition =["sequencesimilarity", "maxpos"], random=["-random", ""]),
-
-        #f"work_folder{pn}/classification/randomforest/goldensplit_asis_model_parameters.txt",
+        f"work_folder{pn}/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv",
         f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
     #expected_output,,
     #f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
