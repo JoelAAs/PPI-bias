@@ -37,6 +37,13 @@ selected_cell_lines:
   - "CVCL_0063"
   - "CVCL_0291"
 
+cell_line_methods:
+  - "MI-0006"
+  - "MI-0007"
+  - "MI-0096"
+  - "MI-0676"
+  - "MI-1314"
+
 ms:
   - "MI-0006"
   - "MI-0007"

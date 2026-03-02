@@ -12,13 +12,15 @@ def reformat_long_cl(df, pattern, col_name, id_column="gene_name_prey"):
 def nested_dict():
     return defaultdict(nested_dict)
 
-def get_input_for_aggregation(wc, filename):
+def get_input_for_aggregation(wc, filename, cell_line_methods):
     ckpt = checkpoints.infer_experimental_search_space.get(cell_line="_cell_line").output[0]
     CL_FOLDER = f"work_folder{pn}/inferred_search_space/experimental_cell_line" # Explicit since it doesn't work otherwise
     cl_df = pd.read_csv(filename, sep="\t")
     cl_df = cl_df[
         cl_df[f"gene_name_bait"] != cl_df[f"gene_name_prey"]
         ] # remove bait-bait
+
+    cl_df = cl_df[cl_df["detection_method"].isin(cell_line_methods)]    
 
     cl_df = cl_df[
         ~cl_df[[
@@ -42,7 +44,7 @@ rule aggregate_inferred_studies_cell_line:
     """
     input:
         ppi_file = f"work_folder{pn}/formated/bait_prey_CVCL.csv",
-        cl_pids = lambda wc: get_input_for_aggregation(wc, f"work_folder{pn}/formated/bait_prey_CVCL.csv")
+        cl_pids = lambda wc: get_input_for_aggregation(wc, f"work_folder{pn}/formated/bait_prey_CVCL.csv", config["cell_line_methods"])
     output:
         cell_line_counts = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
     run:
