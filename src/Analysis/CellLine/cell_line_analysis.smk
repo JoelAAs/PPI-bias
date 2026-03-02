@@ -46,7 +46,7 @@ rule aggregate_inferred_studies_cell_line:
         ppi_file = f"work_folder{pn}/formated/bait_prey_CVCL.csv",
         cl_pids = lambda wc: get_input_for_aggregation(wc, f"work_folder{pn}/formated/bait_prey_CVCL.csv", config["cell_line_methods"])
     output:
-        cell_line_counts = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
+        cell_line_counts = f"work_folder{pn}/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
     run:
         aggregate_inferred_experiments(input.cl_pids, output.cell_line_counts, "gene_name", single=True)
 
