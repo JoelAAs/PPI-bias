@@ -137,7 +137,6 @@ rule all_methods_filter_out_cell_line:
             aggregated_negative_mat = np.zeros_like(inferred_negative_mat)
             prev_bait, prev_prey, prev_n_observed, prev_n_tested, prev_pids, prev_cl, prev_id = inferred_negative_mat[0]
             for i in range(1, inferred_negative_mat.shape[0]):
-                print(f"Processing row {i} out of {inferred_negative_mat.shape[0]}", flush=True)
                 c_bait, c_prey, c_n_observed, c_n_tested, c_pid, c_cl, c_id = inferred_negative_mat[i]
                 pids = set(c_pid.split(";"),)
                 c_bait, c_prey = order_prot = sorted([c_bait, c_prey])
