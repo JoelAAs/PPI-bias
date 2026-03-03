@@ -136,6 +136,7 @@ rule all_methods_filter_out_cell_line:
             inferred_negative_mat = inferred_negative_df.to_numpy()
             aggregated_negative_mat = np.zeros_like(inferred_negative_mat)
             prev_bait, prev_prey, prev_n_observed, prev_n_tested, prev_pids, prev_cl, prev_id = inferred_negative_mat[0]
+            s = datetime.datetime.now()
             for i in range(1, inferred_negative_mat.shape[0]):
                 c_bait, c_prey, c_n_observed, c_n_tested, c_pid, c_cl, c_id = inferred_negative_mat[i]
                 pids = set(c_pid.split(";"),)
