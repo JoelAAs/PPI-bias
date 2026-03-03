@@ -128,15 +128,16 @@ rule all_methods_filter_out_cell_line:
             ].copy()
 
         if wildcards.network_type == "undirectional":
-            inferred_negative_df["id_var"] = inferred_negative_df[[f"{params.id_pattern}_bait", f"{params.id_pattern}_prey", "CVCL"]].apply(
-                lambda x: "_".join(sorted(x[:2]))+"_" + x[3]  , axis=1)
-
-            s = datetime.datetime.now()
+            prot_a = inferred_negative_df[[f"{params.id_pattern}_bait", f"{params.id_pattern}_prey"]].min(axis=1)
+            prot_b = inferred_negative_df[[f"{params.id_pattern}_bait", f"{params.id_pattern}_prey"]].max(axis=1)
+            inferred_negative_df["id_var"] = prot_a + "_" + prot_b + "_" + inferred_negative_df["CVCL"]
+            
             inferred_negative_df.sort_values("id_var", inplace=True)
             inferred_negative_mat = inferred_negative_df.to_numpy()
             aggregated_negative_mat = np.zeros_like(inferred_negative_mat)
             prev_bait, prev_prey, prev_n_observed, prev_n_tested, prev_pids, prev_cl, prev_id = inferred_negative_mat[0]
             for i in range(1, inferred_negative_mat.shape[0]):
+                print(f"Processing row {i} out of {inferred_negative_mat.shape[0]}", flush=True)
                 c_bait, c_prey, c_n_observed, c_n_tested, c_pid, c_cl, c_id = inferred_negative_mat[i]
                 pids = set(c_pid.split(";"),)
                 c_bait, c_prey = order_prot = sorted([c_bait, c_prey])
