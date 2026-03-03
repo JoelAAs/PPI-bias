@@ -106,31 +106,115 @@ rule all_methods_filter_out:
         )
 
 
-rule differential_detected_flat_negatome:
-    #  TODO: Evaluate if this is used or useful
+rule all_methods_filter_out_cell_line:
     """
-    Flat interaction/non-interactions given cl specific prey-detection 
+    Get upper and lower bound probability of detection given test/observations of each bait-prey combination per cell line
     """
+    params:
+        pseudo_n=config["pseudo_n"],
+        id_pattern= config["id_pattern"]
     input:
-        differential_interactions_filtered="work_folder/inferred_search_space/analysis/cell_line/bait_wise_prey_filtered.csv",
-        experimental_negatome="work_folder/inferred_search_space/analysis/bias_reduced_ppis/threshold_negatome.csv",
-        hci="work_folder/inferred_search_space/analysis/bias_reduced_ppis/high_confidence.csv"
+        method_aggregate=f"work_folder{pn}/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv
     output:
-        cl_negatome_cell="work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/threshold_negatome.csv",
-        cl_hci="work_folder/inferred_search_space/analysis/bias_reduced_ppis/cell_line/high_confidence.csv"
+        full_detection=f"work_folder{pn}/analysis/POD/{{network_type}}/POD_cell_line.pq"
     run:
-        df_diff = pd.read_csv(input.differential_interactions_filtered,sep="\t")
-        df_nega = pd.read_csv(input.experimental_negatome,sep="\t")
-        df_hci = pd.read_csv(input.hci,sep="\t")
+        inferred_negative_df = pd.read_csv(
+            input.method_aggregate,
+            sep="\t"
+        )
 
-        df_nega = df_nega.merge(
-            df_diff,
-            on="gene_name_prey"
-        ).to_csv(output.cl_negatome_cell,sep="\t")
-        df_hci = df_hci.merge(
-            df_diff,
-            on="gene_name_prey"
-        ).to_csv(output.cl_hci,sep="\t")
+        inferred_negative_df = inferred_negative_df[
+            inferred_negative_df[f"{params.id_pattern}_bait"] != inferred_negative_df[f"{params.id_pattern}_prey"]
+            ].copy()
+
+        if wildcards.network_type == "undirectional":
+            inferred_negative_df["id_var"] = inferred_negative_df[[f"{params.id_pattern}_bait", f"{params.id_pattern}_prey", "CVCL"]].apply(
+                lambda x: "_".join(sorted(x[:2]))+"_" + x[3]  , axis=1)
+
+            s = datetime.datetime.now()
+            inferred_negative_df.sort_values("id_var", inplace=True)
+            inferred_negative_mat = inferred_negative_df.to_numpy()
+            aggregated_negative_mat = np.zeros_like(inferred_negative_mat)
+            prev_bait, prev_prey, prev_n_observed, prev_n_tested, prev_pids, prev_cl, prev_id = inferred_negative_mat[0]
+            for i in range(1, inferred_negative_mat.shape[0]):
+                c_bait, c_prey, c_n_observed, c_n_tested, c_pid, c_cl, c_id = inferred_negative_mat[i]
+                pids = set(c_pid.split(";"),)
+                c_bait, c_prey = order_prot = sorted([c_bait, c_prey])
+                
+                if prev_id == c_id:
+                    prev_n_observed += c_n_observed
+                    prev_n_tested += c_n_tested
+                    prev_pids |= pids 
+                else:
+                    aggregated_negative_mat[i-1] = [
+                        prev_bait,
+                        prev_prey,
+                        prev_n_observed,
+                        prev_n_tested,
+                        ";".join(prev_pids),
+                        prev_cl,
+                        prev_id
+                    ]
+                    prev_bait, prev_prey, prev_n_observed, prev_n_tested, prev_pids, prev_cl prev_id = c_bait, c_prey, c_n_observed, c_n_tested, pids, c_cl c_id
+                
+            aggregated_negative_mat[i] = [
+                prev_bait,
+                prev_prey,
+                prev_n_observed,
+                prev_n_tested,
+                ";".join(prev_pids),
+                prev_cl,
+                prev_id
+            ]
+
+            ppis_joined_idx = aggregated_negative_mat[:, 1] != 0
+            print(f"joined {-sum(ppis_joined_idx-1)} out of {inferred_negative_mat.shape[0]} rows in {(datetime.datetime.now() - s).total_seconds()} seconds", flush=True)
+            aggregated_negative_mat = aggregated_negative_mat[ppis_joined_idx, :]
+            undirectional_negative_df = pd.DataFrame(
+                aggregated_negative_mat,
+                columns=inferred_negative_df.columns
+            )
+
+            flipped_df = undirectional_negative_df.copy()
+            flipped_df[["gene_name_bait", "gene_name_prey"]] = (
+                flipped_df[["gene_name_prey", "gene_name_bait"]]
+            )
+
+            inferred_negative_df = (
+                pd.concat([undirectional_negative_df, flipped_df], ignore_index=True)
+            )
+
+        inferred_negative_df["n_observed"] = inferred_negative_df["n_observed"].astype(int)
+        inferred_negative_df["n_tested"] = inferred_negative_df["n_tested"].astype(int)
+
+        global_pod_by_cvcl = (
+            inferred_negative_df
+                .groupby("CVCL")
+                .apply(lambda x: x["n_observed"].sum() / x["n_tested"].sum
+                )
+                )
+        inferred_negative_df["alpha_prior"] = inferred_negative_df["CVCL"].map(ratio_series)
+        inferred_negative_df["alpha_prior"] = inferred_negative_df["alpha_prior"] * params.pseudo_n
+        inferred_negative_df["beta_prior"] = params.pseudo_n - inferred_negative_df["alpha_prior"]
+        
+        inferred_negative_df["alpha_post"] = prior_alpha + inferred_negative_df["n_observed"]
+        inferred_negative_df["beta_post"] = prior_beta + inferred_negative_df["n_tested"] - inferred_negative_df["n_observed"]
+
+        inferred_negative_df["p"] = inferred_negative_df["alpha_post"] / (
+                inferred_negative_df["alpha_post"] + inferred_negative_df["beta_post"])
+
+        inferred_negative_df["lower_bound_pod"] = beta.ppf(0.025,
+            inferred_negative_df["alpha_post"],inferred_negative_df["beta_post"])
+        inferred_negative_df["upper_bound_pod"] = beta.ppf(0.975,
+            inferred_negative_df["alpha_post"],inferred_negative_df["beta_post"])
+        inferred_negative_df["pair_id"] = range(inferred_negative_df.shape[0])
+
+        inferred_negative_df.to_parquet(
+            output.full_detection,
+            index=False
+        )
+
+
 
 def t_threshold_degree(df, t, greater=True, n = 5):
     if greater:
