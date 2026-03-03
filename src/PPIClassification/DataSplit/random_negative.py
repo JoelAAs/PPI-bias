@@ -32,23 +32,15 @@ def get_negative_data_undir(G_pos):
             chosen_edges.append(neg_edge)
             n_random_edges += 1
     
-     
     return chosen_edges   ## to dataframe edgelist with node name for each edge
 
 
 def get_negative_data_dir(G_dir_pos):
     n_edges = len(G_dir_pos.edges())
 
-    prey_degrees = dict(G_dir_pos.out_degree())
-    prey_nodes = list(prey_degrees.keys()) 
-    prey_probs = np.array([prey_degrees[n] for n in prey_nodes], dtype=float)
-    prey_probs /= prey_probs.sum()
-
-    bait_degrees = dict(G_dir_pos.out_degree())
-    bait_nodes = list(bait_degrees.keys())
-    bait_probs = np.array([bait_degrees[n] for n in bait_nodes], dtype=float)
-    bait_probs /= bait_probs.sum()
-
+    pret_target = dict(G_dir_pos.out_degree())
+    bait_target = dict(G_dir_pos.out_degree())
+    
     pos_edges = {(u, v) for u, v in G_dir_pos.edges()}
     chosen_edges = set()
     
@@ -87,10 +79,20 @@ def write_edges(edges, flip, output):
     df_neg.to_parquet(output, index=False)
 
 
+def get_scaling_factor(negative_edge_file):
+    with open(negative_edge_file, "r") as f:
+        for line in f:
+            if line.startwith("#"):
+                return int(line.strip().split(":")[1])
+            else:
+                return 1
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Balance positive and negative PPI datasets by matching degree distributions.")
     parser.add_argument("--positive_data", type=str, required=True, help="Path to the positive PPI dataset (CSV format).")
-    parser.add_argument("--negative_data", type=str, required=True, help="Path to the negative PPI output.")
+    parser.add_argument("--negative_data", type=str, required=True, help="Path to the negative PPI output to get scale.")
+    #parser.add_argument("--random_negative_data", type=str, required=True, help="Path to random negative file output")
     parser.add_argument("--network_type", type=str, required=True, help="Networktype either directed or undirected")
     
     args = parser.parse_args()
