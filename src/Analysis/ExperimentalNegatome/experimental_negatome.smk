@@ -114,7 +114,7 @@ rule all_methods_filter_out_cell_line:
         pseudo_n=config["pseudo_n"],
         id_pattern= config["id_pattern"]
     input:
-        method_aggregate=f"work_folder{pn}/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv
+        method_aggregate=f"work_folder{pn}/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
     output:
         full_detection=f"work_folder{pn}/analysis/POD/{{network_type}}/POD_cell_line.pq"
     run:
@@ -155,7 +155,7 @@ rule all_methods_filter_out_cell_line:
                         prev_cl,
                         prev_id
                     ]
-                    prev_bait, prev_prey, prev_n_observed, prev_n_tested, prev_pids, prev_cl prev_id = c_bait, c_prey, c_n_observed, c_n_tested, pids, c_cl c_id
+                    prev_bait, prev_prey, prev_n_observed, prev_n_tested, prev_pids, prev_cl, prev_id = c_bait, c_prey, c_n_observed, c_n_tested, pids, c_cl, c_id
                 
             aggregated_negative_mat[i] = [
                 prev_bait,
@@ -193,7 +193,7 @@ rule all_methods_filter_out_cell_line:
                 .apply(lambda x: x["n_observed"].sum() / x["n_tested"].sum
                 )
                 )
-        inferred_negative_df["alpha_prior"] = inferred_negative_df["CVCL"].map(ratio_series)
+        inferred_negative_df["alpha_prior"] = inferred_negative_df["CVCL"].map(global_pod_by_cvcl)
         inferred_negative_df["alpha_prior"] = inferred_negative_df["alpha_prior"] * params.pseudo_n
         inferred_negative_df["beta_prior"] = params.pseudo_n - inferred_negative_df["alpha_prior"]
         
