@@ -187,18 +187,21 @@ rule all_methods_filter_out_cell_line:
         inferred_negative_df["n_observed"] = inferred_negative_df["n_observed"].astype(int)
         inferred_negative_df["n_tested"] = inferred_negative_df["n_tested"].astype(int)
 
-        global_pod_by_cvcl = (
+        pod_by_cvcl = (
             inferred_negative_df
-                .groupby("CVCL")
-                .apply(lambda x: x["n_observed"].sum() / x["n_tested"].sum
-                )
-                )
-        inferred_negative_df["alpha_prior"] = inferred_negative_df["CVCL"].map(global_pod_by_cvcl)
+                .groupby("CVCL")[["n_observed", "n_tested"]]
+                .sum()
+        )
+        pod_by_cvcl["cl_pod"] = (
+            pod_by_cvcl["n_observed"]/pod_by_cvcl["n_tested"]
+        )
+
+        inferred_negative_df["alpha_prior"] = inferred_negative_df["CVCL"].map(pod_by_cvcl["cl_pod"])
         inferred_negative_df["alpha_prior"] = inferred_negative_df["alpha_prior"] * params.pseudo_n
         inferred_negative_df["beta_prior"] = params.pseudo_n - inferred_negative_df["alpha_prior"]
         
-        inferred_negative_df["alpha_post"] = prior_alpha + inferred_negative_df["n_observed"]
-        inferred_negative_df["beta_post"] = prior_beta + inferred_negative_df["n_tested"] - inferred_negative_df["n_observed"]
+        inferred_negative_df["alpha_post"] = inferred_negative_df["alpha_prior"] + inferred_negative_df["n_observed"]
+        inferred_negative_df["beta_post"] = inferred_negative_df["beta_prior"] + inferred_negative_df["n_tested"] - inferred_negative_df["n_observed"]
 
         inferred_negative_df["p"] = inferred_negative_df["alpha_post"] / (
                 inferred_negative_df["alpha_post"] + inferred_negative_df["beta_post"])
