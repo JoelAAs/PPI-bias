@@ -81,7 +81,7 @@ def write_edges(edges, flip, output):
         df_neg = (
             pd.concat([df_neg, flipped_df], ignore_index=True)
         )
-    df_neg.to_csv(output, index=False, sep="\t")
+    df_neg.to_csv(output, header=None, index=False, sep="\t")
 
 
 def get_scaling_factor(negative_edge_file):

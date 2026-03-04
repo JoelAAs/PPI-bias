@@ -68,7 +68,7 @@ rule random_forest:
 
 
 
-rule get_tvt_degree_balance:
+rule get_degree_balance:
     params:
         script_location = "PPIClassification/ModelEvaluation/degree_balance_metrics.py"
     input:    
