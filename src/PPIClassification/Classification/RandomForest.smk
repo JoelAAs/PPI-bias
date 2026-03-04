@@ -19,12 +19,12 @@ def get_expected_input(wc):
             posdata =  f"{wc.dataset}_{wc.network_type}_limit_{neg_limit}_poslim_{pos_limit}_{wc.partition.split("-")[0]}"
             negdata =  f"{wc.dataset}_{wc.network_type}_limit_{neg_limit}_poslim_{pos_limit}_{wc.partition}"
             return [
-                f"work_folder{pn}/subsets/train/{selection}/{posdata}_pos.pq",
-                f"work_folder{pn}/subsets/train/{selection}/{negdata}_neg.pq",
-                f"work_folder{pn}/subsets/validation/{selection}/{posdata}_pos.pq",
-                f"work_folder{pn}/subsets/validation/{selection}/{negdata}_neg.pq",
-                f"work_folder{pn}/subsets/test/{selection}/{posdata}_pos.pq",
-                f"work_folder{pn}/subsets/test/{selection}/{negdata}_neg.pq"
+                f"work_folder{pn}/subsets/train/{selection}/{posdata}_pos.csv",
+                f"work_folder{pn}/subsets/train/{selection}/{negdata}_neg.csv",
+                f"work_folder{pn}/subsets/validation/{selection}/{posdata}_pos.csv",
+                f"work_folder{pn}/subsets/validation/{selection}/{negdata}_neg.csv",
+                f"work_folder{pn}/subsets/test/{selection}/{posdata}_pos.csv",
+                f"work_folder{pn}/subsets/test/{selection}/{negdata}_neg.csv"
             ]
 
         else:

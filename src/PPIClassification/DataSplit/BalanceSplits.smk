@@ -69,7 +69,7 @@ rule generate_random_negative_set:
         balanced_neg=f"work_folder{pn}/subsets/{{settype}}/{{selection}}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv"
 
     output:
-        set_random_neg=f"work_folder{pn}/subsets/{{settype}}/{{selection}}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}-random_neg.pq"
+        set_random_neg=f"work_folder{pn}/subsets/{{settype}}/{{selection}}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}-random_neg.csv"
     shell:
         """
         python3 src/PPIClassification/DataSplit/random_negative.py \
