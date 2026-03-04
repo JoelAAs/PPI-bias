@@ -3,29 +3,32 @@ def get_expected_input(wc):
     if wc.dataset == "goldensplit":
         data = f"data_{wc.network_type}"
         selection = wc.dataset
-    elif re.search("-random",wc.partition):
-        pos_limit = config["models"][wc.model_configuration]["pos"]
-        posdata =  f"{wc.dataset}_{wc.network_type}_limit_{pos_limit}_{wc.partition.split("-")[0]}"
-        negdata =  f"{wc.dataset}_{wc.network_type}_limit_{pos_limit}_{wc.partition}"
-        return [
-            f"work_folder{pn}/subsets/train/{posdata}_pos.pq",
-            f"work_folder{pn}/subsets/train/randomnegative/{negdata}_neg.pq",
-            f"work_folder{pn}/subsets/validation/{posdata}_pos.pq",
-            f"work_folder{pn}/subsets/validation/randomnegative/{negdata}_neg.pq",
-            f"work_folder{pn}/subsets/test/{posdata}_pos.pq",
-            f"work_folder{pn}/subsets/test/randomnegative/{negdata}_neg.pq"
-        ]
-
     else:
-        pos_limit = config["models"][wc.model_configuration]["pos"]
-        neg_limit = config["models"][wc.model_configuration]["neg"]
-        data =  f"{wc.dataset}_{wc.network_type}_limit_{neg_limit}_poslim_{pos_limit}_{wc.partition}"
         if wc.network_type == "directional":
             selection = "maxflow"
         elif wc.network_type == "undirectional":
             selection="undirectionalbalanced"
         else:
-            raise ValueError(f"unkown networktype {wc.network_type}")
+            raise ValueError(f"unknown network type {wc.network_type}")
+
+        if re.search("-random",wc.partition):
+            pos_limit = config["models"][wc.model_configuration]["pos"]
+            posdata =  f"{wc.dataset}_{wc.network_type}_limit_{neg_limit}_poslim_{pos_limit}_{wc.partition.split("-")[0]}"
+            negdata =  f"{wc.dataset}_{wc.network_type}_limit_{neg_limit}_poslim_{pos_limit}_{wc.partition}"
+            return [
+                f"work_folder{pn}/subsets/train/{selection}/{posdata}_pos.pq",
+                f"work_folder{pn}/subsets/train/{selection}/{negdata}_neg.pq",
+                f"work_folder{pn}/subsets/validation/{selection}/{posdata}_pos.pq",
+                f"work_folder{pn}/subsets/validation/{selection}/{negdata}_neg.pq",
+                f"work_folder{pn}/subsets/test/{selection}/{posdata}_pos.pq",
+                f"work_folder{pn}/subsets/test/{selection}/{negdata}_neg.pq"
+            ]
+
+        else:
+            pos_limit = config["models"][wc.model_configuration]["pos"]
+            neg_limit = config["models"][wc.model_configuration]["neg"]
+            data =  f"{wc.dataset}_{wc.network_type}_limit_{neg_limit}_poslim_{pos_limit}_{wc.partition}"
+
     return [
         f"work_folder{pn}/subsets/train/{selection}/{data}_pos.csv",
         f"work_folder{pn}/subsets/train/{selection}/{data}_neg.csv",
