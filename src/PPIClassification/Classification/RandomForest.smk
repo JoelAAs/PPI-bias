@@ -11,6 +11,9 @@ def get_expected_input(wc):
         else:
             raise ValueError(f"unknown network type {wc.network_type}")
 
+        pos_limit = config["models"][wc.model_configuration]["pos"]
+        neg_limit = config["models"][wc.model_configuration]["neg"]
+
         if re.search("-random",wc.partition):
             pos_limit = config["models"][wc.model_configuration]["pos"]
             posdata =  f"{wc.dataset}_{wc.network_type}_limit_{neg_limit}_poslim_{pos_limit}_{wc.partition.split("-")[0]}"
@@ -25,8 +28,6 @@ def get_expected_input(wc):
             ]
 
         else:
-            pos_limit = config["models"][wc.model_configuration]["pos"]
-            neg_limit = config["models"][wc.model_configuration]["neg"]
             data =  f"{wc.dataset}_{wc.network_type}_limit_{neg_limit}_poslim_{pos_limit}_{wc.partition}"
 
     return [
