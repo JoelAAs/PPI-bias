@@ -74,7 +74,7 @@ rule generate_random_negative_set:
         """
         python3 src/PPIClassification/DataSplit/random_negative.py \
             --positive_data {input.balanced_pos} \
-            --negative_data {output.balanced_neg} \
-            --random_negative_data {input.set_random_neg} \
+            --negative_data {input.balanced_neg} \
+            --random_negative_data {output.set_random_neg} \
             --network_type {wildcards.network_type}
         """
