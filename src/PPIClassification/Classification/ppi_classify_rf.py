@@ -100,7 +100,7 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
         current_t = 0.5
         for t in np.linspace(0.1, 0.9, 50):
             preds = (probs > t).astype(int)
-            f1 = f1_score(y_validation, preds, average="weighted")
+            f1 = f1_score(y_validation, preds, average="macro")
             if f1 > best_f1:
                 best_f1 = f1
                 current_t = t
