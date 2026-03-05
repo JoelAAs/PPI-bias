@@ -108,8 +108,8 @@ if __name__ == "__main__":
             for p_f, n_f in pos_neg_pairs:
                 G_pos, G_neg, aimed_scale = read_data_pair(p_f, n_f, network_type)
                 
-                filename = p_f.split("/")[-1]
-                dataset = re.sub(r"_pos..*$", "", filename)
+                filename = n_f.split("/")[-1]
+                dataset = re.sub(r"_neg..*$", "", filename)
                 
                 degree_pos_bait = G_pos.out_degree()
                 degree_neg_bait = G_neg.out_degree()
@@ -129,8 +129,8 @@ if __name__ == "__main__":
             w.write("dataset\tp_undir\tsp_undir\tws_undir\taimed_scale\n")
             for p_f, n_f in pos_neg_pairs:
                 G_pos, G_neg, aimed_scale = read_data_pair(p_f, n_f, network_type)
-                filename = p_f.split("/")[-1]
-                dataset = re.sub(r"_pos..*$", "", filename)
+                filename = n_f.split("/")[-1]
+                dataset = re.sub(r"_neg..*$", "", filename)
                 
                 degree_pos_undir = G_pos.degree()
                 degree_neg_undir = G_neg.degree()
