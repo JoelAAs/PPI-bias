@@ -13,7 +13,7 @@ def get_negative_data_undir(G_pos, scaling_factor=1):
         degrees[node] = int(value * scaling_factor)
 
     pos_edges = {tuple(sorted((u, v))) for u, v in G_pos.edges()}
-    all_possible_edges = set(sorted((u, v)) for u in G_pos.nodes() for v in G_pos.nodes() if u != v)
+    all_possible_edges = set(tuple(sorted((u, v))) for u in G_pos.nodes() for v in G_pos.nodes() if u != v)
     negative_edges = all_possible_edges - pos_edges
     np.random.shuffle(negative_edges)
     
