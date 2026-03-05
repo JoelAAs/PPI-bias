@@ -126,7 +126,7 @@ if __name__ == "__main__":
                 
                 w.write(f"{dataset}\t{set_type}\t{p_bait}\t{sp_bait}\t{ws_bait}\t{p_prey}\t{sp_prey}\t{ws_prey}\t{aimed_scale}\n")
         else:
-            w.write("dataset\tp_undir\tsp_undir\tws_undir\taimed_scale\n")
+            w.write("dataset\tset_type\tp_undir\tsp_undir\tws_undir\taimed_scale\n")
             for ((p_f, n_f), set_type) in zip(pos_neg_pairs, ["train", "val", "test"]):
                 G_pos, G_neg, aimed_scale = read_data_pair(p_f, n_f, network_type)
                 filename = n_f.split("/")[-1]
