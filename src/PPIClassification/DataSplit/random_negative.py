@@ -2,37 +2,39 @@ import networkx as nx
 import numpy as np
 import argparse
 import pandas as pd
-
+np.random.seed(1234)
 
 
 def get_negative_data_undir(G_pos, scaling_factor=1):
-    nodes = list(G_pos.nodes())
     n_edges = len(G_pos.edges())
     n_edges *= scaling_factor
     degrees = dict(G_pos.degree())
-    probs = np.array([degrees[n] for n in nodes], dtype=float)
-    probs /= probs.sum()
+    for node, value in degrees.items():
+        degrees[node] = int(value * scaling_factor)
 
     pos_edges = {tuple(sorted((u, v))) for u, v in G_pos.edges()}
-    chosen_edges = set()
+    all_possible_edges = set(sorted((u, v)) for u in G_pos.nodes() for v in G_pos.nodes() if u != v)
+    negative_edges = all_possible_edges - pos_edges
+    np.random.shuffle(negative_edges)
     
-
-    n_random_edges = 0
     chosen_edges = []
-    while n_random_edges < n_edges:
-        u = np.random.choice(nodes, p=probs)
-        v = np.random.choice(nodes, p=probs)
+    for u,v in negative_edges:
+        capacity_a = degrees.get(u, False)
+        capacity_b = degrees.get(v, False)
         
-        if u == v:
-            continue
-        
-        neg_edge = tuple(sorted((u,v)))
-        
-        if neg_edge not in pos_edges and neg_edge not in chosen_edges:
-            chosen_edges.append(neg_edge)
-            n_random_edges += 1
+        if capacity_a > 0 and capacity_b > 0:
+            chosen_edges.append((u, v))
+            degrees[u] -= 1
+            degrees[v] -= 1
+        else:
+            if capacity_a > 0 and capacity_b == False:
+                degrees[u] -= 1
+                chosen_edges.append((u, v))
+            elif capacity_b > 0 and capacity_a == False:
+                degrees[v] -= 1
+                chosen_edges.append((u, v))
     
-    return chosen_edges   ## to dataframe edgelist with node name for each edge
+    return chosen_edges 
 
 
 def get_negative_data_dir(G_dir_pos, scaling_factor=1):
@@ -101,7 +103,7 @@ if __name__ == '__main__':
     parser.add_argument("--network_type", type=str, required=True, help="Networktype either directed or undirected")
     
     args = parser.parse_args()
-    df_pos = pd.read_csv(args.positive_data, sep="\t", header=False, names=["gene_name_bait", "gene_name_prey"])
+    df_pos = pd.read_csv(args.positive_data, sep="\t", header=None, names=["gene_name_bait", "gene_name_prey"])
     scaling_factor = get_scaling_factor(args.negative_data)
     if args.network_type == "undirectional":
         G_pos = nx.from_pandas_edgelist(df_pos, source="gene_name_bait", target="gene_name_prey", create_using=nx.Graph())

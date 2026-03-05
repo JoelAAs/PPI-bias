@@ -70,7 +70,7 @@ rule random_forest:
 
 rule get_degree_balance:
     params:
-        script_location = "PPIClassification/ModelEvaluation/degree_balance_metrics.py"
+        script_location = "src/PPIClassification/ModelEvaluation/degree_balance_metrics.py"
     input:    
         data = lambda wc: get_expected_input(wc)
     output:
