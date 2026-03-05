@@ -37,10 +37,10 @@ def read_data_pair(pos_file, neg_file, network_type):
     graph_type = (nx.DiGraph if network_type == "directional" else nx.Graph)
     bp_cols = df_pos.columns
     G_pos = nx.from_pandas_edgelist(
-        df_pos, bp_cols[0], bp_cols[1], graph_type
+        df_pos, bp_cols[0], bp_cols[1], create_using=graph_type
     )
     G_neg = nx.from_pandas_edgelist(
-        df_neg, bp_cols[0], bp_cols[1], graph_type
+        df_neg, bp_cols[0], bp_cols[1], create_using=graph_type
     )
 
     return G_pos, G_neg, scale
@@ -53,8 +53,8 @@ def get_correlation(degree_df):
     return pear_corr, spear_corr
 
 def get_wasserstein(degree_df, aimed_scaling):
-    pos_scaled = (degree_df["degree_pos"] * aimed_scaling).astype(int)
-    neg_degree = degree_df["degree_neg"].astype(int)
+    pos_scaled = (degree_df["pos_degree"] * aimed_scaling).astype(int)
+    neg_degree = degree_df["neg_degree"].astype(int)
 
     max_degrees = int(max(pos_scaled.max(), neg_degree.max()))
 
