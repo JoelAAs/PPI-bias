@@ -48,9 +48,9 @@ g <- ggplot(
 ) +
   geom_point(aes(color = random, shape = network_type)) +
   labs(
-    title = expression(paste(Delta, " ", Delta, "  Log-loss between HCNI and non-observed")),
+    title = expression(paste(Delta, "  Log-loss between HCNI and non-observed")),
     x = "Gene partition",
-    y = expression(paste(Delta, " ", Delta, "  Log-loss")),
+    y = expression(paste(Delta, "  Log-loss")),
     color = "Negative data",
     shape = "Network type"
   ) +
@@ -66,7 +66,7 @@ g <- ggplot(
     axis.text.x = element_text(angle = -45, hjust = 0, vjust = 0)
   )
 
-ggsave("delta_directional_ce.png", g, height = 4, width = 6)
+ggsave("delta_ce.png", g, height = 4, width = 6)
 
 g <- ggplot(
   auc_data,
@@ -125,6 +125,9 @@ df_balance_undir <- df_balance_undir %>%
     TRUE ~ NA_character_
   ))
 
+df_balance_undir <- df_balance_undir %>% filter(partition == "sequencesimilarity")
+
+
 g <- ggplot(
   df_balance_undir,
   aes(
@@ -159,8 +162,8 @@ ggsave("degree_balance_undir.png",g,  height = 4, width = 6)
 
 df_balance_dir <- read.csv(
   "work_folder/per_gene/subsets/degree_balance/all_directional.csv",
-  sep = "\t", header = TRUE
-)
+  sep = "\t", header =  TRUE
+) 
 
 df_balance_dir$model <- df_balance_dir$dataset
 df_balance_dir$dataset <- sapply(df_balance_dir$model, function(x) strsplit(x, "_")[[1]][1])
@@ -183,6 +186,8 @@ df_balance_dir <- df_balance_dir %>%
     negative_lim == 3 & positive_lim == 0.29 ~ "strict",
     TRUE ~ NA_character_
   ))
+
+df_balance_dir <- df_balance_dir %>% filter(partition == "sequencesimilarity")
 
 g <- ggplot(
   df_balance_dir,
@@ -213,3 +218,31 @@ g <- ggplot(
   )
 
 ggsave("degree_balance_dir.png",g,  height = 4, width = 6)
+
+g <- ggplot(
+  df_balance_dir,
+  aes(
+    y = ws_bait,
+    x = ws_prey
+  )
+) +
+  geom_point(aes(color = random, shape = set_type)) +
+  labs(
+    title = "Degree balance score between HCNI and non-observed\nDirected",
+    x = "Wasserstein metric (prey)",
+    y = "Wasserstein metric (bait)",
+    color = "Negative data"
+  ) +
+  scale_color_manual(
+    values = c("darkorange", "blue"),
+    labels = c("HCNI", "Non-observed")
+  ) +
+  theme_bw() +
+  facet_grid(selection ~ dataset) +
+  #scale_x_discrete(labels = function(x) sub("\\..*", "", x)) + 
+  theme(
+    legend.position = "right",
+    axis.text.x = element_text(angle = -45, hjust = 0, vjust = 0)
+  )
+
+ggsave("degree_ws_dir.png",g,  height = 4, width = 6)
