@@ -1,6 +1,3 @@
-def input_metrics(wc):
-    expected_input.append(f"work_folder{pn}/classification/randomforest/metrics/goldensplit_asis_metrics.txt")
-    return expected_input
 
 def get_model_validation_data(wc):
     if wc.dataset == "goldensplit":
@@ -8,15 +5,15 @@ def get_model_validation_data(wc):
         selection = wc.dataset
         negdata = data
     else:
+        pos_limit = config["models"][wc.model_configuration]["pos"]
+        neg_limit = config["models"][wc.model_configuration]["neg"]
+        
         if re.search("-random",wc.partition):
-            pos_limit = config["models"][wc.model_configuration]["pos"]
-            data =  f"{wc.dataset}_{wc.network_type}_limit_{pos_limit}_{wc.partition.split("-")[0]}"
-            negdata =  f"{wc.dataset}_{wc.network_type}_limit_{pos_limit}_{wc.partition}"
+            data =  f"{wc.dataset}_{wc.network_type}_limit_{neg_limit}_poslim_{pos_limit}_{wc.partition.split("-")[0]}"
+            negdata =  f"{wc.dataset}_{wc.network_type}_limit_{neg_limit}_poslim_{pos_limit}_{wc.partition}"
             print(negdata)
         
         else:
-            pos_limit = config["models"][wc.model_configuration]["pos"]
-            neg_limit = config["models"][wc.model_configuration]["neg"]
             data =  f"{wc.dataset}_{wc.network_type}_limit_{neg_limit}_poslim_{pos_limit}_{wc.partition}"
             negdata=data
 
