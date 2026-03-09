@@ -5,7 +5,6 @@ import joblib
 from sklearn.metrics import precision_recall_curve, auc, roc_curve, log_loss
 import matplotlib.pyplot as plt
 import math
-from scipy.interpolate import interp1d
 
 def generate_and_plot_performace(model, X_test, y_test, pr_png, neg_pr_png, roc_png, ce_png):
     y_pred = model.predict_proba(X_test)[:, 1]

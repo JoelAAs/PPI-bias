@@ -6,18 +6,21 @@ def get_model_validation_data(wc):
     if wc.dataset == "goldensplit":
         data = "data"
         selection = wc.dataset
-    elif re.search("-random",wc.partition):
-        pos_limit = config["models"][wc.model_configuration]["pos"]
-        posdata =  f"{wc.dataset}_{wc.network_type}_limit_{pos_limit}_{wc.partition.split("-")[0]}"
-        negdata =  f"{wc.dataset}_{wc.network_type}_limit_{pos_limit}_{wc.partition}"
-        return[
-            f"work_folder{pn}/subsets/test/{posdata}_pos.pq",
-            f"work_folder{pn}/subsets/test/randomnegative/{negdata}_neg.pq"
-        ]
+        negdata = data
     else:
-        pos_limit = config["models"][wc.model_configuration]["pos"]
-        neg_limit = config["models"][wc.model_configuration]["neg"]
-        data =  f"{wc.dataset}_{wc.network_type}_limit_{neg_limit}_poslim_{pos_limit}_{wc.partition}"
+        if re.search("-random",wc.partition):
+            pos_limit = config["models"][wc.model_configuration]["pos"]
+            data =  f"{wc.dataset}_{wc.network_type}_limit_{pos_limit}_{wc.partition.split("-")[0]}"
+            negdata =  f"{wc.dataset}_{wc.network_type}_limit_{pos_limit}_{wc.partition}"
+            print(negdata)
+        
+        else:
+            pos_limit = config["models"][wc.model_configuration]["pos"]
+            neg_limit = config["models"][wc.model_configuration]["neg"]
+            data =  f"{wc.dataset}_{wc.network_type}_limit_{neg_limit}_poslim_{pos_limit}_{wc.partition}"
+            negdata=data
+
+            
         if wc.network_type == "directional":
             selection = "maxflow"
         elif wc.network_type == "undirectional":
@@ -26,7 +29,7 @@ def get_model_validation_data(wc):
             raise ValueError(f"unkown networktype {wc.network_type}")
     return [
         f"work_folder{pn}/subsets/test/{selection}/{data}_pos.csv",
-        f"work_folder{pn}/subsets/test/{selection}/{data}_neg.csv"
+        f"work_folder{pn}/subsets/test/{selection}/{negdata}_neg.csv"
     ]
 
 rule get_model_metrics:

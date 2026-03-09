@@ -50,9 +50,9 @@ g <- ggplot(
 ) +
   geom_point(aes(color = random, shape = network_type)) +
   labs(
-    title = expression(paste(H[obs], " - ", H[baseline], " between HCNI and non-observed")),
+    title = expression(paste(H[baseline], " - ", H[obs], " between HCNI and non-observed")),
     x = "Gene partition",
-    y = expression(paste(H[obs], " - ", H[baseline])),
+    y = expression(paste(H[baseline], " - ", H[obs])),
     color = "Negative data",
     shape = "Network type"
   ) +
@@ -86,8 +86,8 @@ ggsave("delta_ce.png", g, height = 4, width = 6)
 g <- ggplot(
   auc_data,
   aes(
-    y = delta_pr_auc/(1-pr_auc_base),
-    x = delta_pr_auc_neg/(1-pr_auc_neg_base),
+    x = delta_pr_auc,
+    y = delta_pr_auc_neg,
   )
 ) +
   geom_point(aes(color = interaction(random, partition), shape = network_type)) +
@@ -270,3 +270,25 @@ g <- ggplot(
   )
 
 ggsave("degree_ws_dir.png", g, height = 4, width = 6)
+
+
+
+df <- read.table("prediction_dist_ms_loose_directional_ss.csv", header = T)
+
+g <- ggplot(df,
+  aes(x =value, fill = negative_data)
+  ) +
+  geom_density(alpha = 0.5) +
+  theme_bw() +
+  labs(
+    title = "Prediction distribution for MS loose directional sequence similarity",
+    x = "Predicted probability",
+    y = "Density",
+    fill = "Negative data"
+  ) +
+  theme(
+    legend.position = "right"
+  )
+
+ggsave("prob_denstity.png", g, height = 4, width = 6)
+
