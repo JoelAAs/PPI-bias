@@ -88,7 +88,7 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
         model = RandomForestClassifier(
             **params_dict,
             bootstrap=True,
-            class_weight="balanced",
+            #class_weight="balanced",
             random_state=RANDOM_STATE,
             n_jobs=n_threads
         )
@@ -183,7 +183,7 @@ if __name__ == '__main__':
     rfc = RandomForestClassifier(
         **parameters,
         bootstrap=True,
-        class_weight="balanced",
+        #class_weight="balanced",
         random_state=RANDOM_STATE,
         n_jobs=threads)
 
@@ -204,3 +204,5 @@ if __name__ == '__main__':
     param_file.write(classification_report(y_test, y_test_pred))
     param_file.close()
     
+
+

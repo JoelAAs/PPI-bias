@@ -98,6 +98,7 @@ def get_base_line_plot(obs_performance, obs_auc, base_dist, auc_base_dist, outpu
         axes[0].plot([0, 1], [random_chance, random_chance], linestyle='--', label='Prevalence')
     axes[0].set_xlabel('Recall' if eval_method_name == "PR" else 'FPR')
     axes[0].set_ylabel('Precision' if eval_method_name == "PR" else 'TPR')
+    axes[0].set_ylim(0,1)
     axes[0].set_title(f'{eval_method_name} Curve with Baseline')
     axes[0].legend()
 
