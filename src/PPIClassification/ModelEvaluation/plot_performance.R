@@ -9,7 +9,7 @@ auc_data <- read.csv(
 auc_data$delta_pr_auc <- auc_data$pr_auc - auc_data$pr_auc_base
 auc_data$delta_pr_auc_neg <- auc_data$pr_auc_neg - auc_data$pr_auc_neg_base
 auc_data$delta_roc_auc <- auc_data$roc_auc - auc_data$roc_auc_base
-auc_data$delta_ce <- auc_data$ce_obs - auc_data$ce_baseline
+auc_data$delta_ce <- auc_data$ce_baseline - auc_data$ce_obs
 auc_data$dataset <- sapply(auc_data$model, function(x) strsplit(x, "_")[[1]][1])
 auc_data$network_type <- sapply(
   auc_data$model, function(x) strsplit(x, "_")[[1]][2]
@@ -25,14 +25,16 @@ auc_data$random <- sapply(
 )
 
 
-mat <- auc_data %>% 
+mat <- auc_data %>%
   filter(random == TRUE & partition == "sequencesimilarity" & network_type == "directional") %>%
-  {.[, c("dataset", "samples", "selection")]} %>%
+  {
+    .[, c("dataset", "samples", "selection")]
+  } %>%
   pivot_wider(
     names_from = dataset,
     values_from = samples
   )
-  column_to_rownames("row_id") %>%
+column_to_rownames("row_id") %>%
   as.matrix()
 
 
@@ -40,17 +42,17 @@ xy <- auc_data[auc_data$dataset == "goldensplit", c("delta_pr_auc", "delta_pr_au
 auc_data <- auc_data[auc_data$dataset != "goldensplit", ]
 
 g <- ggplot(
-  auc_data, 
+  auc_data,
   aes(
-    y = -delta_ce,
+    y = delta_ce,
     x = interaction(partition, network_type)
   )
 ) +
   geom_point(aes(color = random, shape = network_type)) +
   labs(
-    title = expression(paste(Delta, "  Log-loss between HCNI and non-observed")),
+    title = expression(paste(H[obs], " - ", H[baseline], " between HCNI and non-observed")),
     x = "Gene partition",
-    y = expression(paste(Delta, "  Log-loss")),
+    y = expression(paste(H[obs], " - ", H[baseline])),
     color = "Negative data",
     shape = "Network type"
   ) +
@@ -59,8 +61,21 @@ g <- ggplot(
     labels = c("HCNI", "Non-observed")
   ) +
   theme_bw() +
-  facet_grid(selection ~ dataset) +
-  scale_x_discrete(labels = function(x) sub("\\..*", "", x)) + 
+  facet_grid(selection ~ dataset, labeller = labeller(
+    dataset = c(
+      flat = "Combined",
+      ms = "MS",
+      y2h = "Y2H"
+    )
+  )) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  scale_x_discrete(labels = function(x) {
+    case_when(
+      str_remove(x, "\\..*") == "maxpos" ~ "MaxPos",
+      str_remove(x, "\\..*") == "sequencesimilarity" ~ "SeqSim",
+      TRUE ~ x
+    )
+  }) +
   theme(
     legend.position = "right",
     axis.text.x = element_text(angle = -45, hjust = 0, vjust = 0)
@@ -71,31 +86,41 @@ ggsave("delta_ce.png", g, height = 4, width = 6)
 g <- ggplot(
   auc_data,
   aes(
-    y = roc_auc,
-    x = interaction(partition, network_type)
- )) +
-  geom_point(aes(color = random, shape = network_type)) +
+    y = delta_pr_auc/(1-pr_auc_base),
+    x = delta_pr_auc_neg/(1-pr_auc_neg_base),
+  )
+) +
+  geom_point(aes(color = interaction(random, partition), shape = network_type)) +
   labs(
-    title = "ROC AUC between HCNI and non-observed",
-    x = "Gene partition",
-    y = "ROC AUC",
+    title = "PR AUC between HCNI and non-observed",
+    x = "PR AUC (interaction)",
+    y = "PR AUC (non-interaction)",
     color = "Negative data",
     shape = "Network type"
   ) +
   scale_color_manual(
-    values = c("darkorange", "blue"),
-    labels = c("HCNI", "Non-observed")
+    values = c("darkorange", "blue", "#BA3F1D", "#80A1C1"),
+    labels = c(
+      "HCNI:MaxPos", "Non-observed:MaxPos",
+      "HCNI:SeqSim", "Non-observed:SeqSim"
+    )
   ) +
-  geom_hline(yintercept = 0.5, linetype = "dashed") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_vline(xintercept = 0, linetype = "dashed") +
   theme_bw() +
-  facet_grid(selection ~ dataset) +
-  scale_x_discrete(labels = function(x) sub("\\..*", "", x)) + 
+  facet_grid(selection ~ dataset, labeller = labeller(
+    dataset = c(
+      flat = "Combined",
+      ms = "MS",
+      y2h = "Y2H"
+    )
+  )) +
   theme(
     legend.position = "right",
     axis.text.x = element_text(angle = -45, hjust = 0, vjust = 0)
   )
 
-ggsave("model_roc.png", g, height = 4, width = 6)
+ggsave("model_pr_auc.png", g, height = 4, width = 6)
 
 
 df_balance_undir <- read.csv(
@@ -150,20 +175,19 @@ g <- ggplot(
   ylim(0, 1) +
   theme_bw() +
   facet_grid(selection ~ dataset) +
-  #scale_x_discrete(labels = function(x) sub("\\..*", "", x)) + 
+  # scale_x_discrete(labels = function(x) sub("\\..*", "", x)) +
   theme(
     legend.position = "right",
     axis.text.x = element_text(angle = -45, hjust = 0, vjust = 0)
   )
 
-ggsave("degree_balance_undir.png",g,  height = 4, width = 6)
-
+ggsave("degree_balance_undir.png", g, height = 4, width = 6)
 
 
 df_balance_dir <- read.csv(
   "work_folder/per_gene/subsets/degree_balance/all_directional.csv",
-  sep = "\t", header =  TRUE
-) 
+  sep = "\t", header = TRUE
+)
 
 df_balance_dir$model <- df_balance_dir$dataset
 df_balance_dir$dataset <- sapply(df_balance_dir$model, function(x) strsplit(x, "_")[[1]][1])
@@ -211,13 +235,13 @@ g <- ggplot(
   ylim(0, 1) +
   theme_bw() +
   facet_grid(selection ~ dataset) +
-  #scale_x_discrete(labels = function(x) sub("\\..*", "", x)) + 
+  # scale_x_discrete(labels = function(x) sub("\\..*", "", x)) +
   theme(
     legend.position = "right",
     axis.text.x = element_text(angle = -45, hjust = 0, vjust = 0)
   )
 
-ggsave("degree_balance_dir.png",g,  height = 4, width = 6)
+ggsave("degree_balance_dir.png", g, height = 4, width = 6)
 
 g <- ggplot(
   df_balance_dir,
@@ -239,10 +263,10 @@ g <- ggplot(
   ) +
   theme_bw() +
   facet_grid(selection ~ dataset) +
-  #scale_x_discrete(labels = function(x) sub("\\..*", "", x)) + 
+  # scale_x_discrete(labels = function(x) sub("\\..*", "", x)) +
   theme(
     legend.position = "right",
     axis.text.x = element_text(angle = -45, hjust = 0, vjust = 0)
   )
 
-ggsave("degree_ws_dir.png",g,  height = 4, width = 6)
+ggsave("degree_ws_dir.png", g, height = 4, width = 6)
