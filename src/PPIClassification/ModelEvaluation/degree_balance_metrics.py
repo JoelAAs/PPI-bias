@@ -106,7 +106,7 @@ if __name__ == "__main__":
         if network_type == "directional":
             w.write("dataset\tset_type\tp_bait\tsp_bait\tws_bait\tp_prey\tsp_prey\tws_prey\taimed_scale\tn_pos\tn_neg\n")
             for ((p_f, n_f), set_type) in zip(pos_neg_pairs, ["train", "val", "test"]):
-                n_pos, n_neg,G_pos, G_neg, aimed_scale = read_data_pair(p_f, n_f, network_type)
+                n_pos, n_neg, G_pos, G_neg, aimed_scale = read_data_pair(p_f, n_f, network_type)
                 
                 filename = n_f.split("/")[-1]
                 dataset = re.sub(r"_neg..*$", "", filename)
@@ -125,8 +125,8 @@ if __name__ == "__main__":
                 ws_prey = get_wasserstein(degree_prey_df, aimed_scale)
                 
                 w.write(f"{dataset}\t{set_type}\t{p_bait}\t{sp_bait}\t{ws_bait}\t"
-                        f"{p_prey}\t{sp_prey}\t{ws_prey}\t{aimed_scale}"
-                        f"{n_pos}, {n_neg}\n")
+                        f"{p_prey}\t{sp_prey}\t{ws_prey}\t{aimed_scale}\t"
+                        f"{n_pos}\t{n_neg}\n")
         else:
             w.write("dataset\tset_type\tp_undir\tsp_undir\tws_undir\taimed_scale\tn_pos\tn_neg\n")
             for ((p_f, n_f), set_type) in zip(pos_neg_pairs, ["train", "val", "test"]):
@@ -143,6 +143,6 @@ if __name__ == "__main__":
                 ws_undir = get_wasserstein(degree_undir_df, aimed_scale)
                 
                 w.write(f"{dataset}\t{set_type}\t{p_undir}\t{sp_undir}\t"
-                        f"{ws_undir}\t{aimed_scale}"
-                        f"{n_pos}, {n_neg}\n")
+                        f"{ws_undir}\t{aimed_scale}\t"
+                        f"{n_pos}\t{n_neg}\n")
                 
