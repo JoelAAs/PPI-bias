@@ -7,7 +7,7 @@ from skopt import Optimizer
 from skopt.space import Integer, Real, Categorical
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, balanced_accuracy_score
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, log_loss
 import joblib
 from sklearn.metrics import precision_recall_curve, auc
 
@@ -59,10 +59,10 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
         Real(0.1, 0.3, name="max_samples")
     ]
 
-    best_score = -np.inf
+    best_score = np.inf
     best_model = None
     best_params = None
-    best_t = 0.5
+    #best_t = 0.5
 
     hyper_optimizer = Optimizer(
         dimensions=param_dist,
@@ -94,40 +94,30 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
         )
         model.fit(X_train, y_train)
         probs = model.predict_proba(X_validation)[:, 1]
+        probs = np.clip(probs, 1e-15, 1 - 1e-15)
+        c_log_loss = log_loss(y_validation, probs)
 
-        y_val_pred = np.zeros(len(y_validation))
-        best_f1 = 0
-        current_t = 0.5
-        for t in np.linspace(0.1, 0.9, 50):
-            preds = (probs > t).astype(int)
-            f1 = f1_score(y_validation, preds, average="macro")
-            if f1 > best_f1:
-                best_f1 = f1
-                current_t = t
-                y_val_pred = preds
-
-        val_acc = balanced_accuracy_score(y_validation, y_val_pred)
-        hyper_optimizer.tell(params, -best_f1)
+        val_acc = balanced_accuracy_score(y_validation, (probs > 0.5).astype(int))
+        hyper_optimizer.tell(params, c_log_loss)
 
         e = datetime.datetime.now()
         print("------------------------------------------------")
         print(f"{i + 1} iteration of {n_iters} in {e - s}")
         print("Current params: " + str(params))
-        print(f"F1 score: {best_f1}\t t: {current_t} Acc: {val_acc} for Validation", flush=True)
+        print(f"log loss: {c_log_loss}\tAcc: {val_acc} for Validation", flush=True)
         fileout.write("---------------------")
         fileout.write(f"Training took {e - s} using {n_threads} threads\n")
         fileout.write("Current params: " + str(params) + "\n")
 
-        if best_f1 > best_score:
-            best_score = best_f1
-            best_t = current_t
+        if c_log_loss < best_score:
+            best_score = c_log_loss
             best_model = model
             best_params = params
 
     fileout.write("Best validation score: " + str(best_score) + "\n")
     fileout.write("Best params: " + str(best_params) + "\n")
     best_params = dict(zip([d.name for d in param_dist], best_params))
-    return best_model, best_t, best_score, best_params
+    return best_model, best_score, best_params
 
 
 
@@ -177,7 +167,7 @@ if __name__ == '__main__':
     )
 
     param_file = open(args.params_out, "w")
-    _, best_t, score, parameters = hyperparameter_tuned_model(
+    _, score, parameters = hyperparameter_tuned_model(
         X_train, y_train, X_validate, y_validate, threads, param_file, n_iters=20)
 
     rfc = RandomForestClassifier(
@@ -197,10 +187,9 @@ if __name__ == '__main__':
 
     precision, recall, _ = precision_recall_curve(y_test, probs_test)
     pr_auc = auc(recall, precision)
-    y_test_pred = (probs_test > best_t).astype(int)
+    y_test_pred = (probs_test > 0.5).astype(int)
     param_file.write("-----------------TEST ACCURACY----------------\n")
     param_file.write(f"Precision-Recall AUC: {pr_auc:.4f}\n")
-    param_file.write(f"Selected t: {best_t}\n")
     param_file.write(classification_report(y_test, y_test_pred))
     param_file.close()
     
