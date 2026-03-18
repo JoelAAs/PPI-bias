@@ -20,10 +20,10 @@ negative_bait_prey_df.columns = ["bait", "prey"]
 shared_baits = set(positive_bait_prey_df["bait"]) & set(negative_bait_prey_df["bait"])
 shared_prey = set(positive_bait_prey_df["prey"]) & set(negative_bait_prey_df["prey"])
 
-missing_baits_in_negative = negative_bait_prey_df[
+missing_baits_in_negative = positive_bait_prey_df[
     ~positive_bait_prey_df["bait"].isin(negative_bait_prey_df["bait"])
     ]
-missing_prey_in_negative = negative_bait_prey_df[
+missing_prey_in_negative = positive_bait_prey_df[
     ~positive_bait_prey_df["prey"].isin(negative_bait_prey_df["prey"])
     ]
 
@@ -50,49 +50,27 @@ def get_scaled_targets(graph, scale):
     bait_target = dict(graph.out_degree())
     prey_target = dict(graph.in_degree())
 
-    bait_target = {gene: round(degree * scaling) for gene, degree in bait_target.items()}
-    prey_target = {gene: round(degree * scaling) for gene, degree in prey_target.items()}
+    bait_target = {gene: round(degree * scale) for gene, degree in bait_target.items()}
+    prey_target = {gene: round(degree * scale) for gene, degree in prey_target.items()}
 
     return bait_target, prey_target
 
+
+def build_flow_graph(graph, target_bait, target_prey):
+    F = nx.DiGraph()
+
+    for node in graph.nodes():
+        F.add_edge("source", ("bait", node), capacity=target_bait.get(node, 0).numerator)
+        F.add_edge(("prey", node), "sink", capacity=target_prey.get(node, 0).numerator)
+
+    for bait, prey in graph.edges():
+        F.add_edge(("bait", bait), ("prey", prey), capacity=1)
+
+    return F
+
 for scaling in range(1, 2, 0.1):
-    target_in, target_out, success = get_scaled_targets(positive_diG, scaling)
-    if success:
-        print(f"Trying a subset where {pai} : 1")
-        testF = build_flow_graph(negative_diG, target_in, target_out)
-        flow_value, flow_dict = nx.maximum_flow(testF, "source", "sink")
-        percent_output = round(flow_value / sum(target_in.values()).numerator * 100)
-
-        print(f"Flow value: {flow_value}, that being {percent_output} % of scaled degree")
-
-        min_target_ppis = sum(target_in.values()) / pai
-        min_ppi_target = min_target_ppis*.8 < flow_value < min_target_ppis*1.2
-
-        save=False
-        if args.subset == "test":
-            if min_ppi_target or pai == 1:
-                save = True
-        elif percent_output > min_max_flow or pai == 1 or min_ppi_target: # Fix this one later
-            save = True
-
-        if save:
-            S = nx.DiGraph()
-            S.add_nodes_from(negative_diG.nodes())
-
-            for u, v in negative_diG.edges():
-                if flow_dict.get(("out", u), {}).get(("in", v), 0) == 1:
-                    S.add_edge(u, v)
-
-            with open(max_flow_negative, "w") as w:
-                w.write(f"#Scaled: {pai.numerator} : 1\n")
-                for u, v in S.edges():
-                    w.write(f"{u}\t{v}\n")
-
-            with open(max_flow_positive, "w") as w:
-                for u, v in positive_diG.edges():
-                    w.write(f"{u}\t{v}\n")
-            success = True
-            break
-if not success:
-    raise ValueError(f"No possible subset with flow > {min_max_flow} %")
-
+    target_in, target_out = get_scaled_targets(positive_diG, scaling)
+    print(f"Trying a subset where {pai} : 1")
+    testF = build_flow_graph(negative_diG, target_in, target_out)
+    flow_value, flow_dict = nx.maximum_flow(testF, "source", "sink")
+    percent_output = round(flow_value / sum(target_in.values()).numerator * 100)
