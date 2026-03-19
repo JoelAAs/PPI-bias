@@ -6,8 +6,8 @@ rule maxflow_splits:
     resources:
         mem_gb=100
     input:
-        set_pos=f"work_folder{pn}/subsets/{{dataset}}_directional_limit_{{pos_limit}}_pos.pq",
-        set_neg=f"work_folder{pn}/subsets/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.pq"
+        set_pos=f"work_folder{pn}/subsets/{{dataset}}_directional_full_{{pos_limit}}_pos.pq",
+        set_neg=f"work_folder{pn}/subsets/{{dataset}}_directional_full_{{neg_limit}}_neg.pq"
     output:
         set_pos=f"work_folder{pn}/subsets/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
         set_neg=f"work_folder{pn}/subsets/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv",
