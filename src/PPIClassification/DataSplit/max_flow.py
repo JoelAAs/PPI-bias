@@ -2,59 +2,84 @@ import networkx as nx
 from fractions import Fraction
 import pandas as pd
 import argparse
+import numpy as np
+from scipy.stats import spearmanr
 
 def get_degrees(G):
-    degree_in = dict(G.in_degree())
-    degree_out = dict(G.out_degree())
-    return degree_in, degree_out
+    degree_bait = dict(G.out_degree())
+    degree_prey = dict(G.in_degree())
+    
+    return degree_bait, degree_prey
 
 
-def scaling_fractions(min_edges, max_edges):
-    if max_edges/min_edges > 100:
-        max_edges = min_edges*100
-    return [
-        Fraction(i, min_edges) for i in range(max_edges, 1, -1)
-    ]
+def get_scaled_targets(graph, scale):
+    bait_target, prey_target = get_degrees(graph)
+
+    bait_target = {gene: round(degree * scale) for gene, degree in bait_target.items()}
+    prey_target = {gene: round(degree * scale) for gene, degree in prey_target.items()}
+
+    return bait_target, prey_target
 
 
-def get_possible_scaling_factors(targetG, scaling):
-    target_degree_in, target_degree_out = get_degrees(targetG)
-    target_in_scaled = {}
-    target_out_scaled = {}
-    feasible = True
-    for node in targetG.nodes():
-        target_in_scaled[node] = target_degree_in[node] * scaling
-        target_out_scaled[node] = target_degree_out[node] * scaling
-        if target_in_scaled[node].denominator != 1 or target_out_scaled[node].denominator != 1:
-            feasible = False
-            break
-    return target_in_scaled, target_out_scaled, feasible
-
-
-def build_flow_graph(otherG, scaled_degree_in, scaled_degree_out):
+def build_flow_graph(graph, target_bait, target_prey):
     F = nx.DiGraph()
 
-    overflow = Fraction(10000)
+    for node in graph.nodes():
+        if node in target_bait:
+            F.add_edge("source", ("bait", node), capacity=target_bait.get[node])
+        if node in target_prey:
+            F.add_edge(("prey", node), "sink", capacity=target_prey[node])
 
-    for node in otherG.nodes():  # same nodes in pos/neg
-        F.add_edge("source", ("out", node), capacity=scaled_degree_out.get(node, overflow).numerator)
-        F.add_edge(("in", node), "sink", capacity=scaled_degree_in.get(node, overflow).numerator)
-
-    for bait, prey in otherG.edges():
-        F.add_edge(("out", bait), ("in", prey), capacity=1)
+    for bait, prey in graph.edges():
+        F.add_edge(("bait", bait), ("prey", prey), capacity=1)
 
     return F
 
 
-def write_degree_differance(filename, targetG, otherG, alpha_hat):
-    in_degree, out_degree = get_degrees(targetG)
-    in_degree_other, out_degree_other = get_degrees(otherG)
+def get_selected_negative_graph(flow_dict, negative_graph):
+    S = nx.DiGraph()
+    S.add_nodes_from(negative_graph.nodes())
 
-    with open(filename, "w") as w:
-        w.write("node\ttarget_in_degree\tscaled_in_degree\ttarget_out_degree\tscaled_out_degree\testimated_increase\n")
-        for node in targetG.nodes():
-            w.write(f"{node}\t{in_degree.get(node, 0)}\t{in_degree_other.get(node, 0)}\t")
-            w.write(f"{out_degree.get(node, 0)}\t{out_degree_other.get(node, 0)}\t{alpha_hat}\n")
+    for u, v in negative_graph.edges():
+        if flow_dict.get(("out", u), {}).get(("in", v), 0) == 1:
+            S.add_edge(u, v)
+    return S
+
+
+
+def get_degree_divergence(targetG, otherG):
+    bait_target, prey_target = get_degrees(targetG)
+    bait_selected, prey_selected = get_degrees(otherG)
+    all_nodes = set(targetG.nodes()) | set(otherG.nodes())
+    
+    divergence_bait = 0
+    divergence_prey = 0
+    
+    for node in all_nodes:
+        divergence_bait += np.abs(bait_target.get(node, 0) - bait_selected.get(node,0))
+        divergence_prey += np.abs(prey_target.get(node, 0) - prey_selected.get(node,0))
+    
+    return divergence_bait, divergence_prey
+
+def degree_spearman_correlation(targetG, otherG):
+    bait_target, prey_target = get_degrees(targetG)
+    bait_selected, prey_selected = get_degrees(otherG)
+    
+    targets = []
+    selected = []
+    all_nodes = set(targetG.nodes()) | set(otherG.nodes())
+    for node in all_nodes:
+        if node in bait_selected or node in bait_target:
+           targets.append(bait_target.get(node, 0))
+           selected.append(bait_selected.get(node, 0))
+        
+        if node in prey_selected or node in prey_target:
+           targets.append(prey_target.get(node, 0))
+           selected.append(prey_selected.get(node, 0))
+        
+        rho, _ = spearmanr(targets, selected)
+        return rho
+
 
 
 if __name__ == '__main__':
@@ -63,15 +88,13 @@ if __name__ == '__main__':
     parser.add_argument("--negative_data", required=True, help="")
     parser.add_argument("--max_flow_positive", required=True, help="Path to output csv file")
     parser.add_argument("--max_flow_negative", required=True, help="Path to output csv file")
-    parser.add_argument("--min_max_flow", type=int, default=40, help="")
-    parser.add_argument("--subset", type=str)
-
+    parser.add_argument("--balance_file", type=int, default=40, help="")
+    
     args = parser.parse_args()
     positive_data = args.positive_data
     negative_data = args.negative_data
     max_flow_positive = args.max_flow_positive
     max_flow_negative = args.max_flow_negative
-    min_max_flow = args.min_max_flow
 
     positive_bait_prey_df = pd.read_parquet(positive_data)
     negative_bait_prey_df = pd.read_parquet(negative_data)
@@ -82,10 +105,19 @@ if __name__ == '__main__':
     positive_bait_prey_df.columns = ["bait", "prey"]
     negative_bait_prey_df.columns = ["bait", "prey"]
 
+    shared_baits = set(negative_bait_prey_df["bait"]) & set(positive_bait_prey_df["bait"])
+    shared_prey = set(negative_bait_prey_df["prey"]) & set(positive_bait_prey_df["prey"])
+
     negative_bait_prey_df = negative_bait_prey_df[
-        (negative_bait_prey_df["bait"].isin(positive_bait_prey_df["bait"])) |
-        (negative_bait_prey_df["prey"].isin(positive_bait_prey_df["prey"]))
+        (negative_bait_prey_df["bait"].isin(shared_baits)) &
+        (negative_bait_prey_df["prey"].isin(shared_prey))
     ]
+
+    positive_bait_prey_df = positive_bait_prey_df[
+        (positive_bait_prey_df["bait"].isin(shared_baits)) &
+        (positive_bait_prey_df["prey"].isin(shared_prey))
+    ]
+
 
     positive_diG = nx.from_pandas_edgelist(
         positive_bait_prey_df, "bait", "prey", create_using=nx.DiGraph()
@@ -95,44 +127,35 @@ if __name__ == '__main__':
     )
     success = False
 
-    pa = [Fraction(i, 1) for i in range(3,0,-1)]
-    for pai in pa:
-        target_in, target_out, success = get_possible_scaling_factors(positive_diG, pai)
-        if success:
-            print(f"Trying a subset where {pai} : 1")
-            testF = build_flow_graph(negative_diG, target_in, target_out)
-            flow_value, flow_dict = nx.maximum_flow(testF, "source", "sink")
+    current_min_score = 1000
+    n_pos_edges = positive_bait_prey_df.shape[0]
+    best_sample_balance = 5
+    best_divergence_balance = 1
+    best_spearman = 0
+    current_best_negative = None
+    with open(args.balance_file, "w") as w:
+        w.write("positive_edges\tnegative_edges\tscale\tspearman_degree\tdivergance_bait\tdivergrence_prey\n")
+        for scale in np.linespace(1, 2, 0.1):
+            target_in, target_out = get_scaled_targets(positive_diG, scale)
+            print(f"Trying a subset with scaling: {scale}")
+            F = build_flow_graph(negative_diG, target_in, target_out)
+            flow_value, flow_dict = nx.maximum_flow(F, "source", "sink")
+            
             percent_output = round(flow_value / sum(target_in.values()).numerator * 100)
 
-            print(f"Flow value: {flow_value}, that being {percent_output} % of scaled degree")
+            selected_negative_G = get_selected_negative_graph(flow_dict, negative_diG)
+            spearman = degree_spearman_correlation(positive_diG, selected_negative_G)
+            div_bait, div_prey = get_degree_divergence(positive_diG, selected_negative_G)
 
-            min_target_ppis = sum(target_in.values()) / pai
-            min_ppi_target = min_target_ppis*.8 < flow_value < min_target_ppis*1.2
+            n_negative_edges = len(list(selected_negative_G.edges()))
 
-            save=False
-            if args.subset == "test":
-                if min_ppi_target or pai == 1:
-                    save = True
-            elif percent_output > min_max_flow or pai == 1 or min_ppi_target: # Fix this one later
-                save = True
+            score = 1 - np.abs(n_pos_edges/n_negative_edges) + (div_bait+div_prey)/n_pos_edges - spearman
+            w.write(f"{n_pos_edges}\t{n_negative_edges}\t{scale}\t{spearman}\t{div_bait}\t{div_prey}\n")
+            if score < current_min_score:
+                current_best_negative = selected_negative_G
 
-            if save:
-                S = nx.DiGraph()
-                S.add_nodes_from(negative_diG.nodes())
-
-                for u, v in negative_diG.edges():
-                    if flow_dict.get(("out", u), {}).get(("in", v), 0) == 1:
-                        S.add_edge(u, v)
-
-                with open(max_flow_negative, "w") as w:
-                    w.write(f"#Scaled: {pai.numerator} : 1\n")
-                    for u, v in S.edges():
-                        w.write(f"{u}\t{v}\n")
-
-                with open(max_flow_positive, "w") as w:
-                    for u, v in positive_diG.edges():
-                        w.write(f"{u}\t{v}\n")
-                success = True
-                break
-    if not success:
-        raise ValueError(f"No possible subset with flow > {min_max_flow} %")
+    
+    for balanced_network, output_filename in zip([positive_diG, current_best_negative], [max_flow_positive, max_flow_negative]):
+        with open(output_filename, "w") as w:
+            for bait, prey in balanced_network.edges():
+                w.write(f"{bait}\t{prey}\n")

@@ -2,14 +2,16 @@ rule maxflow_splits:
     # Directional balancing
     params:
         script_location="src/PPIClassification/DataSplit/max_flow.py",
-        min_max_flow=65
-    log: "logs/maxflow/{partition_name}/maxflow_{settype}_{dataset}_{neg_limit}_poslim_{pos_limit}.log"
+    log: "logs/maxflow/maxflow_{dataset}_{neg_limit}_poslim_{pos_limit}.log"
+    resources:
+        mem_gb=100
     input:
-        set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_directional_limit_{{pos_limit}}_{{partition_name}}_pos.pq",
-        set_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.pq"
+        set_pos=f"work_folder{pn}/subsets/{{dataset}}_directional_limit_{{pos_limit}}_pos.pq",
+        set_neg=f"work_folder{pn}/subsets/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.pq"
     output:
-        set_pos=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_pos.csv",
-        set_neg=f"work_folder{pn}/subsets/{{settype}}/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv"
+        set_pos=f"work_folder{pn}/subsets/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
+        set_neg=f"work_folder{pn}/subsets/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv",
+        balance_data=f"work_folder{pn}/subsets/maxflow/balance_data/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv"
     shell:
         """(
         python3 {params.script_location} \
@@ -17,33 +19,8 @@ rule maxflow_splits:
             --negative_data {input.set_neg} \
             --max_flow_positive {output.set_pos} \
             --max_flow_negative {output.set_neg} \
-            --min_max_flow {params.min_max_flow} \
-            --subset {wildcards.settype}
+            --balance_file {output.balance_data}
         ) >{log} 2>&1"""
-
-rule ilp:
-    # Directional balancing
-    params:
-        script_location="src/PPIClassification/DataSplit/ILP.py",
-        accepted_missmatch=2
-    threads: 20
-    log: "logs/ilp/{partition_name}/ilp_{settype}_{dataset}_{neg_limit}_poslim_{pos_limit}.log"
-    input:
-        set_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_directional_limit_{{pos_limit}}_{{partition_name}}_pos.pq",
-        set_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.pq"
-    output:
-        balanced_pos=f"work_folder{pn}/subsets/{{settype}}/ilp/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_pos.csv",
-        balanced_neg=f"work_folder{pn}/subsets/{{settype}}/ilp/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv"
-    shell:
-        """(
-        python3 {params.script_location} \
-            --positive_data {input.set_pos} \
-            --negative_data {input.set_neg} \
-            --balanced_positive {output.balanced_pos} \
-            --balanced_negative {output.balanced_neg} \
-            --accepted_error {params.accepted_missmatch} \
-            --threads {threads}         
-            ) >{log} 2>&1"""
 
 
 rule balance_undirectional:
