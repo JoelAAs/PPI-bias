@@ -2,7 +2,6 @@ rule maxflow_splits:
     # Directional balancing
     params:
         script_location="src/PPIClassification/DataSplit/max_flow.py",
-    log: "logs/maxflow/maxflow_{dataset}_{neg_limit}_poslim_{pos_limit}.log"
     resources:
         mem_gb=100
     input:
@@ -13,14 +12,14 @@ rule maxflow_splits:
         set_neg=f"work_folder{pn}/subsets/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv",
         balance_data=f"work_folder{pn}/subsets/maxflow/balance_data/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv"
     shell:
-        """(
+        """
         python3 {params.script_location} \
             --positive_data {input.set_pos} \
             --negative_data {input.set_neg} \
             --max_flow_positive {output.set_pos} \
             --max_flow_negative {output.set_neg} \
             --balance_file {output.balance_data}
-        ) >{log} 2>&1"""
+        """
 
 
 rule balance_undirectional:
