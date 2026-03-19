@@ -88,7 +88,7 @@ if __name__ == '__main__':
     parser.add_argument("--negative_data", required=True, help="")
     parser.add_argument("--max_flow_positive", required=True, help="Path to output csv file")
     parser.add_argument("--max_flow_negative", required=True, help="Path to output csv file")
-    parser.add_argument("--balance_file", type=int, default=40, help="")
+    parser.add_argument("--balance_file", required=True, help="")
     
     args = parser.parse_args()
     positive_data = args.positive_data
