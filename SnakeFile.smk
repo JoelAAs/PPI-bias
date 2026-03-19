@@ -113,7 +113,9 @@ rule all:
     #    f"work_folder{pn}/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv",
     #    f"work_folder/per_gene/analysis/POD/undirectional/POD_cell_line.pq"
     #    f"work_folder/per_gene/analysis/POD/directional/POD_cell_line.pq"
-        f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
+    #    f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
+        expand(f"work_folder{pn}/subsets/maxflow/balance_data/{{dataset}}_directional_limit_1_poslim_0.02_pos.csv",
+            dataset=["flat", "y2h", "ms"])
     #expected_output,,
     #f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
     #f"work_folder{pn}/plots/degree/GO_enrichment.png",
