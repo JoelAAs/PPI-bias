@@ -72,10 +72,10 @@ def build_flow_graph_gt(negative_df, target_bait, target_prey, node_map):
     prey_ids = [flow_node_map[(1, i)] for i in tar_prey]
 
     edges = np.column_stack((bait_ids, prey_ids))
-    g.add_edge_list(edges)
-    for e in list(g.edges())[-len(edges):]:
-        capacity[e] = 1
     
+    for u, v in edges:
+        e = g.add_edge(u, v)
+        capacity[e] = 1 
     return g, capacity, source, sink, flow_node_map_index
 
 
