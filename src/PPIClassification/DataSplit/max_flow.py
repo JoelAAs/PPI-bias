@@ -4,7 +4,8 @@ import pandas as pd
 import argparse
 import numpy as np
 from scipy.stats import spearmanr
-from graph_tool.all import Graph, max_flow, openmp_set_num_threads
+from graph_tool.all import Graph, openmp_set_num_threads
+from graph_tool.flow import boykov_kolmogorov_max_flow as max_flow
 
 
 def generate_graph(edge_df, node_map):
@@ -42,8 +43,8 @@ def build_flow_graph_gt(negative_df, target_bait, target_prey):
     # 0 is bait, 1 is prey in tuples
     g = Graph(directed=True)
 
-    flow_node_map = {(0,b_id):i for i, b_id in enumerate(target_bait)}
-    flow_node_map.update({(1,p_id):(i+ len(target_bait)) for i, p_id in enumerate(target_prey)})
+    flow_node_map = {(0,i):i for i, _ in enumerate(target_bait)}
+    flow_node_map.update({(1,i):(i+ len(target_bait)) for i, _ in enumerate(target_prey)})
     flow_node_map_index = {value:key for key, value in flow_node_map.items()}
     
     g.add_vertex(len(flow_node_map))
@@ -71,8 +72,9 @@ def build_flow_graph_gt(negative_df, target_bait, target_prey):
     prey_ids = [flow_node_map[(1, i)] for i in tar_prey]
 
     edges = np.column_stack((bait_ids, prey_ids))
-    edge_caps = np.ones(len(edges), dtype=np.int32)
-    g.add_edge_list(edges, eprops=[capacity], vals=[edge_caps])
+    g.add_edge_list(edges)
+    for e in list(g.edges())[-len(edges):]:
+        capacity[e] = 1
     
     return g, capacity, source, sink, flow_node_map_index
 
@@ -180,12 +182,12 @@ if __name__ == '__main__':
         w.write("positive_edges\tnegative_edges\tscale\tspearman_degree\tdivergence_bait\tdivergrence_prey\n")
         for scale in np.linspace(1, 2, 10):
 
-            target_in, target_out = get_scaled_targets(pos_diG, scale)
+            target_bait, target_prey = get_scaled_targets(pos_diG, scale)
 
             g, capacity, source, sink, flow_node_map_idx = build_flow_graph_gt(
                 negative_bait_prey_df,
-                target_in,
-                target_out
+                target_bait,
+                target_prey
             )
             residual = max_flow(g, source, sink, capacity)
 
