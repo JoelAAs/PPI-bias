@@ -39,7 +39,7 @@ def get_node_map(all_nodes):
     return {gene:i for i, gene in enumerate(all_nodes)}, {i:gene for i, gene in enumerate(all_nodes)}
 
 
-def build_flow_graph_gt(negative_df, target_bait, target_prey):
+def build_flow_graph_gt(negative_df, target_bait, target_prey, node_map):
     # 0 is bait, 1 is prey in tuples
     g = Graph(directed=True)
 
@@ -187,7 +187,8 @@ if __name__ == '__main__':
             g, capacity, source, sink, flow_node_map_idx = build_flow_graph_gt(
                 negative_bait_prey_df,
                 target_bait,
-                target_prey
+                target_prey,
+                node_map
             )
             residual = max_flow(g, source, sink, capacity)
 
@@ -209,7 +210,7 @@ if __name__ == '__main__':
             selected_negative_g = generate_graph(selected_negative_edges, node_map)
 
             
-            percent_output = round(flow_value / sum(target_in) * 100)
+            percent_output = round(flow_value / sum(target_bait) * 100)
 
             spearman = degree_spearman_correlation(pos_diG, selected_negative_g)
             div_bait, div_prey = get_degree_divergence(pos_diG, selected_negative_g, node_map)
