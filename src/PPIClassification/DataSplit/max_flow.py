@@ -41,7 +41,7 @@ def get_selected_negative_graph(flow_dict, negative_graph):
     S.add_nodes_from(negative_graph.nodes())
 
     for u, v in negative_graph.edges():
-        if flow_dict.get(("out", u), {}).get(("in", v), 0) == 1:
+        if flow_dict.get(("bait", u), {}).get(("prey", v), 0) == 1:
             S.add_edge(u, v)
     return S
 
@@ -77,8 +77,8 @@ def degree_spearman_correlation(targetG, otherG):
            targets.append(prey_target.get(node, 0))
            selected.append(prey_selected.get(node, 0))
         
-        rho, _ = spearmanr(targets, selected)
-        return rho
+    rho, _ = spearmanr(targets, selected)
+    return rho
 
 
 
@@ -131,17 +131,17 @@ if __name__ == '__main__':
     n_pos_edges = positive_bait_prey_df.shape[0]
     best_sample_balance = 5
     best_divergence_balance = 1
-    best_spearman = 0
+    best_spearman = 0 
     current_best_negative = None
     with open(args.balance_file, "w") as w:
-        w.write("positive_edges\tnegative_edges\tscale\tspearman_degree\tdivergance_bait\tdivergrence_prey\n")
+        w.write("positive_edges\tnegative_edges\tscale\tspearman_degree\tdivergence_bait\tdivergrence_prey\n")
         for scale in np.linspace(1, 2, 10):
             target_in, target_out = get_scaled_targets(positive_diG, scale)
             print(f"Trying a subset with scaling: {scale}")
             F = build_flow_graph(negative_diG, target_in, target_out)
             flow_value, flow_dict = nx.maximum_flow(F, "source", "sink")
             
-            percent_output = round(flow_value / sum(target_in.values()).numerator * 100)
+            percent_output = round(flow_value / sum(target_in.values()) * 100)
 
             selected_negative_G = get_selected_negative_graph(flow_dict, negative_diG)
             spearman = degree_spearman_correlation(positive_diG, selected_negative_G)
@@ -152,6 +152,7 @@ if __name__ == '__main__':
             score = 1 - np.abs(n_pos_edges/n_negative_edges) + (div_bait+div_prey)/n_pos_edges - spearman
             w.write(f"{n_pos_edges}\t{n_negative_edges}\t{scale}\t{spearman}\t{div_bait}\t{div_prey}\n")
             if score < current_min_score:
+                current_min_score = score
                 current_best_negative = selected_negative_G
 
     
