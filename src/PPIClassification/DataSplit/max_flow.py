@@ -4,79 +4,120 @@ import pandas as pd
 import argparse
 import numpy as np
 from scipy.stats import spearmanr
+from graph_tool.all import Graph, max_flow, openmp_set_num_threads
 
-def get_degrees(G):
-    degree_bait = dict(G.out_degree())
-    degree_prey = dict(G.in_degree())
+
+def generate_graph(edge_df, node_map):
+    g = Graph(directed=True)
+    g.add_vertex(len(node_map))
+
+
+    bait_src = edge_df["bait"].map(node_map).to_numpy()
+    tar_prey = edge_df["prey"].map(node_map).to_numpy()
+    edges = np.column_stack((bait_src, tar_prey))
+
+    g.add_edge_list(edges)
     
-    return degree_bait, degree_prey
+    return g
+
+def get_degree(g):
+    # bait, prey degree
+    return g.get_out_degrees(g.get_vertices()), g.get_in_degrees(g.get_vertices())
 
 
 def get_scaled_targets(graph, scale):
-    bait_target, prey_target = get_degrees(graph)
+    bait_target, prey_target = get_degree(graph)
 
-    bait_target = {gene: round(degree * scale) for gene, degree in bait_target.items()}
-    prey_target = {gene: round(degree * scale) for gene, degree in prey_target.items()}
+    bait_target = np.round(bait_target * scale).astype(np.int64)
+    prey_target = np.round(prey_target * scale).astype(np.int64)
 
     return bait_target, prey_target
 
-
-def build_flow_graph(graph, target_bait, target_prey):
-    F = nx.DiGraph()
-
-    for node in graph.nodes():
-        if node in target_bait:
-            F.add_edge("source", ("bait", node), capacity=target_bait[node])
-        if node in target_prey:
-            F.add_edge(("prey", node), "sink", capacity=target_prey[node])
-
-    for bait, prey in graph.edges():
-        F.add_edge(("bait", bait), ("prey", prey), capacity=1)
-
-    return F
+def get_node_map(all_nodes):
+    all_nodes = list(all_nodes)
+    return {gene:i for i, gene in enumerate(all_nodes)}, {i:gene for i, gene in enumerate(all_nodes)}
 
 
-def get_selected_negative_graph(flow_dict, negative_graph):
-    S = nx.DiGraph()
-    S.add_nodes_from(negative_graph.nodes())
+def build_flow_graph_gt(negative_df, target_bait, target_prey):
+    # 0 is bait, 1 is prey in tuples
+    g = Graph(directed=True)
 
-    for u, v in negative_graph.edges():
-        if flow_dict.get(("bait", u), {}).get(("prey", v), 0) == 1:
-            S.add_edge(u, v)
-    return S
+    flow_node_map = {(0,b_id):i for i, b_id in enumerate(target_bait)}
+    flow_node_map.update({(1,p_id):(i+ len(target_bait)) for i, p_id in enumerate(target_prey)})
+    flow_node_map_index = {value:key for key, value in flow_node_map.items()}
+    
+    g.add_vertex(len(flow_node_map))
+
+    source = g.add_vertex()
+    sink = g.add_vertex()
+
+
+    capacity = g.new_edge_property("int")
+
+    for bait, cap in enumerate(target_bait):
+        bait_v = flow_node_map[(0, bait)]
+        e = g.add_edge(source, bait_v)
+        capacity[e] = int(cap)
+
+    for prey, cap in enumerate(target_prey):
+        prey_v = flow_node_map[(1, prey)]
+        e = g.add_edge(prey_v, sink)
+        capacity[e] = int(cap)
+
+    src_baits = negative_df["bait"].map(node_map).to_numpy()
+    tar_prey = negative_df["prey"].map(node_map).to_numpy()
+
+    bait_ids = [flow_node_map[(0, i)] for i in src_baits]
+    prey_ids = [flow_node_map[(1, i)] for i in tar_prey]
+
+    edges = np.column_stack((bait_ids, prey_ids))
+    edge_caps = np.ones(len(edges), dtype=np.int32)
+    g.add_edge_list(edges, eprops=[capacity], vals=[edge_caps])
+    
+    return g, capacity, source, sink, flow_node_map_index
+
+
+def extract_selected_edges(flow_g, capacity, residual, flow_node_map_index, node_map_index, source, sink):
+    selected_edges = []
+
+    for e in flow_g.edges():
+        u = e.source()
+        v = e.target()
+
+        if u == source or v == sink:
+            continue
+
+        flow = capacity[e] - residual[e] # if not in residual then edge is chosen
+
+        if flow == 1:
+            bait = node_map_index[flow_node_map_index[int(u)][1]]
+            prey = node_map_index[flow_node_map_index[int(v)][1]]
+            selected_edges.append((bait, prey))
+
+    return pd.DataFrame(selected_edges, columns=["bait", "prey"])
 
 
 
-def get_degree_divergence(targetG, otherG):
-    bait_target, prey_target = get_degrees(targetG)
-    bait_selected, prey_selected = get_degrees(otherG)
-    all_nodes = set(targetG.nodes()) | set(otherG.nodes())
+def get_degree_divergence(targetG, otherG, node_map):
+    bait_target, prey_target = get_degree(targetG)
+    bait_selected, prey_selected = get_degree(otherG)
     
     divergence_bait = 0
     divergence_prey = 0
     
-    for node in all_nodes:
-        divergence_bait += np.abs(bait_target.get(node, 0) - bait_selected.get(node,0))
-        divergence_prey += np.abs(prey_target.get(node, 0) - prey_selected.get(node,0))
+    for node in node_map.values():
+        divergence_bait += np.abs(bait_target[node] - bait_selected[node])
+        divergence_prey += np.abs(prey_target[node] - prey_selected[node])
     
     return divergence_bait, divergence_prey
 
 def degree_spearman_correlation(targetG, otherG):
-    bait_target, prey_target = get_degrees(targetG)
-    bait_selected, prey_selected = get_degrees(otherG)
-    
-    targets = []
-    selected = []
-    all_nodes = set(targetG.nodes()) | set(otherG.nodes())
-    for node in all_nodes:
-        if node in bait_selected or node in bait_target:
-           targets.append(bait_target.get(node, 0))
-           selected.append(bait_selected.get(node, 0))
-        
-        if node in prey_selected or node in prey_target:
-           targets.append(prey_target.get(node, 0))
-           selected.append(prey_selected.get(node, 0))
-        
+    bait_target, prey_target = get_degree(targetG)
+    bait_selected, prey_selected = get_degree(otherG)
+
+    targets = np.concatenate([bait_target, prey_target])
+    selected = np.concatenate([bait_selected, prey_selected])
+
     rho, _ = spearmanr(targets, selected)
     return rho
 
@@ -89,8 +130,11 @@ if __name__ == '__main__':
     parser.add_argument("--max_flow_positive", required=True, help="Path to output csv file")
     parser.add_argument("--max_flow_negative", required=True, help="Path to output csv file")
     parser.add_argument("--balance_file", required=True, help="")
+    parser.add_argument("--threads", type=int, default=10)
     
+
     args = parser.parse_args()
+    openmp_set_num_threads(args.threads)
     positive_data = args.positive_data
     negative_data = args.negative_data
     max_flow_positive = args.max_flow_positive
@@ -119,13 +163,10 @@ if __name__ == '__main__':
     ]
 
 
-    positive_diG = nx.from_pandas_edgelist(
-        positive_bait_prey_df, "bait", "prey", create_using=nx.DiGraph()
-    )
-    negative_diG = nx.from_pandas_edgelist(
-        negative_bait_prey_df, "bait", "prey", create_using=nx.DiGraph()
-    )
-    success = False
+
+    node_map, node_map_idx = get_node_map(shared_baits | shared_prey)
+
+    pos_diG = generate_graph(positive_bait_prey_df, node_map)
 
     current_min_score = 1000
     n_pos_edges = positive_bait_prey_df.shape[0]
@@ -133,30 +174,54 @@ if __name__ == '__main__':
     best_divergence_balance = 1
     best_spearman = 0 
     current_best_negative = None
+
+
     with open(args.balance_file, "w") as w:
         w.write("positive_edges\tnegative_edges\tscale\tspearman_degree\tdivergence_bait\tdivergrence_prey\n")
         for scale in np.linspace(1, 2, 10):
-            target_in, target_out = get_scaled_targets(positive_diG, scale)
-            print(f"Trying a subset with scaling: {scale}")
-            F = build_flow_graph(negative_diG, target_in, target_out)
-            flow_value, flow_dict = nx.maximum_flow(F, "source", "sink")
+
+            target_in, target_out = get_scaled_targets(pos_diG, scale)
+
+            g, capacity, source, sink, flow_node_map_idx = build_flow_graph_gt(
+                negative_bait_prey_df,
+                target_in,
+                target_out
+            )
+            residual = max_flow(g, source, sink, capacity)
+
+            flow_value = sum(
+                capacity[e] - residual[e]
+                for e in source.out_edges()
+            )
+
+            selected_negative_edges = extract_selected_edges(
+                g,
+                capacity,
+                residual,
+                flow_node_map_idx,
+                node_map_idx,
+                source, 
+                sink
+            )
+
+            selected_negative_g = generate_graph(selected_negative_edges, node_map)
+
             
-            percent_output = round(flow_value / sum(target_in.values()) * 100)
+            percent_output = round(flow_value / sum(target_in) * 100)
 
-            selected_negative_G = get_selected_negative_graph(flow_dict, negative_diG)
-            spearman = degree_spearman_correlation(positive_diG, selected_negative_G)
-            div_bait, div_prey = get_degree_divergence(positive_diG, selected_negative_G)
+            spearman = degree_spearman_correlation(pos_diG, selected_negative_g)
+            div_bait, div_prey = get_degree_divergence(pos_diG, selected_negative_g, node_map)
 
-            n_negative_edges = len(list(selected_negative_G.edges()))
+            n_negative_edges = selected_negative_edges.shape[0]
 
             score = 1 - np.abs(n_pos_edges/n_negative_edges) + (div_bait+div_prey)/n_pos_edges + 1 - spearman
             w.write(f"{n_pos_edges}\t{n_negative_edges}\t{scale}\t{spearman}\t{div_bait}\t{div_prey}\n")
             if score < current_min_score:
                 current_min_score = score
-                current_best_negative = selected_negative_G
+                current_best_negative = selected_negative_g
 
     
-    for balanced_network, output_filename in zip([positive_diG, current_best_negative], [max_flow_positive, max_flow_negative]):
+    for balanced_network, output_filename in zip([pos_diG, current_best_negative], [max_flow_positive, max_flow_negative]):
         with open(output_filename, "w") as w:
             for bait, prey in balanced_network.edges():
-                w.write(f"{bait}\t{prey}\n")
+                w.write(f"{node_map_idx[bait]}\t{node_map_idx[prey]}\n")

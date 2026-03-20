@@ -4,6 +4,7 @@ rule maxflow_splits:
         script_location="src/PPIClassification/DataSplit/max_flow.py",
     resources:
         mem_gb=100
+    threads: 10
     input:
         set_pos=f"work_folder{pn}/subsets/{{dataset}}_directional_full_{{pos_limit}}_pos.pq",
         set_neg=f"work_folder{pn}/subsets/{{dataset}}_directional_full_{{neg_limit}}_neg.pq"
@@ -18,7 +19,8 @@ rule maxflow_splits:
             --negative_data {input.set_neg} \
             --max_flow_positive {output.set_pos} \
             --max_flow_negative {output.set_neg} \
-            --balance_file {output.balance_data}
+            --balance_file {output.balance_data} \
+            --threads {threads}
         """
 
 
