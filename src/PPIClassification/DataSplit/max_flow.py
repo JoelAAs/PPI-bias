@@ -149,7 +149,7 @@ if __name__ == '__main__':
 
             n_negative_edges = len(list(selected_negative_G.edges()))
 
-            score = 1 - np.abs(n_pos_edges/n_negative_edges) + (div_bait+div_prey)/n_pos_edges - spearman
+            score = 1 - np.abs(n_pos_edges/n_negative_edges) + (div_bait+div_prey)/n_pos_edges + 1 - spearman
             w.write(f"{n_pos_edges}\t{n_negative_edges}\t{scale}\t{spearman}\t{div_bait}\t{div_prey}\n")
             if score < current_min_score:
                 current_min_score = score
