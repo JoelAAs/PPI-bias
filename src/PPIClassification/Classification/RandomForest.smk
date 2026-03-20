@@ -49,7 +49,7 @@ rule random_forest:
     output:
         params =      f"work_folder{pn}/classification/randomforest/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_model_parameters.txt",
         saved_model = f"work_folder{pn}/classification/randomforest/model/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_model_parameters.joblib"
-    threads: 48
+    threads: 23
     shell:
         """
         python3 {params.script_location} \

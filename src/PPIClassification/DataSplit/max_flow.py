@@ -26,7 +26,7 @@ def build_flow_graph(graph, target_bait, target_prey):
 
     for node in graph.nodes():
         if node in target_bait:
-            F.add_edge("source", ("bait", node), capacity=target_bait.get[node])
+            F.add_edge("source", ("bait", node), capacity=target_bait[node])
         if node in target_prey:
             F.add_edge(("prey", node), "sink", capacity=target_prey[node])
 
@@ -135,7 +135,7 @@ if __name__ == '__main__':
     current_best_negative = None
     with open(args.balance_file, "w") as w:
         w.write("positive_edges\tnegative_edges\tscale\tspearman_degree\tdivergance_bait\tdivergrence_prey\n")
-        for scale in np.linspace(1, 2, 0.1):
+        for scale in np.linspace(1, 2, 10):
             target_in, target_out = get_scaled_targets(positive_diG, scale)
             print(f"Trying a subset with scaling: {scale}")
             F = build_flow_graph(negative_diG, target_in, target_out)
