@@ -87,15 +87,15 @@ ggsave("delta_ce.png", g, height = 4, width = 6)
 g <- ggplot(
   auc_data,
   aes(
-    x = delta_pr_auc,
-    y = delta_pr_auc_neg,
+    x = delta_pr_auc / (1 - pr_auc_base),
+    y = delta_pr_auc_neg / (1 - pr_auc_neg_base)
   )
 ) +
   geom_point(aes(color = interaction(random, partition), shape = network_type)) +
   labs(
     title = "PR AUC between HCNI and non-observed",
-    x = "PR AUC (interaction)",
-    y = "PR AUC (non-interaction)",
+    x = "(PR AUC - p)/(1-p) (interaction)",
+    y = "(PR AUC - p)/(1-p) (non-interaction)",
     color = "Negative data",
     shape = "Network type"
   ) +
@@ -345,3 +345,32 @@ g <- ggplot(df_plot, aes(x = partition, y = selection)) +
 
 
 ggsave("percent_retained.png", g, height = 6, width = 6)
+
+
+
+df_prob_dist <- read.table(
+  "prediction_dist_ms_loose_directional_ss.csv",
+  sep = "\t", header = TRUE
+)
+
+g <- ggplot(
+  df_prob_dist,
+  aes(x = value, fill = negative_data)
+) +
+  geom_density(alpha = .8) +
+  theme_bw() +
+  scale_fill_manual(
+    values = c("darkorange", "blue"),
+    labels = c(
+      "HCNI", "Non-observed"
+    )
+  ) +
+  labs(
+    title = "Predicted probabilities HCNI vs non-observed\nMS dataset, loose selection, bait-prey network",
+    x = "Prediction probability",
+    fill = "Negative data"
+  ) + theme(
+    legend.position = "bottom"
+  )
+
+ggsave("prediction_probabilities.png", g, height = 4, width = 5)

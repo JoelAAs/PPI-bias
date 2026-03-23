@@ -23,7 +23,7 @@ def generate_graph(edge_df, node_map):
 
 def get_degree(g):
     # bait, prey degree
-    return g.get_out_degrees(g.get_vertices()), g.get_in_degrees(g.get_vertices())
+    return g.get_out_degrees(g.get_vertices()).astype(np.int64), g.get_in_degrees(g.get_vertices()).astype(np.int64)
 
 
 def get_scaled_targets(graph, scale):
@@ -179,8 +179,8 @@ if __name__ == '__main__':
 
 
     with open(args.balance_file, "w") as w:
-        w.write("positive_edges\tnegative_edges\tscale\tspearman_degree\tdivergence_bait\tdivergrence_prey\n")
-        for scale in np.linspace(1, 2, 10):
+        w.write("positive_edges\tnegative_edges\tscale\tspearman_degree\tdivergence_bait\tdivergence_prey\n")
+        for scale in np.linspace(1, 2, 3):
 
             target_bait, target_prey = get_scaled_targets(pos_diG, scale)
 
@@ -217,7 +217,7 @@ if __name__ == '__main__':
 
             n_negative_edges = selected_negative_edges.shape[0]
 
-            score = 1 - np.abs(n_pos_edges/n_negative_edges) + (div_bait+div_prey)/n_pos_edges + 1 - spearman
+            score = 1 - n_pos_edges/n_negative_edges + (div_bait+div_prey)/n_pos_edges + 1 - spearman
             w.write(f"{n_pos_edges}\t{n_negative_edges}\t{scale}\t{spearman}\t{div_bait}\t{div_prey}\n")
             if score < current_min_score:
                 current_min_score = score

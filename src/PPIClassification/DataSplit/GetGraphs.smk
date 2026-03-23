@@ -51,7 +51,7 @@ rule get_sequence_similarity_graph:
         nx.write_graphml(G,output.sequence_similarity_graph)
 
 
-rule get_min_cut_partitions:
+rule get_min_cut_pos_partitions:
     input:
         full_pos=f"work_folder{pn}/subsets/{{dataset}}_{{network_type}}_full_{{pos_limit}}_pos.pq"
     output:
@@ -60,4 +60,21 @@ rule get_min_cut_partitions:
         pos_df = pd.read_parquet(input.full_pos)
         pos_df["edge_weight"] = 1
         G = nx.from_pandas_edgelist(pos_df,"gene_name_bait","gene_name_prey",edge_attr="edge_weight")
+        nx.write_graphml(G,output.ppi_graph)
+
+
+rule get__pre_balanced_neg_pos_network:
+    input:
+        set_pos=f"work_folder{pn}/subsets/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
+        set_neg=f"work_folder{pn}/subsets/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv"
+    output:
+        ppi_graph=f"work_folder{pn}/subsets/graphs/{{dataset}}__directional_limit_{{neg_limit}}_poslim_{{pos_limit}}.graphml"
+    run:
+        pos_df = pd.read_csv(input.set_pos, sep="\t", header=None)
+        neg_df = pd.read_csv(input.set_neg, sep="\t", header=None)
+        neg_df["edge_weight"] = 1
+        pos_df["edge_weight"] = 1
+        G_pos = nx.from_pandas_edgelist(pos_df,0,1,edge_attr="edge_weight")
+        G_neg = nx.from_pandas_edgelist(pos_df,0,1,edge_attr="edge_weight")
+        G = nx.compose(G_pos, G_neg)
         nx.write_graphml(G,output.ppi_graph)

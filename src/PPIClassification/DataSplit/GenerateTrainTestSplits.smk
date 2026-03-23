@@ -6,6 +6,8 @@ def get_gene_partition(wc):
         return f"work_folder{pn}/subsets/partitions/sequencesimilarity_gene_name.txt"
     elif wc["partition_name"] == "maxpos":
         return f"work_folder{pn}/subsets/partitions/{wc['dataset']}_{wc["network_type"]}_limit_{wc['pos_limit']}_gene_name.txt"
+    elif wc["partition_name"] == "pre-balanced":
+        return f"work_folder{pn}/subsets/partitions/{wc['dataset']}__directional_limit_{wc['neg_limit']}_poslim_{wc['pos_limit']}_gene_name.txt"
     else:
         raise ValueError(f"unknown partition name = {wc['partition_name']}")
 
