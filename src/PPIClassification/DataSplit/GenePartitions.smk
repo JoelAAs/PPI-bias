@@ -24,7 +24,7 @@ rule get_kahip_partitions:
     params:
         kahip_location=config["kahip_location"],
         seed=config["seed"],
-        k = 12
+        k = 20
     input:
         metis_graph=f"work_folder{pn}/subsets/graphs/metis/{{graph}}.graph"
     output:

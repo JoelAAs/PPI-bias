@@ -68,7 +68,7 @@ rule get__pre_balanced_neg_pos_network:
         set_pos=f"work_folder{pn}/subsets/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
         set_neg=f"work_folder{pn}/subsets/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv"
     output:
-        ppi_graph=f"work_folder{pn}/subsets/graphs/{{dataset}}__directional_limit_{{neg_limit}}_poslim_{{pos_limit}}.graphml"
+        ppi_graph=f"work_folder{pn}/subsets/graphs/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}.graphml"
     run:
         pos_df = pd.read_csv(input.set_pos, sep="\t", header=None)
         neg_df = pd.read_csv(input.set_neg, sep="\t", header=None)
