@@ -177,7 +177,9 @@ def remove_all_nonovelapping_nodes(G_pos, G_neg):
                     G.remove_node(node)
                 except nx.NetworkXError:
                     continue
-
+        if G_pos.number_of_edge() == 0 or G_neg.number_of_edge() == 0:
+            raise nx.NetworkXError("Graph is empty!")
+        
         pos_bait = {u for u, _ in G_pos.edges()}
         neg_bait = {u for u, _ in G_neg.edges()}
         pos_prey = {v for _, v in G_pos.edges()}
@@ -204,7 +206,7 @@ def back_and_forth_max_flow(G_pos, G_neg):
     node_idx_gene = {i: gene for gene, i in node_idx.items()}
     percent_flow = 0
     keys = list(target_source.keys())
-    while percent_flow < 0.95:
+    while percent_flow < 0.9:
         target_key = keys[i % 2]
         source_key = keys[(i + 1) % 2]
         target_G = target_source[target_key]
@@ -253,7 +255,7 @@ def main():
     train_graphs, remaining_graphs = remove_nodes_until_edge_count(G_pos, G_neg, 0.7)
     G_pos_train, G_neg_train = back_and_forth_max_flow(train_graphs[0], train_graphs[1])
 
-    validation_graphs, test_graphs = remove_all_nonovelapping_nodes(
+    validation_graphs, test_graphs = remove_nodes_until_edge_count(
         remaining_graphs[0], remaining_graphs[1], 0.5
     )
     G_pos_validation, G_neg_validation = back_and_forth_max_flow(
