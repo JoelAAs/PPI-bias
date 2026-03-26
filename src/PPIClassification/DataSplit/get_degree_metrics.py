@@ -54,7 +54,7 @@ def main():
     
     original_edges = source_graphs[0].number_of_edges()
     with open(snakemake.output.edge_statistics, "w") as w:
-        w.write("dataset\tsplit\tspearman\tdivergence\tn_edges\tfraction_total\n")
+        w.write("dataset\tsplit\tspearman\tdivergence\tn_edges\tfraction_total\tsample_balance\n")
         for graphs, split_name in zip([
             source_graphs,
             train_graphs,
@@ -69,8 +69,8 @@ def main():
             dataset = f"{snakemake.wildcards.dataset}_{snakemake.wildcards.neg_limit}_{snakemake.wildcards.pos_limit}"
             spearman = get_spearman(*graphs)
             div_degrees = sum(get_bait_prey_div(*graphs))
-            n_edges = graphs[0].number_of_edges() # assume n_pos ~ n_neg where it matters
+            n_edges = [g.number_of_edges() for g in graphs]
             fraction_total = n_edges/original_edges
-            w.write(f"{dataset}\t{split_name}\t{spearman}\t{div_degrees}\t{n_edges}\t{fraction_total}\n")
+            w.write(f"{dataset}\t{split_name}\t{spearman}\t{div_degrees}\t{n_edges[0]}\t{fraction_total}\t{n_edges[0]/n_edges[1]}\n")
 
 main()
