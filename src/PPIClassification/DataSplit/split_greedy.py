@@ -97,6 +97,7 @@ def remove_nodes_until_edge_count(G_pos, G_neg, fraction_to_pick):
                 f"Current progress: {round(current_ratio*100)} %; Requested ratio {round(fraction_to_pick*100)} %",
                 flush=True,
             )
+            old_ratio = current_ratio
 
     print("Original set")
     report_balance(G_pos, G_neg)
@@ -262,24 +263,24 @@ def main():
     G_pos_test, G_neg_test = test_graphs
 
     nx.write_edgelist(
-        G_pos_train, snakemake @ output.train_pos, delimiter="\t", data=False
+        G_pos_train, snakemake.output.train_pos, delimiter="\t", data=False
     )
     nx.write_edgelist(
-        G_neg_train, snakemake @ output.train_neg, delimiter="\t", data=False
-    )
-
-    nx.write_edgelist(
-        G_pos_validation, snakemake @ output.validation_pos, delimiter="\t", data=False
-    )
-    nx.write_edgelist(
-        G_neg_validation, snakemake @ output.validation_neg, delimiter="\t", data=False
+        G_neg_train, snakemake.output.train_neg, delimiter="\t", data=False
     )
 
     nx.write_edgelist(
-        G_pos_test, snakemake @ output.test_pos, delimiter="\t", data=False
+        G_pos_validation, snakemake.output.validation_pos, delimiter="\t", data=False
     )
     nx.write_edgelist(
-        G_neg_test, snakemake @ output.test_neg, delimiter="\t", data=False
+        G_neg_validation, snakemake.output.validation_neg, delimiter="\t", data=False
+    )
+
+    nx.write_edgelist(
+        G_pos_test, snakemake.output.test_pos, delimiter="\t", data=False
+    )
+    nx.write_edgelist(
+        G_neg_test, snakemake.output.test_neg, delimiter="\t", data=False
     )
 
 
