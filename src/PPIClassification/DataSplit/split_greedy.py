@@ -24,8 +24,7 @@ def get_worst_node(G_pos, G_neg):
             if sum(diff_set) == 0:
                 continue
             elif min_deg == 0:
-                print("Removing separated")
-                score += 100000  # Large number to always pick those without negative/postive representation
+                score += 100000  # Large number to always pick those without negative/positive representation
             else:
                 score += delta / min_deg
 
@@ -78,6 +77,7 @@ def remove_nodes_until_edge_count(G_pos, G_neg, fraction_to_pick):
     removed_nodes = []
     i = 1
     current_ratio = 1
+    old_ratio = current_ratio
     while current_ratio > fraction_to_pick:
         i += 1
         w_node = get_worst_node(G_pos_train, G_neg_train)
@@ -92,6 +92,8 @@ def remove_nodes_until_edge_count(G_pos, G_neg, fraction_to_pick):
             G_pos_remain.number_of_edges() + G_pos_train.number_of_edges()
         )
         current_ratio = G_pos_train.number_of_edges() / total_remaining_edges
+        if old_ratio -current_ratio > 0.01:
+            print(f"Current progress: {round(current_ratio*100)} %; Requested ratio {round(fraction_to_pick*100)} %")
 
     print("Original set")
     report_balance(G_pos, G_neg)
@@ -191,13 +193,21 @@ def remove_all_nonovelapping_nodes(G_pos, G_neg):
 
 def back_and_forth_max_flow(G_pos, G_neg):
     i = 0
-    target_source = [G_pos, G_neg]
+    target_source = {
+        "pos":G_pos,
+        "neg":G_neg
+        }
+    
     node_idx = {gene: i for i, gene in enumerate(set(G_pos.nodes()) | set(G_neg.nodes()))}
     node_idx_gene = {i:gene for gene, i in node_idx.items()}
     percent_flow = 0
+    keys = target_source.keys()
     while percent_flow < 0.95:
-        target_G = target_source[i % 2]
-        edge_G = target_source[(i + 1) % 2]
+        target = keys[i % 2]
+        source = keys[(i+1) % 2]
+        target_G = target_source[target]
+        edge_G = target_source[source]
+        
         target_bait, target_prey = get_targets(target_G, node_idx)
 
         mf_F, source, sink, flow_idx = build_flow_graph(target_bait, target_prey, edge_G, node_idx)
@@ -210,8 +220,13 @@ def back_and_forth_max_flow(G_pos, G_neg):
         selected_G = get_graph_from_selected_edges(flow_dict, flow_idx_gene)
         balanced_source = remove_all_nonovelapping_nodes(target_G, selected_G)
         
+        target_source = {
+            target: balanced_source[0],
+            source: balanced_source[1]
+        }
         i += 1
-        
+    
+    return target_source
         
 def main():
     pos_df = pd.read_csv(snakemake.input.set_pos, sep="\t", header=None)
