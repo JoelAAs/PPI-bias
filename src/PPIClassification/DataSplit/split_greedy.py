@@ -177,7 +177,7 @@ def remove_all_nonovelapping_nodes(G_pos, G_neg):
                     G.remove_node(node)
                 except nx.NetworkXError:
                     continue
-        if G_pos.number_of_edge() == 0 or G_neg.number_of_edge() == 0:
+        if G_pos.number_of_edges() == 0 or G_neg.number_of_edges() == 0:
             raise nx.NetworkXError("Graph is empty!")
         
         pos_bait = {u for u, _ in G_pos.edges()}
@@ -229,7 +229,7 @@ def back_and_forth_max_flow(G_pos, G_neg):
         target_source = {target_key: balanced_source[0], source_key: balanced_source[1]}
         i += 1
 
-    return target_source
+    return target_source["pos"], target_source["neg"]
 
 
 def main():
