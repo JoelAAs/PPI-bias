@@ -42,7 +42,7 @@ def get_bait_prey_div(G_pos, G_neg):
 
 def read_graphs(input_files):
     return [
-        nx.from_pandas_edgelist(pd.read_csv(f, sep="\t"), 0, 1, create_using=nx.DiGraph)
+        nx.from_pandas_edgelist(pd.read_csv(f, sep="\t",header=None), 0, 1, create_using=nx.DiGraph)
         for f in input_files
         ]
 
@@ -72,3 +72,5 @@ def main():
             n_edges = graphs[0].number_of_edges() # assume n_pos ~ n_neg where it matters
             fraction_total = n_edges/original_edges
             w.write(f"{dataset}\t{split_name}\t{spearman}\t{div_degrees}\t{n_edges}\t{fraction_total}\n")
+
+main()

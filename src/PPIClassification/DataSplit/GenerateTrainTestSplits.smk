@@ -41,6 +41,6 @@ rule get_directional_balance_report:
         validation_neg=f"work_folder{pn}/subsets/validation/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv",
         test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv"
     output:
-        edge_statistics = f"work_folder{pn}/subsets/balance_data/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv"
+        edge_statistics = f"work_folder{pn}/subsets/balance_data/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_stats.csv"
     script:
         "get_degree_metrics.py"
