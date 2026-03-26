@@ -196,7 +196,7 @@ def remove_all_nonovelapping_nodes(G_pos, G_neg):
     return G_pos, G_neg
 
 
-def back_and_forth_max_flow(G_pos, G_neg):
+def back_and_forth_max_flow(G_pos, G_neg, allowed_imbalance=.9):
     i = 0
     target_source = {"pos": G_pos, "neg": G_neg}
 
@@ -206,7 +206,7 @@ def back_and_forth_max_flow(G_pos, G_neg):
     node_idx_gene = {i: gene for gene, i in node_idx.items()}
     percent_flow = 0
     keys = list(target_source.keys())
-    while percent_flow < 0.9:
+    while percent_flow < allowed_imbalance:
         target_key = keys[i % 2]
         source_key = keys[(i + 1) % 2]
         target_G = target_source[target_key]
@@ -259,7 +259,7 @@ def main():
         remaining_graphs[0], remaining_graphs[1], 0.5
     )
     G_pos_validation, G_neg_validation = back_and_forth_max_flow(
-        validation_graphs[0], validation_graphs[1]
+        validation_graphs[0], validation_graphs[1], 0.7
     )
 
     G_pos_test, G_neg_test = test_graphs
