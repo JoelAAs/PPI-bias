@@ -1,11 +1,9 @@
-import networkx as nx
-from fractions import Fraction
 import pandas as pd
 import argparse
 import numpy as np
 from scipy.stats import spearmanr
 from graph_tool.all import Graph, openmp_set_num_threads
-from graph_tool.flow import boykov_kolmogorov_max_flow as max_flow
+from graph_tool.flow import push_relabel_max_flow as max_flow
 
 
 def generate_graph(edge_df, node_map):
