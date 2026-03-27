@@ -1,4 +1,5 @@
 import networkx as nx
+import pandas as pd
 from degree_balaning_functions import back_and_forth_max_flow
 
 
@@ -14,9 +15,9 @@ def main():
             if u != v and not G_pos.has_edge(u, v):
                 G_comp.add_edge(u, v)
     
-    selected_G, _ = back_and_forth_max_flow(G_pos, G_comp)
+    _, selected_G, _ = back_and_forth_max_flow(G_pos, G_comp)
     nx.write_edgelist(
-        selected_G[1], snakemake.output.set_random_neg, delimiter="\t", data=False
+        selected_G, snakemake.output.set_random_neg, delimiter="\t", data=False
     )
 
 main()

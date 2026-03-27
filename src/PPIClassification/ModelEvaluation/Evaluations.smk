@@ -1,3 +1,12 @@
+def input_metrics():
+    metrics = expand(
+        f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_metrics.txt",
+        dataset=config["datasets"], neg_limit=1,pos_limit=[0.02, 0.15, 0.29], random=["", "-random"])
+
+    metrics = [m for m in metrics if m not in failed]
+    return matrics
+
+
 rule get_model_metrics:
     params:
         script_location = "src/PPIClassification/ModelEvaluation/evaluate_model.py"
@@ -28,9 +37,7 @@ rule get_model_metrics:
 
 rule all_metrics:
     input:
-        metrics = expand(
-            f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_metrics.txt",
-            dataset=config["datasets"], neg_limit=1,pos_limit=[0.02, 0.15, 0.29], random=["", "-random"])
+        input_metrics
     output:
         all_models = f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
     run:
