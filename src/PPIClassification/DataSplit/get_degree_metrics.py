@@ -70,7 +70,7 @@ def main():
             spearman = get_spearman(*graphs)
             div_degrees = sum(get_bait_prey_div(*graphs))
             n_edges = [g.number_of_edges() for g in graphs]
-            fraction_total = n_edges/original_edges
+            fraction_total = n_edges[0]/original_edges
             w.write(f"{dataset}\t{split_name}\t{spearman}\t{div_degrees}\t{n_edges[0]}\t{fraction_total}\t{n_edges[0]/n_edges[1]}\n")
 
 main()
