@@ -43,8 +43,8 @@ rule balance_undirectional:
 
 rule generate_random_negative_set:
     input:
-        balanced_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_pos.csv",
+        balanced_pos=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
     output:
-        set_random_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}-random_neg.csv",
+        set_random_neg=f"work_folder{pn}/subsets/{{settype}}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}-random_neg.csv",
     script:
         "random_negative.py"
