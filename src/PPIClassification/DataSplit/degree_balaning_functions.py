@@ -30,7 +30,9 @@ def get_worst_node(G_pos, G_neg):
 
         return score
 
-    for node in G_pos:
+    for node in G_pos.nodes():
+        if worst_node == None:
+            worst_node = node
         b_n_degree = [bait_degree[0][node], bait_degree[1][node]]
         p_n_degree = [prey_degree[0][node], prey_degree[1][node]]
 
