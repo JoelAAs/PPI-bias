@@ -178,8 +178,8 @@ if __name__ == '__main__':
         n_jobs=threads)
 
     rfc.fit(
-        np.vstack((X_train, X_validate)),
-        np.concatenate((y_train, y_validate))
+        X_train,
+        y_train, y_validate
     )
     joblib.dump(rfc, args.saved_model)
 

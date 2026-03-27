@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import networkx as nx
+import random
 
 ####################################################################
 #
@@ -235,3 +236,54 @@ def back_and_forth_max_flow(G_pos, G_neg, allowed_imbalance=.9):
 
     return target_source["pos"], target_source["neg"], all_discarded_nodes
 
+
+def edge_balance_partition(G_pos, G_neg, max_iter=10000):
+    nodes = list(set(G_pos.nodes()) | set(G_neg.nodes()))
+    
+    A = set(random.sample(nodes, len(nodes)//2))
+    B = set(nodes) - A
+    
+    def get_induced_edge_count(S):
+        return G_pos.subgraph(S).number_of_edges(), G_neg.subgraph(S).number_of_edges()
+    
+    def objective(A, B):
+        eA_pos, eA_neg = get_induced_edge_count(A)
+        eB_pos, eB_neg = get_induced_edge_count(B)
+
+        imbalance = np.abs(eA_pos - eA_neg) + np.abs(eB_pos - eB_neg)
+        internal_edges = (eA_pos + eA_neg) + (eB_pos + eB_neg)
+
+        return imbalance - 1.5 * internal_edges
+    
+    for _ in range(max_iter):
+
+        diff = objective(A, B)
+        
+        if diff == 0:
+            return A, B
+        
+        improved = False
+        
+        for v in list(A):
+            newA = A - {v}
+            newB = B | {v}
+            delta = objective(newA, newB)
+            if delta < np.abs(diff):
+                A, B = newA, newB
+                improved = True
+                break
+        
+        if not improved:
+            for v in list(B):
+                newB = B - {v}
+                newA = A | {v}
+                delta = objective(newA, newB)
+                if delta < np.abs(diff):
+                    A, B = newA, newB
+                    improved = True
+                    break
+        
+        if not improved:
+            break
+    
+    return G_pos.subgraph(A), G_neg.subgraph(A), G_pos.subgraph(B), G_neg.subgraph(B)
