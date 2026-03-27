@@ -347,7 +347,6 @@ g <- ggplot(df_plot, aes(x = partition, y = selection)) +
 ggsave("percent_retained.png", g, height = 6, width = 6)
 
 
-
 df_prob_dist <- read.table(
   "prediction_dist_ms_loose_directional_ss.csv",
   sep = "\t", header = TRUE
@@ -369,8 +368,98 @@ g <- ggplot(
     title = "Predicted probabilities HCNI vs non-observed\nMS dataset, loose selection, bait-prey network",
     x = "Prediction probability",
     fill = "Negative data"
-  ) + theme(
+  ) +
+  theme(
     legend.position = "bottom"
   )
 
 ggsave("prediction_probabilities.png", g, height = 4, width = 5)
+
+
+df_balance <- read.table(
+  "work_folder/per_gene/subsets/balance_data/all.csv",
+  sep = "\t", header = FALSE
+)
+
+colnames(df_balance) <- c(
+  "filename", "split", "spearman", "divergence",
+  "n_edges", "fraction_total", "sample_balance"
+)
+
+df_balance[, c("dataset", "hcni_limit", "hci_limit")] <- do.call(
+  rbind, strsplit(df_balance$filename, "_")
+)
+
+df_balance$split <- factor(
+  df_balance$split,
+  levels = c("source", "train", "validation", "test")
+)
+
+df_balance <- df_balance %>%
+  mutate(selection = case_when(
+    hcni_limit == 1 & hci_limit == 0.02 ~ "loose",
+    hcni_limit == 2 & hci_limit == 0.15 ~ "medium",
+    hcni_limit == 3 & hci_limit == 0.29 ~ "strict",
+    TRUE ~ NA_character_
+  ))
+
+
+g <- ggplot(
+  df_balance,
+  aes(
+    y = spearman,
+    x = divergence / n_edges,
+    color = split
+  )
+) +
+  geom_point() +
+  facet_grid(selection ~ dataset, labeller = labeller(
+    dataset = c(
+      flat = "Combined",
+      ms = "MS",
+      y2h = "Y2H"
+    )
+  )) +
+  theme_bw() +
+  labs(
+    title = "Degree agreement HCNI/HCI",
+    x = "Degree deviation per edge", y = "Spearman degree correlation"
+  ) 
+
+ggsave("split_partitioning_balance.png", g, height = 4, width = 6)
+
+
+g <- ggplot(df_balance, aes(x = selection, y = split)) +
+  geom_tile(
+    aes(
+      fill = fraction_total * 100
+    )
+  ) +
+  geom_text(
+    aes(
+      label = sprintf("%.1f", fraction_total * 100)
+    ),
+    color = "white", size = 3
+  ) +
+  scale_fill_gradient(high = "darkorange", low = "blue") +
+  labs(
+    title = "Positive edges retained in after partitioning",
+    x = "Selection", y = "Split", fill = " % edges retained"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = -45), legend.position = "right") +
+  facet_wrap(~dataset, labeller = labeller(
+    dataset = c(
+      flat = "Combined",
+      ms = "MS",
+      y2h = "Y2H"
+    ),
+    set_type = c(
+      source = "Source",
+      train = "Train",
+      validation = "Validation",
+      test = "Test"
+    )
+  ))
+
+ggsave("split_partitioning_edge_retention.png", g, height = 4, width = 6)

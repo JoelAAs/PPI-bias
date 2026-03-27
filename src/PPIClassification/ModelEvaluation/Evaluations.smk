@@ -1,52 +1,22 @@
-
-def get_model_validation_data(wc):
-    if wc.dataset == "goldensplit":
-        data = "data"
-        selection = wc.dataset
-        negdata = data
-    else:
-        pos_limit = config["models"][wc.model_configuration]["pos"]
-        neg_limit = config["models"][wc.model_configuration]["neg"]
-        
-        if re.search("-random",wc.partition):
-            data =  f"{wc.dataset}_{wc.network_type}_limit_{neg_limit}_poslim_{pos_limit}_{wc.partition.split("-")[0]}"
-            negdata =  f"{wc.dataset}_{wc.network_type}_limit_{neg_limit}_poslim_{pos_limit}_{wc.partition}"
-            print(negdata)
-        
-        else:
-            data =  f"{wc.dataset}_{wc.network_type}_limit_{neg_limit}_poslim_{pos_limit}_{wc.partition}"
-            negdata=data
-
-            
-        if wc.network_type == "directional":
-            selection = "maxflow"
-        elif wc.network_type == "undirectional":
-            selection="undirectionalbalanced"
-        else:
-            raise ValueError(f"unkown networktype {wc.network_type}")
-    return [
-        f"work_folder{pn}/subsets/test/{selection}/{data}_pos.csv",
-        f"work_folder{pn}/subsets/test/{selection}/{negdata}_neg.csv"
-    ]
-
 rule get_model_metrics:
     params:
         script_location = "src/PPIClassification/ModelEvaluation/evaluate_model.py"
     input:
-        validation_data = lambda wc: get_model_validation_data(wc),
-        saved_model = f"work_folder{pn}/classification/randomforest/model/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_model_parameters.joblib",
+        test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
+        test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_neg.csv",
+        saved_model = f"work_folder{pn}/classification/randomforest/model/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_parameters.joblib",
         protein_embeddings = f"work_folder{pn}/embeddings/canonical_embedding.csv.gz"
     output:
-        metrics=f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_metrics.txt",
-        pr_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_pr_curve.png",
-        pr_neg_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_pr_neg_curve.png",
-        roc_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_roc_curve.png",
-        ce_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_ce.png",
+        metrics=f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_metrics.txt",
+        pr_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_pr_curve.png",
+        pr_neg_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_pr_neg_curve.png",
+        roc_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_roc_curve.png",
+        ce_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_ce.png",
     shell:
         """
         python3 {params.script_location} \
-            --pos_data_file {input.validation_data[0]} \
-            --neg_data_file {input.validation_data[1]} \
+            --pos_data_file {input.test_pos} \
+            --neg_data_file {input.test_neg} \
             --protein_embeddings_file {input.protein_embeddings} \
             --model_file {input.saved_model} \
             --output_file {output.metrics} \
@@ -59,8 +29,8 @@ rule get_model_metrics:
 rule all_metrics:
     input:
         metrics = expand(
-            f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}{{random}}_metrics.txt",
-            dataset=config["datasets"], network_type=["undirectional", "directional"], model_configuration=config["models"], partition=config["partitions"], random=["", "-random"])
+            f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_metrics.txt",
+            dataset=config["datasets"], neg_limit=1,pos_limit=[0.02, 0.15, 0.29], random=["", "-random"])
     output:
         all_models = f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
     run:
@@ -78,7 +48,7 @@ rule all_metrics:
 rule get_all_degree_delta:
     input:
         degree_delta = expand(
-            f"work_folder{pn}/subsets/degree_balance/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}{{random}}.csv",
+            f"work_folder{pn}/subsets/degree_balance/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}.csv",
             dataset=config["datasets"], network_type=["undirectional", "directional"], model_configuration=config["models"], partition=config["partitions"], random=["", "-random"])
     output:
         directional_metrics = f"work_folder{pn}/subsets/degree_balance/all_directional.csv",
