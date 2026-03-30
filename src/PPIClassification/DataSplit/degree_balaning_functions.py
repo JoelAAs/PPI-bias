@@ -237,7 +237,7 @@ def back_and_forth_max_flow(G_pos, G_neg, allowed_imbalance=.9):
     return target_source["pos"], target_source["neg"], all_discarded_nodes
 
 
-def edge_balance_partition(G_pos, G_neg, max_iter=10000):
+def edge_balance_partition(G_pos, G_neg, max_iter=1000):
     nodes = list(set(G_pos.nodes()) | set(G_neg.nodes()))
     
     A = set(random.sample(nodes, len(nodes)//2))
@@ -253,9 +253,10 @@ def edge_balance_partition(G_pos, G_neg, max_iter=10000):
         imbalance = np.abs(eA_pos - eA_neg) + np.abs(eB_pos - eB_neg)
         internal_edges = eA_pos + eA_neg + eB_pos + eB_neg
 
-        return imbalance - 0.5 * internal_edges
+        return imbalance - 0.9 * internal_edges
     
-    for _ in range(max_iter):
+    for i in range(max_iter):
+        print(f"iter: {i}/{max_iter}")
 
         diff = objective(A, B)
         
