@@ -179,7 +179,7 @@ if __name__ == '__main__':
 
     rfc.fit(
         X_train,
-        y_train, y_validate
+        y_train,
     )
     joblib.dump(rfc, args.saved_model)
 

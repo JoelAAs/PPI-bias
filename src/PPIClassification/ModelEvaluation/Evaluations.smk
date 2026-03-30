@@ -1,10 +1,9 @@
-def input_metrics():
+def input_metrics(wc):
     metrics = expand(
         f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_metrics.txt",
-        dataset=config["datasets"], neg_limit=1,pos_limit=[0.02, 0.15, 0.29], random=["", "-random"])
-
+        dataset=config["datasets"], neg_limit=[1,2,3],pos_limit=[0.02, 0.15, 0.29], random=["", "-random"])
     metrics = [m for m in metrics if m not in failed]
-    return matrics
+    return metrics
 
 
 rule get_model_metrics:
@@ -37,7 +36,7 @@ rule get_model_metrics:
 
 rule all_metrics:
     input:
-        input_metrics
+        metrics = input_metrics
     output:
         all_models = f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
     run:
