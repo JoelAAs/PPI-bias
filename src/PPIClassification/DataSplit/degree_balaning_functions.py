@@ -251,9 +251,9 @@ def edge_balance_partition(G_pos, G_neg, max_iter=10000):
         eB_pos, eB_neg = get_induced_edge_count(B)
 
         imbalance = np.abs(eA_pos - eA_neg) + np.abs(eB_pos - eB_neg)
-        internal_edges = (eA_pos + eA_neg) + (eB_pos + eB_neg)
+        internal_edges = eA_pos + eA_neg + eB_pos + eB_neg
 
-        return imbalance - 1.5 * internal_edges
+        return imbalance - 0.5 * internal_edges
     
     for _ in range(max_iter):
 
@@ -268,7 +268,7 @@ def edge_balance_partition(G_pos, G_neg, max_iter=10000):
             newA = A - {v}
             newB = B | {v}
             delta = objective(newA, newB)
-            if delta < np.abs(diff):
+            if delta < diff:
                 A, B = newA, newB
                 improved = True
                 break
@@ -278,7 +278,7 @@ def edge_balance_partition(G_pos, G_neg, max_iter=10000):
                 newB = B - {v}
                 newA = A | {v}
                 delta = objective(newA, newB)
-                if delta < np.abs(diff):
+                if delta < diff:
                     A, B = newA, newB
                     improved = True
                     break
