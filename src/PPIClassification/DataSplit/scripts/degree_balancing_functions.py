@@ -88,8 +88,8 @@ def remove_nodes_until_edge_count(G_pos, G_neg, fraction_to_pick):
         G_pos_select.remove_node(w_node)
         G_neg_select.remove_node(w_node)
 
-        G_pos_remain = G_pos.subgraph(removed_nodes)
-        G_neg_remain = G_neg.subgraph(removed_nodes)
+        G_pos_remain = G_pos.subgraph(removed_nodes).copy()
+        G_neg_remain = G_neg.subgraph(removed_nodes).copy()
 
         total_remaining_edges = (
             G_pos_remain.number_of_edges() + G_pos_select.number_of_edges()
@@ -170,32 +170,52 @@ def build_flow_graph(target_bait, target_prey, edge_G, node_idx):
 
 
 def remove_all_nonovelapping_nodes(G_pos, G_neg):
-    any_nonoverlapping = True
-    nodes_to_drop = set()
     all_discarded_nodes = set()
-    while any_nonoverlapping:
-        for node in nodes_to_drop:
-            for G in [G_pos, G_neg]:
-                try:
-                    G.remove_node(node)
-                except nx.NetworkXError:
-                    continue
-        if G_pos.number_of_edges() == 0 or G_neg.number_of_edges() == 0:
-            raise nx.NetworkXError("Graph is empty!")
-        
-        pos_bait = {u for u, _ in G_pos.edges()}
-        neg_bait = {u for u, _ in G_neg.edges()}
-        pos_prey = {v for _, v in G_pos.edges()}
-        neg_prey = {v for _, v in G_neg.edges()}
 
-        non_overlapping_baits = pos_bait ^ neg_bait
-        non_overlapping_prey = pos_prey ^ neg_prey
+    pos_out = dict(G_pos.out_degree())
+    neg_out = dict(G_neg.out_degree())
+    pos_in = dict(G_pos.in_degree())
+    neg_in = dict(G_neg.in_degree())
 
-        nodes_to_drop = non_overlapping_baits | non_overlapping_prey
-        all_discarded_nodes |= nodes_to_drop
+    def is_nonoverlapping(node):
+        in_pos_bait = pos_out.get(node, 0) > 0
+        in_neg_bait = neg_out.get(node, 0) > 0
+        ex_bait = in_pos_bait ^ in_neg_bait
+        if ex_bait: return True
 
-        if len(nodes_to_drop) == 0:
-            any_nonoverlapping = False
+        in_pos_prey = pos_in.get(node, 0) > 0
+        in_neg_prey = neg_in.get(node, 0) > 0
+        ex_prey = in_pos_prey ^ in_neg_prey
+        if ex_prey: return True
+        return False
+
+    queue = {n for n in set(G_pos.nodes()) | set(G_neg.nodes()) if is_nonoverlapping(n)}
+
+    while queue:
+        node = queue.pop()
+        all_discarded_nodes.add(node)
+
+        neighbours = set()
+        if node in G_pos:
+            neighbours |= set(G_pos.predecessors(node)) | set(G_pos.successors(node))
+            G_pos.remove_node(node)
+        if node in G_neg:
+            neighbours |= set(G_neg.predecessors(node)) | set(G_neg.successors(node))
+            G_neg.remove_node(node)
+
+        for n in neighbours - all_discarded_nodes:
+            pos_out[n] = G_pos.out_degree(n) if n in G_pos else 0
+            pos_in[n] = G_pos.in_degree(n) if n in G_pos else 0
+            neg_out[n] = G_neg.out_degree(n) if n in G_neg else 0
+            neg_in[n] = G_neg.in_degree(n) if n in G_neg else 0
+            if is_nonoverlapping(n):
+                queue.add(n)
+
+        for d in [pos_out, pos_in, neg_out, neg_in]:
+            d.pop(node, None)
+
+    if G_pos.number_of_edges() == 0 or G_neg.number_of_edges() == 0:
+        raise nx.NetworkXError("Graph is empty!")
 
     return [G_pos, G_neg], all_discarded_nodes
 
@@ -229,7 +249,7 @@ def back_and_forth_max_flow(G_pos, G_neg, allowed_imbalance=.9):
         print(f"Current_flow is {percent_flow}")
 
         selected_G = get_graph_from_selected_edges(flow_dict, flow_idx_gene)
-        balanced_source, discarded_nodes = remove_all_nonovelapping_nodes(target_G, selected_G)
+        balanced_source, discarded_nodes = remove_all_nonovelapping_nodes(target_G.copy(), selected_G.copy())
         all_discarded_nodes |= discarded_nodes
         target_source = {target_key: balanced_source[0], source_key: balanced_source[1]}
         i += 1

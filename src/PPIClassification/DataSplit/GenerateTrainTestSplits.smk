@@ -27,7 +27,7 @@ rule get_directional_splits:
         validation_neg=f"work_folder{pn}/subsets/validation/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv",
         test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv"
     script:
-        "split_greedy.py"
+        "scripts/split_greedy.py"
 
 
 rule get_directional_balance_report:
@@ -43,5 +43,16 @@ rule get_directional_balance_report:
     output:
         edge_statistics = f"work_folder{pn}/subsets/balance_data/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_stats.csv"
     script:
-        "get_degree_metrics.py"
+        "scripts/get_degree_metrics.py"
 
+rule generate_validation_test:
+    input:
+        interaction_data = f"work_folder{pn}/subsets/{{dataset}}_directional_limit_{config['positive_max']}_pos.csv",
+        max_negative = f"work_folder{pn}/subsets/{{dataset}}_directional_limit_{config['negative_max']}_pos.csv"
+    output:
+        validation_pos = f"work_folder{pn}/subsets/validation/{{dataset}}_pos.csv",
+        validation_neg = f"work_folder{pn}/subsets/validation/{{dataset}}_neg.csv",
+        test_pos = f"work_folder{pn}/subsets/test/{{dataset}}_pos.csv",
+        test_neg = f"work_folder{pn}/subsets/test/{{dataset}}_neg.csv",
+    script:
+        "scripts/define_train_test.py"
