@@ -111,6 +111,16 @@ def extract_selected_edges(
     return g
 
 
+def graph_to_edge_df(g, node_map_idx):
+    edge_list = []
+    for e in g.edges():
+        bait_idx = int(e.source())
+        prey_idx = int(e.target())
+        bait = node_map_idx[bait_idx]
+        prey = node_map_idx[prey_idx]
+        edge_list.append((bait, prey))
+    return pd.DataFrame(edge_list, columns=["bait", "prey"])
+
 
 def single_alternating_maxflow(positive_edge_df, negative_edge_df, min_flow):
     shared_baits = set(negative_edge_df["bait"]) & set(positive_edge_df["bait"])
@@ -233,7 +243,7 @@ def build_multi_network_flow_graph(edge_list_a, edge_list_b):
             source,
             sink,
             flow_node_map_index,
-            flow_node_map,   # captured here
+            flow_node_map,  # captured here
         ) = build_bait_prey_flow_graph(
             b_edge_df, target_bait, target_prey, multi_flow_graph, mf_capacity, node_map
         )
@@ -262,7 +272,6 @@ def build_multi_network_flow_graph(edge_list_a, edge_list_b):
     )
 
 
-
 def alternating_maxflow_multi_network(
     edge_list_a,
     edge_list_b,
@@ -275,7 +284,7 @@ def alternating_maxflow_multi_network(
     super_sink = [None, None]
     capacity = [None, None]
     smallest_edge_count = [None, None]
-    g_selected = [[None]*len(edge_list_a), [None]*len(edge_list_a)]
+    g_selected = [[None] * len(edge_list_a), [None] * len(edge_list_a)]
     (
         multi_flow_graph[0],
         network_data[0],
@@ -313,7 +322,7 @@ def alternating_maxflow_multi_network(
                 current_least_flow = percent_flow_value
 
         per_subnetwork_edge_count = [
-            capacity[slot][e] - residual[e] for e in super_source.out_edges()
+            capacity[slot][e] - residual[e] for e in super_source[slot].out_edges()
         ]
         try:
             current_edge_deviation = (
@@ -325,7 +334,7 @@ def alternating_maxflow_multi_network(
             )
 
         for net_i in range(len(edge_list_a)):
-            g_selected[slot][i] = extract_selected_edges(
+            g_selected[slot][net_i] = extract_selected_edges(
                 multi_flow_graph[slot],
                 capacity[slot],
                 residual,
@@ -333,9 +342,15 @@ def alternating_maxflow_multi_network(
                 network_data[slot][net_i]["node_map"],
                 network_data[slot][net_i]["source"],
                 network_data[slot][net_i]["sink"],
-        )
+            )
 
         if multi_flow_graph[next_slot] is None:
+            selected_edge_list = [
+                graph_to_edge_df(
+                    g_selected[slot][net_i], network_data[slot][net_i]["node_map_idx"]
+                )
+                for net_i in range(len(edge_list_a))
+            ]
             (
                 multi_flow_graph[1],
                 network_data[1],
@@ -343,13 +358,17 @@ def alternating_maxflow_multi_network(
                 super_sink[1],
                 capacity[1],
                 smallest_edge_count[1],
-            ) = build_multi_network_flow_graph(g_selected[slot][i], edge_list_a) # expects pandas df, not graph-tool graph; need to adjust build_multi_network_flow_graph to handle this case
+            ) = build_multi_network_flow_graph(
+                selected_edge_list, edge_list_a
+            )
         else:
-            for net_i in range(n):
+            for net_i in range(len(edge_list_a)):
+                selected_bait_degree, selected_prey_degree =get_degree(g_selected[slot][net_i])
                 capacity[next_slot] = update_capacity(
                     multi_flow_graph[next_slot],
                     capacity[next_slot],
-                    *get_degree(g_selected[slot][net_i]),
+                    selected_bait_degree,
+                    selected_prey_degree,
                     network_data[next_slot][net_i]["flow_node_map"],
                     network_data[next_slot][net_i]["sink"],
                     network_data[next_slot][net_i]["source"],
@@ -357,4 +376,10 @@ def alternating_maxflow_multi_network(
 
         i += 1
 
-    return g_selected[0], g_selected[1]
+    return [
+        graph_to_edge_df(g_selected[0][net_i], network_data[0][net_i]["node_map_idx"])
+        for net_i in range(len(edge_list_a))
+    ], [
+        graph_to_edge_df(g_selected[1][net_i], network_data[1][net_i]["node_map_idx"])
+        for net_i in range(len(edge_list_a))
+    ]
