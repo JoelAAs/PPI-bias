@@ -4,15 +4,17 @@ import numpy as np
 from scipy.stats import spearmanr
 from graph_tool.all import Graph, openmp_set_num_threads
 from graph_tool.flow import push_relabel_max_flow as max_flow
+from pympler import asizeof
 
 
 def generate_graph(edge_df, node_map):
     g = Graph(directed=True)
     g.add_vertex(len(node_map))
 
-    bait_src = edge_df["bait"].map(node_map).to_numpy()
-    tar_prey = edge_df["prey"].map(node_map).to_numpy()
+    bait_src = edge_df["bait"].map(node_map).to_numpy(dtype=int)
+    tar_prey = edge_df["prey"].map(node_map).to_numpy(dtype=int)
     edges = np.column_stack((bait_src, tar_prey))
+
     g.add_edge_list(edges)
 
     return g
@@ -57,17 +59,19 @@ def build_bait_prey_flow_graph(
         e = g.add_edge(prey_v, sink)
         capacity[e] = int(cap)
 
-    src_baits = edge_df["bait"].map(node_map).to_numpy()
-    tar_prey = edge_df["prey"].map(node_map).to_numpy()
+    src_baits = edge_df["bait"].map(node_map).to_numpy(dtype=int)
+    tar_prey = edge_df["prey"].map(node_map).to_numpy(dtype=int)
 
-    bait_ids = [flow_node_map[(0, i)] for i in src_baits]
-    prey_ids = [flow_node_map[(1, i)] for i in tar_prey]
+    num_existing = g.num_edges()
+    bait_ids = src_baits + num_existing
+    prey_ids = tar_prey + num_existing + len(target_bait)
 
     edges = np.column_stack((bait_ids, prey_ids))
+    g.add_edge_list(edges)
 
-    for u, v in edges:
-        e = g.add_edge(u, v)
-        capacity[e] = 1
+    # Set capacity=1 for all newly added edges in bulk
+    capacity.a[num_existing:num_existing + len(edges)] = 1
+
     return g, capacity, source, sink, flow_node_map_index, flow_node_map
 
 
@@ -123,10 +127,10 @@ def graph_to_edge_df(g, node_map_idx):
 
 
 def single_alternating_maxflow(positive_edge_df, negative_edge_df, min_flow):
-    shared_baits = set(negative_edge_df["bait"]) & set(positive_edge_df["bait"])
-    shared_prey = set(negative_edge_df["prey"]) & set(positive_edge_df["prey"])
+    all_baits = set(negative_edge_df["bait"]) | set(positive_edge_df["bait"]) 
+    all_prey = set(negative_edge_df["prey"]) | set(positive_edge_df["prey"]) # all since maxflow will remove exclusive
 
-    node_map, node_map_idx = get_node_map(shared_baits | shared_prey)
+    node_map, node_map_idx = get_node_map(all_baits | all_prey)
     g_pos = generate_graph(positive_edge_df, node_map)
     target_bait_pos, target_prey_pos = get_degree(g_pos)
 
@@ -138,14 +142,14 @@ def single_alternating_maxflow(positive_edge_df, negative_edge_df, min_flow):
         source_pos,
         sink_pos,
         flow_node_map_index_pos,
-        flow_node_map_pos,
+        flow_node_map_pos
     ) = build_bait_prey_flow_graph(
-        negative_edge_df,
-        target_bait_pos,
-        target_prey_pos,
-        mf_g_pos,
-        capacity_pos,
-        node_map,
+        edge_df = negative_edge_df,
+        target_bait = target_bait_pos,
+        target_prey = target_prey_pos,
+        g = mf_g_pos,
+        capacity = capacity_pos,
+        node_map = node_map
     )
 
     i = 0
@@ -383,3 +387,12 @@ def alternating_maxflow_multi_network(
         graph_to_edge_df(g_selected[1][net_i], network_data[1][net_i]["node_map_idx"])
         for net_i in range(len(edge_list_a))
     ]
+
+def get_edge_list(list_files):
+    edge_list = []
+    for file in list_files:
+        edge_df = pd.read_parquet(file)[["gene_name_bait", "gene_name_prey"]]
+        edge_df.columns = ["bait", "prey"]
+        edge_list.append(edge_df)
+    return edge_list
+
