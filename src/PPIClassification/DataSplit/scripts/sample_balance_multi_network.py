@@ -11,10 +11,11 @@ def generate_graph(edge_df, node_map):
     g = Graph(directed=True)
     g.add_vertex(len(node_map))
 
-    bait_src = edge_df["bait"].map(node_map).to_numpy(dtype=int)
-    tar_prey = edge_df["prey"].map(node_map).to_numpy(dtype=int)
+    bait_src = edge_df["bait"].map(node_map).to_numpy()
+    tar_prey = edge_df["prey"].map(node_map).to_numpy()
     edges = np.column_stack((bait_src, tar_prey))
-
+    edges = edges[~np.isnan(edges).any(axis=1)]
+    edges = edges.astype(int)
     g.add_edge_list(edges)
 
     return g
@@ -36,11 +37,11 @@ def get_node_map(all_nodes):
 def build_bait_prey_flow_graph(
     edge_df, target_bait, target_prey, g, capacity, node_map
 ):
-    num_edges = g.num_edges()
+    num_vertices = g.num_vertices()
 
-    flow_node_map = {(0, i): (i + num_edges) for i, _ in enumerate(target_bait)}
+    flow_node_map = {(0, i): (i + num_vertices) for i, _ in enumerate(target_bait)}
     flow_node_map.update(
-        {(1, i): (i + num_edges + len(target_bait)) for i, _ in enumerate(target_prey)}
+        {(1, i): (i + num_vertices + len(target_bait)) for i, _ in enumerate(target_prey)}
     )
     flow_node_map_index = {value: key for key, value in flow_node_map.items()}
 
@@ -63,14 +64,14 @@ def build_bait_prey_flow_graph(
     tar_prey = edge_df["prey"].map(node_map).to_numpy(dtype=int)
 
     num_existing = g.num_edges()
-    bait_ids = src_baits + num_existing
-    prey_ids = tar_prey + num_existing + len(target_bait)
+    bait_ids = src_baits + num_vertices
+    prey_ids = tar_prey + num_vertices + len(target_bait)
 
     edges = np.column_stack((bait_ids, prey_ids))
     g.add_edge_list(edges)
 
     # Set capacity=1 for all newly added edges in bulk
-    capacity.a[num_existing:num_existing + len(edges)] = 1
+    capacity.a[num_existing : num_existing + len(edges)] = 1
 
     return g, capacity, source, sink, flow_node_map_index, flow_node_map
 
@@ -95,23 +96,22 @@ def extract_selected_edges(
     g = Graph(directed=True)
     g.add_vertex(len(node_map))
 
-    selected_edges = []
+    n_verts = flow_g.num_vertices()
+    valid = np.zeros(n_verts, dtype=bool)
+    orig_idx = np.zeros(n_verts, dtype=int)
+    vids = np.array(list(flow_node_map_index.keys()))
+    idxs = np.array([v[1] for v in flow_node_map_index.values()])
+    valid[vids] = True
+    orig_idx[vids] = idxs
 
-    for e in flow_g.edges():
-        u = int(e.source())
-        v = int(e.target())
+    edges = flow_g.get_edges([flow_g.edge_index])  # (n_edges, 3): [source, target, edge_idx]
+    edge_flows = capacity.a[edges[:, 2]] - residual.a[edges[:, 2]]
 
-        if u not in flow_node_map_index or v not in flow_node_map_index:
-            continue
+    mask = (edge_flows == 1) & valid[edges[:, 0]] & valid[edges[:, 1]]
+    selected = orig_idx[edges[mask, :2]]
 
-        flow = capacity[e] - residual[e]
-
-        if flow == 1:
-            bait = flow_node_map_index[u][1]
-            prey = flow_node_map_index[v][1]
-            selected_edges.append((bait, prey))
-
-    g.add_edge_list(selected_edges)
+    if len(selected):
+        g.add_edge_list(selected)
     return g
 
 
@@ -127,11 +127,12 @@ def graph_to_edge_df(g, node_map_idx):
 
 
 def single_alternating_maxflow(positive_edge_df, negative_edge_df, min_flow):
-    all_baits = set(negative_edge_df["bait"]) | set(positive_edge_df["bait"]) 
-    all_prey = set(negative_edge_df["prey"]) | set(positive_edge_df["prey"]) # all since maxflow will remove exclusive
+    all_baits = set(negative_edge_df["bait"]) & set(positive_edge_df["bait"])
+    all_prey = set(negative_edge_df["prey"]) & set(positive_edge_df["prey"]) 
 
     node_map, node_map_idx = get_node_map(all_baits | all_prey)
     g_pos = generate_graph(positive_edge_df, node_map)
+    g_neg = generate_graph(negative_edge_df, node_map)
     target_bait_pos, target_prey_pos = get_degree(g_pos)
 
     mf_g_pos = Graph(directed=True)
@@ -142,14 +143,14 @@ def single_alternating_maxflow(positive_edge_df, negative_edge_df, min_flow):
         source_pos,
         sink_pos,
         flow_node_map_index_pos,
-        flow_node_map_pos
+        flow_node_map_pos,
     ) = build_bait_prey_flow_graph(
-        edge_df = negative_edge_df,
-        target_bait = target_bait_pos,
-        target_prey = target_prey_pos,
-        g = mf_g_pos,
-        capacity = capacity_pos,
-        node_map = node_map
+        edge_df=g_neg,
+        target_bait=target_bait_pos,
+        target_prey=target_prey_pos,
+        g=mf_g_pos,
+        capacity=capacity_pos,
+        node_map=node_map
     )
 
     i = 0
@@ -160,60 +161,57 @@ def single_alternating_maxflow(positive_edge_df, negative_edge_df, min_flow):
     current_sink = [sink_pos, None]
     current_flow_map_index = [flow_node_map_index_pos, None]
     current_flow_map = [flow_node_map_pos, None]
-    subset_networks = [mf_g_pos.copy(), None]
-
+    subset_networks = [g_pos, g_neg]
+    
     while percent_flow_value < min_flow:
-
         residual = max_flow(
             current_g[i % 2],
             current_source[i % 2],
             current_sink[i % 2],
-            current_capacity[i % 2],
+            current_capacity[i % 2]
         )
+        
+        capacity_edges = [e for e in current_source[i % 2].out_edges()]
         percent_flow_value = sum(
-            current_capacity[i % 2][e] - residual[e]
-            for e in current_source[i % 2].out_edges()
-        ) / sum(current_capacity[i % 2][e] for e in current_source[i % 2].out_edges())
-
+            current_capacity[i % 2][e] - residual[e] for e in capacity_edges
+        ) /sum(current_capacity[i % 2][e] for e in capacity_edges)
+        
+        print(f"Flow value {percent_flow_value}")
+        
         g_selected = extract_selected_edges(
-            current_g[i % 2],
-            current_capacity[i % 2],
-            residual,
-            current_flow_map_index[i % 2],
-            node_map,
-            current_source[i % 2],
-            current_sink[i % 2],
+            flow_g=current_g[i % 2],
+            capacity=current_capacity[i % 2],
+            residual=residual,
+            flow_node_map_index=current_flow_map_index[i % 2],
+            node_map=node_map,
+            source=current_source[i % 2],
+            sink=current_sink[i % 2]
         )
         subset_networks[(i + 1) % 2] = g_selected.copy()
         new_target_bait, new_target_prey = get_degree(g_selected)
-        if current_g[(i + 1) % 2] is None:
-            g_neg = Graph(directed=True)
-            capacity_neg = g_neg.new_edge_property("int")
-            (
-                current_g[1],
-                current_capacity[1],
-                current_source[1],
-                current_sink[1],
-                current_flow_map_index[1],
-                current_flow_map[1],
-            ) = build_bait_prey_flow_graph(
-                positive_edge_df,
-                new_target_bait,
-                new_target_prey,
-                g_neg,
-                capacity_neg,
-                node_map,
-            )
-        else:
-            current_capacity[(i + 1) % 2] = update_capacity(
-                current_g[(i + 1) % 2],
-                current_capacity[(i + 1) % 2],
-                new_target_bait,
-                new_target_prey,
-                current_flow_map[(i + 1) % 2],
-                current_sink[(i + 1) % 2],
-                current_source[(i + 1) % 2],
-            )
+        g_next = Graph(directed=True)
+        capacity_next = g_next.new_edge_property("int")
+        
+        next_edge_df = edge_df_next = graph_to_edge_df(
+            subset_networks[i % 2],
+            node_map_idx
+        )
+
+        (
+            current_g[(i + 1) % 2],
+            current_capacity[(i + 1) % 2],
+            current_source[(i + 1) % 2],
+            current_sink[(i + 1) % 2],
+            current_flow_map_index[(i + 1) % 2],
+            current_flow_map[(i + 1) % 2],
+        ) = build_bait_prey_flow_graph(
+            edge_df=next_edge_df,
+            target_bait=new_target_bait,
+            target_prey=new_target_prey,
+            g=g_next,
+            capacity=capacity_next,
+            node_map=node_map,
+        )
         i += 1
 
     return subset_networks[0], subset_networks[1], node_map_idx
@@ -247,7 +245,7 @@ def build_multi_network_flow_graph(edge_list_a, edge_list_b):
             source,
             sink,
             flow_node_map_index,
-            flow_node_map,  # captured here
+            flow_node_map
         ) = build_bait_prey_flow_graph(
             b_edge_df, target_bait, target_prey, multi_flow_graph, mf_capacity, node_map
         )
@@ -272,7 +270,7 @@ def build_multi_network_flow_graph(edge_list_a, edge_list_b):
         super_source,
         super_sink,
         mf_capacity,
-        smallest_edge_count,
+        smallest_edge_count
     )
 
 
@@ -325,13 +323,12 @@ def alternating_maxflow_multi_network(
             if current_least_flow > percent_flow_value:
                 current_least_flow = percent_flow_value
 
-        per_subnetwork_edge_count = [
-            capacity[slot][e] - residual[e] for e in super_source[slot].out_edges()
-        ]
+        per_subnetwork_edge_count = [residual[e] for e in super_source[slot].out_edges()]
         try:
             current_edge_deviation = (
                 max(per_subnetwork_edge_count) / min(per_subnetwork_edge_count) - 1
             )
+            smallest_edge_count[slot] = min(per_subnetwork_edge_count)
         except ZeroDivisionError:
             raise ValueError(
                 "One of the sub-networks has zero selected edges, cannot compute edge deviation."
@@ -362,12 +359,12 @@ def alternating_maxflow_multi_network(
                 super_sink[1],
                 capacity[1],
                 smallest_edge_count[1],
-            ) = build_multi_network_flow_graph(
-                selected_edge_list, edge_list_a
-            )
+            ) = build_multi_network_flow_graph(selected_edge_list, edge_list_a)
         else:
             for net_i in range(len(edge_list_a)):
-                selected_bait_degree, selected_prey_degree =get_degree(g_selected[slot][net_i])
+                selected_bait_degree, selected_prey_degree = get_degree(
+                    g_selected[slot][net_i]
+                )
                 capacity[next_slot] = update_capacity(
                     multi_flow_graph[next_slot],
                     capacity[next_slot],
@@ -388,11 +385,28 @@ def alternating_maxflow_multi_network(
         for net_i in range(len(edge_list_a))
     ]
 
-def get_edge_list(list_files):
-    edge_list = []
-    for file in list_files:
-        edge_df = pd.read_parquet(file)[["gene_name_bait", "gene_name_prey"]]
-        edge_df.columns = ["bait", "prey"]
-        edge_list.append(edge_df)
-    return edge_list
-
+def get_edge_list(list_files_a,  list_files_b):
+    edge_list_a = []
+    edge_list_b = []
+    for file_a, file_b in zip(list_files_a, list_files_b):
+        all_shared = False
+        edge_df_a = pd.read_parquet(file_a)[["gene_name_bait", "gene_name_prey"]]
+        edge_df_a.columns = ["bait", "prey"]
+        edge_df_b = pd.read_parquet(file_b)[["gene_name_bait", "gene_name_prey"]]
+        edge_df_b.columns = ["bait", "prey"]
+            
+        while not all_shared:
+            pre_edges = edge_df_a.shape[0] + edge_df_b.shape[0]
+            shared_baits = set(edge_df_a["bait"]) & set(edge_df_b["bait"])
+            shared_prey = set(edge_df_a["prey"]) & set(edge_df_b["prey"])
+            
+            edge_df_a = edge_df_a[(edge_df_a["bait"].isin(shared_baits)) & (edge_df_a["prey"].isin(shared_prey))]
+            edge_df_b = edge_df_b[(edge_df_b["bait"].isin(shared_baits)) & (edge_df_b["prey"].isin(shared_prey))]
+            print(pre_edges)
+            
+            if pre_edges == edge_df_a.shape[0] + edge_df_b.shape[0]:
+                all_shared = True
+        
+        edge_list_a.append(edge_df_a.copy())
+        edge_list_b.append(edge_df_b.copy())
+    return edge_list_a, edge_list_b
