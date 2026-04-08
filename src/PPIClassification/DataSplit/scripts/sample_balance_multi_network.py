@@ -1,10 +1,7 @@
 import pandas as pd
-import argparse
 import numpy as np
-from scipy.stats import spearmanr
 from graph_tool.all import Graph, openmp_set_num_threads
 from graph_tool.flow import push_relabel_max_flow as max_flow
-from pympler import asizeof
 
 
 def generate_graph(edge_df, node_map):
@@ -186,7 +183,6 @@ def single_alternating_maxflow(positive_edge_df, negative_edge_df, min_flow):
         new_target_bait, new_target_prey = get_degree(g_selected)
         g_next = Graph(directed=True)
         capacity_next = g_next.new_edge_property("int")
-
         subset_edges[(i + 1) % 2] = graph_to_edge_df(g_selected, node_map_idx)
 
         (
@@ -387,20 +383,19 @@ def drop_exclusive_nodes(edge_df_a, edge_df_b):
     return edge_df_a, edge_df_b
 
 
-def get_edge_list(list_files_a, list_files_b):
+def get_edge_list(list_files_a, list_files_b, nodes_to_exclude=set()):
     edge_list_a = []
     edge_list_b = []
     for file_a, file_b in zip(list_files_a, list_files_b):
-        all_shared = False
         edge_df_a = pd.read_parquet(file_a)[["gene_name_bait", "gene_name_prey"]]
         edge_df_a.columns = ["bait", "prey"]
         edge_df_b = pd.read_parquet(file_b)[["gene_name_bait", "gene_name_prey"]]
         edge_df_b.columns = ["bait", "prey"]
 
-        while not all_shared:
+        while True:
             pre_edges = edge_df_a.shape[0] + edge_df_b.shape[0]
-            shared_baits = set(edge_df_a["bait"]) & set(edge_df_b["bait"])
-            shared_prey = set(edge_df_a["prey"]) & set(edge_df_b["prey"])
+            shared_baits = (set(edge_df_a["bait"]) & set(edge_df_b["bait"])) - nodes_to_exclude 
+            shared_prey = (set(edge_df_a["prey"]) & set(edge_df_b["prey"])) - nodes_to_exclude
 
             edge_df_a = edge_df_a[
                 (edge_df_a["bait"].isin(shared_baits))
@@ -412,8 +407,7 @@ def get_edge_list(list_files_a, list_files_b):
             ]
 
             if pre_edges == edge_df_a.shape[0] + edge_df_b.shape[0]:
-                all_shared = True
-
+                break
         edge_list_a.append(edge_df_a.copy())
         edge_list_b.append(edge_df_b.copy())
     return edge_list_a, edge_list_b
@@ -435,3 +429,22 @@ def test():
         print(f"Network {i+1}:")
         print(f"Selected positive edges: {selected_a[i].shape[0]}")
         print(f"Selected negative edges: {selected_b[i].shape[0]}")
+
+def main():
+    test_set = snakemake.input.test_set
+    validation_set = snakemake.input.validation_set
+    
+    negative_edge_files = snakemake.input.negative_edges
+    positive_edge_files = snakemake.input.positive_edges
+    output_positive_edge_files = snakemake.output.positive_edges
+    output_negative_edge_files = snakemake.output.negative_edges
+    
+    test_df = pd.read_csv(test_set, header=None, names=["bait", "prey"])
+    validation_df = pd.read_csv(validation_set, header=None, names=["bait", "prey"])
+    nodes_to_exclude = set(test_df["bait"]) | set(test_df["prey"]) | set(validation_df["bait"]) | set(validation_df["prey"])
+    
+    edge_list_a, edge_list_b = get_edge_list(positive_edge_files, negative_edge_files, nodes_to_exclude)
+    selected_a, selected_b = alternating_maxflow_multi_network(edge_list_a, edge_list_b)
+    for i in range(len(positive_edge_files)):
+        selected_a[i].to_parquet(output_positive_edge_files[i], index=False)
+        selected_b[i].to_parquet(output_negative_edge_files[i], index=False)

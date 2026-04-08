@@ -45,7 +45,7 @@ rule get_directional_balance_report:
     script:
         "scripts/get_degree_metrics.py"
 
-rule generate_validation_test:
+rule generate_test_validation_test:
     input:
         interaction_data = f"work_folder{pn}/subsets/{{dataset}}_directional_limit_{config['positive_max']}_pos.csv",
         max_negative = f"work_folder{pn}/subsets/{{dataset}}_directional_limit_{config['negative_max']}_pos.csv"
@@ -56,3 +56,15 @@ rule generate_validation_test:
         test_neg = f"work_folder{pn}/subsets/test/{{dataset}}_neg.csv",
     script:
         "scripts/define_train_test.py"
+
+rule balance_to_equal_samples:
+    input:
+        test_set = f"work_folder{pn}/subsets/test/{{dataset}}_pos.csv",
+        validation_set = f"work_folder{pn}/subsets/validation/{{dataset}}_pos.csv",
+        positive_edge_files = expand(f"work_folder{pn}/subsets/{{dataset}}_directional_limit_{positive_max}_pos.csv", =)
+        negative_edge_files = expand(f"work_folder{pn}/subsets/{{dataset}}_directional_limit_{negative_max}_pos.csv", =)
+    output:
+        output_positive_edge_files = [f"work_folder{pn}/subsets/balanced/{{dataset}}_balanced_pos.csv"],
+        output_negative_edge_files = [f"work_folder{pn}/subsets/balanced/{{dataset}}_balanced_neg.csv"]
+    script:
+        "scripts/sample_balance_multi_network.py"
