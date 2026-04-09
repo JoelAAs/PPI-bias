@@ -63,7 +63,7 @@ rule get_min_cut_pos_partitions:
         nx.write_graphml(G,output.ppi_graph)
 
 
-rule get__pre_balanced_neg_pos_network:
+rule get_pre_balanced_neg_pos_network:
     input:
         set_pos=f"work_folder{pn}/subsets/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
         set_neg=f"work_folder{pn}/subsets/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv"

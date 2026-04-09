@@ -69,10 +69,10 @@ def define_validation_test(G_pos, G_neg, max_iterations):
 
 
 def main():
-    hci_df = pd.read_parquet(snakemake.input.interaction_data)[
+    hci_df = pd.read_csv(snakemake.input.interaction_data, sep="\t")[
         ["gene_name_bait", "gene_name_prey"]
     ]
-    hcni_df = pd.read_parquet(snakemake.input.max_negative)[
+    hcni_df = pd.read_csv(snakemake.input.max_negative, sep="\t")[
         ["gene_name_bait", "gene_name_prey"]
     ]
 

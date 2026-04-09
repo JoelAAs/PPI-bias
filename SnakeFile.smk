@@ -11,47 +11,6 @@ if pn:
     pn = "/" + pn
 
 datasets = config["datasets"]
-
-pods = [
-    f"work_folder{pn}/analysis/POD/POD_{data}.csv" for data in datasets
-]
-
-colocalisation_plot = [
-    f"work_folder{pn}/plots/AccumulationPOD/colocalisation_{data}.png"
-    for data in datasets
-]
-
-matched_colocalisation_plot = [
-    f"work_folder{pn}/plots/AccumulationPOD/matched_colocalisation_{data}.png"
-    for data in datasets if data != "abundance_mcmc"
-]
-
-go_jaccards_plot = [
-    f"work_folder{pn}/plots/AccumulationPOD/go_{data}_jaccard.png"
-    for data in datasets
-]
-
-do_jaccards_plot = [
-    f"work_folder{pn}/plots/AccumulationPOD/do_{data}_jaccard.png"
-    for data in datasets
-]
-
-hydro_delta_plot = [
-    f"work_folder{pn}/plots/AccumulationPOD/hydrophobicity_{data}.png"
-    for data in datasets
-]
-
-### Negatome compare
-negatome_compare = [
-    f"work_folder{pn}/analysis/neg2compare/{data}.txt"
-    for data in datasets
-]
-negatome_entropy = [
-    f"work_folder{pn}/analysis/negatome/test_entropy_{data}_limit_{min_tests}.csv"
-    for min_tests in [3, 4, 5] for data in ["y2h", "ms"]
-]
-
-expected_output = pods
 #expected_output += colocalisation_plot + go_jaccards_plot + hydro_delta_plot +  do_jaccards_plot
 #expected_output += negatome_compare + matched_colocalisation_plot + negatome_entropy
 
@@ -110,14 +69,5 @@ wildcard_constraints:
 
 rule all:
     input:
-    #    f"work_folder{pn}/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv",
-    #    f"work_folder/per_gene/analysis/POD/undirectional/POD_cell_line.pq"
-    #    f"work_folder/per_gene/analysis/POD/directional/POD_cell_line.pq"
-    #    f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
-        expand(f"work_folder{pn}/subsets/maxflow/balance_data/{{dataset}}_directional_limit_1_poslim_0.02_pos.csv",
-            dataset=["flat", "y2h", "ms"])
-    #expected_output,,
-    #f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
-    #f"work_folder{pn}/plots/degree/GO_enrichment.png",
-    #f"work_folder{pn}/plots/localisation/HuRI_bioplex.png",
-    #f"work_folder{pn}/plots/membrane/HuRI_bioplex.png"
+        expand("work_folder{pn}/subsets/train/equal_edge/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
+            pn=pn, dataset=datasets, pos_limit=config["positive_limits"], neg_limit=config["negative_limits"])

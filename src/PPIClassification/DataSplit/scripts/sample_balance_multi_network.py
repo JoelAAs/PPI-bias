@@ -322,7 +322,7 @@ def alternating_maxflow_multi_network(
                 )
             )
         sample_balances = [
-            abs(e / d -1)
+            abs(e / d - 1)
             for d, e in zip(single_network_degree, per_subnetwork_edge_count)
         ]
         current_edge_deviation = max(sample_balances)
@@ -383,68 +383,79 @@ def drop_exclusive_nodes(edge_df_a, edge_df_b):
     return edge_df_a, edge_df_b
 
 
-def get_edge_list(list_files_a, list_files_b, nodes_to_exclude=set()):
-    edge_list_a = []
-    edge_list_b = []
-    for file_a, file_b in zip(list_files_a, list_files_b):
-        edge_df_a = pd.read_parquet(file_a)[["gene_name_bait", "gene_name_prey"]]
-        edge_df_a.columns = ["bait", "prey"]
-        edge_df_b = pd.read_parquet(file_b)[["gene_name_bait", "gene_name_prey"]]
-        edge_df_b.columns = ["bait", "prey"]
+def get_edge_list(
+    full_detection_df,
+    positive_limits,
+    negative_limits,
+    nodes_to_exclude,
+):
+    edge_list_pos = []
+    edge_list_neg = []
+    pair_order = []
+    pos_edges = full_detection_df[
+        ~full_detection_df["bait"].isin(nodes_to_exclude)
+        & ~full_detection_df["prey"].isin(nodes_to_exclude)
+    ]
+    neg_edges = full_detection_df[
+        ~full_detection_df["bait"].isin(nodes_to_exclude)
+        & ~full_detection_df["prey"].isin(nodes_to_exclude)
+    ]
 
-        while True:
-            pre_edges = edge_df_a.shape[0] + edge_df_b.shape[0]
-            shared_baits = (set(edge_df_a["bait"]) & set(edge_df_b["bait"])) - nodes_to_exclude 
-            shared_prey = (set(edge_df_a["prey"]) & set(edge_df_b["prey"])) - nodes_to_exclude
+    for pos_limit in positive_limits:
+        for neg_limit in negative_limits:
+            if pos_limit == "all":
+                c_pos = pos_edges[pos_edges["n_observed"] != 0]
+            else:
+                c_pos = pos_edges[pos_edges["n_observed"] >= float(pos_limit)]
 
-            edge_df_a = edge_df_a[
-                (edge_df_a["bait"].isin(shared_baits))
-                & (edge_df_a["prey"].isin(shared_prey))
+            c_neg = neg_edges[
+                (neg_edges["n_tested"] >= int(neg_limit))
+                & (neg_edges["n_observed"] == 0)
             ]
-            edge_df_b = edge_df_b[
-                (edge_df_b["bait"].isin(shared_baits))
-                & (edge_df_b["prey"].isin(shared_prey))
-            ]
 
-            if pre_edges == edge_df_a.shape[0] + edge_df_b.shape[0]:
-                break
-        edge_list_a.append(edge_df_a.copy())
-        edge_list_b.append(edge_df_b.copy())
-    return edge_list_a, edge_list_b
+            pair_order.append((pos_limit, neg_limit))
+            c_pos, c_neg = drop_exclusive_nodes(c_pos, c_neg)
+            edge_list_pos.append(c_pos)
+            edge_list_neg.append(c_neg)
 
+    return edge_list_pos, edge_list_neg, pair_order
 
-def test():
-    edge_list_a, edge_list_b = get_edge_list(
-        [
-            "work_folder/per_gene/subsets/ms_directional_full_0.02_pos.pq",
-            "work_folder/per_gene/subsets/ms_directional_full_0.02_pos.pq",
-        ],
-        [
-            "work_folder/per_gene/subsets/ms_directional_full_1_neg.pq",
-            "work_folder/per_gene/subsets/ms_directional_full_1_neg.pq",
-        ],
-    )
-    selected_a, selected_b = alternating_maxflow_multi_network(edge_list_a, edge_list_b)
-    for i in range(len(edge_list_a)):
-        print(f"Network {i+1}:")
-        print(f"Selected positive edges: {selected_a[i].shape[0]}")
-        print(f"Selected negative edges: {selected_b[i].shape[0]}")
 
 def main():
     test_set = snakemake.input.test_set
     validation_set = snakemake.input.validation_set
+
+    full_detection_df = pd.read_parquet(snakemake.input.full_detection).rename(
+        {"gene_name_bait": "bait", "gene_name_prey": "prey"}, axis=1
+    )
     
-    negative_edge_files = snakemake.input.negative_edges
-    positive_edge_files = snakemake.input.positive_edges
-    output_positive_edge_files = snakemake.output.positive_edges
-    output_negative_edge_files = snakemake.output.negative_edges
-    
+    positive_limits = snakemake.params.positive_limits
+    negative_limits = snakemake.params.negative_limits
+
     test_df = pd.read_csv(test_set, header=None, names=["bait", "prey"])
     validation_df = pd.read_csv(validation_set, header=None, names=["bait", "prey"])
-    nodes_to_exclude = set(test_df["bait"]) | set(test_df["prey"]) | set(validation_df["bait"]) | set(validation_df["prey"])
-    
-    edge_list_a, edge_list_b = get_edge_list(positive_edge_files, negative_edge_files, nodes_to_exclude)
-    selected_a, selected_b = alternating_maxflow_multi_network(edge_list_a, edge_list_b)
-    for i in range(len(positive_edge_files)):
-        selected_a[i].to_parquet(output_positive_edge_files[i], index=False)
-        selected_b[i].to_parquet(output_negative_edge_files[i], index=False)
+    nodes_to_exclude = (
+        set(test_df["bait"])
+        | set(test_df["prey"])
+        | set(validation_df["bait"])
+        | set(validation_df["prey"])
+    )
+
+    edge_list_pos, edge_list_neg, pair = get_edge_list(
+        full_detection_df,
+        positive_limits,
+        negative_limits,
+        nodes_to_exclude,
+    )
+
+    selected_pos, selected_neg = alternating_maxflow_multi_network(
+        edge_list_pos, edge_list_neg
+    )
+
+    balanced_edges_positive = snakemake.output.balanced_edges_positive
+    balanced_edges_negative = snakemake.output.balanced_edges_negative
+    for i, (output_pos, output_neg) in enumerate(
+        zip(balanced_edges_positive, balanced_edges_negative)
+    ):
+        selected_pos[i].to_csv(output_pos, index=False, sep="\t")
+        selected_neg[i].to_csv(output_neg, index=False, sep="\t")

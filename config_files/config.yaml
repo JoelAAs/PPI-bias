@@ -75,36 +75,15 @@ partitions:
   - "sequencesimilarity"
   - "maxpos"
 
-models:
-  strict:
-    pos: 0.29
-    neg: 3
-  medium:
-    pos: 0.15
-    neg: 2
-  loose:
-    pos: 0.02
-    neg: 1
-    
 
-#  goldensplit:
-#  seqs3:
-#    partition: "sequencesimilarity"
-#    pos: 0.15
-#    neg: 3
-#    balancing: "maxflow"
-#  maxdata3:
-#    partition: "maxpos"
-#    pos: 0.15
-#    neg: 3
-#    balancing: "maxflow"
-#  seqs2:
-#    partition: "sequencesimilarity"
-#    pos: 0.15
-#    neg: 2
-#    balancing: "maxflow"
-#  maxdata2:
-#    partition: "maxpos"
-#    pos: 0.15
-#    neg: 2
-#    balancing: "maxflow"
+positive_max: 0.29
+negative_max: 3
+
+positive_limits:
+  - "all"
+  - 0.1
+  - 0.15    
+
+negative_limits:
+  - 1
+  - 2
