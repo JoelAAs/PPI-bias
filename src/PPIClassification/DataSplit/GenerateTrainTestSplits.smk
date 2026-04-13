@@ -24,10 +24,10 @@ rule generate_test_validation_test:
         interaction_data = f"work_folder{pn}/subsets/{{dataset}}_directional_limit_{config['positive_max']}_pos.csv",
         max_negative = f"work_folder{pn}/subsets/{{dataset}}_directional_limit_{config['negative_max']}_neg.csv"
     output:
-        validation_pos = f"work_folder{pn}/subsets/validation/{{dataset}}_pos.csv",
-        validation_neg = f"work_folder{pn}/subsets/validation/{{dataset}}_neg.csv",
-        test_pos = f"work_folder{pn}/subsets/test/{{dataset}}_pos.csv",
-        test_neg = f"work_folder{pn}/subsets/test/{{dataset}}_neg.csv",
+        validation_pos = f"work_folder{pn}/subsets/validation/{{dataset}}_directional_pos.csv",
+        validation_neg = f"work_folder{pn}/subsets/validation/{{dataset}}_directional_neg.csv",
+        test_pos = f"work_folder{pn}/subsets/test/{{dataset}}_directional_pos.csv",
+        test_neg = f"work_folder{pn}/subsets/test/{{dataset}}_directional_neg.csv",
     script:
         "scripts/define_validation_test.py"
 
@@ -55,9 +55,10 @@ rule balance_to_equal_samples:
         positive_limits = config["positive_limits"],
         negative_limits = config["negative_limits"]
     input:
-        test_set = f"work_folder{pn}/subsets/test/{{dataset}}_pos.csv",
-        validation_set = f"work_folder{pn}/subsets/validation/{{dataset}}_pos.csv",
+        test_set = f"work_folder{pn}/subsets/test/{{dataset}}_directional_pos.csv",
+        validation_set = f"work_folder{pn}/subsets/validation/{{dataset}}_directional_pos.csv",
         full_detection=f"work_folder{pn}/analysis/POD/directional/POD_{{dataset}}.pq"
+    threads: 10
     output:
         balanced_edges_positive = expand(
             "work_folder{pn}/subsets/train/equal_edge/{{dataset}}_directional_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
@@ -67,3 +68,13 @@ rule balance_to_equal_samples:
             pn=pn, pos_limit=config["positive_limits"], neg_limit=config["negative_limits"])
     script:
         "scripts/sample_balance_multi_network.py"
+
+
+
+rule generate_negative_sample:
+    input:
+        balanced_positive_edges = f"work_folder{pn}/subsets/train/equal_edge/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
+    output:
+        random_positive_edges = f"work_folder{pn}/subsets/train/equal_edge/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}-random_neg.csv"
+    script:
+        "scripts/random_negative.py"

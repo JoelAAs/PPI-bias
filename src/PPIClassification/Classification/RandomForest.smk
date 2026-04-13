@@ -5,10 +5,10 @@ rule random_forest:
     input:
         train_pos=f"work_folder{pn}/subsets/train/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
         train_neg=f"work_folder{pn}/subsets/train/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_neg.csv",
-        validation_pos=f"work_folder{pn}/subsets/validation/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
-        validation_neg=f"work_folder{pn}/subsets/validation/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_neg.csv",
-        test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
-        test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_neg.csv",
+        validation_pos = f"work_folder{pn}/subsets/validation/{{dataset}}_pos.csv",
+        validation_neg=f"work_folder{pn}/subsets/validation/{{dataset}}_neg.csv",
+        test_pos = f"work_folder{pn}/subsets/test/{{dataset}}_pos.csv",
+        test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_neg.csv",
         protein_embeddings=f"work_folder{pn}/embeddings/canonical_embedding.csv.gz"
     output:
         params =      f"work_folder{pn}/classification/randomforest/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_parameters.txt",
@@ -31,28 +31,3 @@ rule random_forest:
         """
 
 
-
-rule get_degree_balance:
-    params:
-        script_location = "src/PPIClassification/ModelEvaluation/degree_balance_metrics.py"
-    input:    
-        train_pos=f"work_folder{pn}/subsets/train/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
-        train_neg=f"work_folder{pn}/subsets/train/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_neg.csv",
-        validation_pos=f"work_folder{pn}/subsets/validation/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
-        validation_neg=f"work_folder{pn}/subsets/validation/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_neg.csv",
-        test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
-        test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_neg.csv"
-    output:
-        degree_balance = f"work_folder{pn}/subsets/degree_balance/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}.csv"
-    shell:
-        """
-        python3 {params.script_location} \
-            --pos_train {input.train_pos} \
-            --neg_train {input.train_neg} \
-            --pos_val {input.validation_pos} \
-            --neg_val {input.validation_neg} \
-            --pos_test {input.test_pos} \
-            --neg_test  {input.test_neg} \
-            --output_file {output.degree_balance} \
-            --network_type {wildcards.network_type}
-        """

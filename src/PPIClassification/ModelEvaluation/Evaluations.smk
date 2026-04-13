@@ -1,17 +1,11 @@
-def input_metrics(wc):
-    metrics = expand(
-        f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_metrics.txt",
-        dataset=config["datasets"], neg_limit=[1,2,3],pos_limit=[0.02, 0.15, 0.29], random=["", "-random"])
-    metrics = [m for m in metrics if m not in failed]
-    return metrics
 
 
 rule get_model_metrics:
     params:
         script_location = "src/PPIClassification/ModelEvaluation/evaluate_model.py"
     input:
-        test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
-        test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_neg.csv",
+        test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_directional_pos.csv",
+        test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_directional_neg.csv",
         saved_model = f"work_folder{pn}/classification/randomforest/model/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_parameters.joblib",
         protein_embeddings = f"work_folder{pn}/embeddings/canonical_embedding.csv.gz"
     output:
@@ -36,7 +30,9 @@ rule get_model_metrics:
 
 rule all_metrics:
     input:
-        metrics = input_metrics
+        metrics = expand(
+            f"work_folder{pn}/classification/randomforest/metrics/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}{random}_metrics.txt",
+            pn=pn, dataset=config["datasets"], pos_limit=config["positive_limits"], neg_limit=config["negative_limits"], random=["", "-random"])
     output:
         all_models = f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
     run:

@@ -69,5 +69,4 @@ wildcard_constraints:
 
 rule all:
     input:
-        expand("work_folder{pn}/subsets/train/equal_edge/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
-            pn=pn, dataset=datasets, pos_limit=config["positive_limits"], neg_limit=config["negative_limits"])
+        all_models = f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"

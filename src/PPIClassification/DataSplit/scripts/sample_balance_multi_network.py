@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from graph_tool.all import Graph, openmp_set_num_threads
 from graph_tool.flow import push_relabel_max_flow as max_flow
 
@@ -121,10 +122,11 @@ def graph_to_edge_df(g, node_map_idx):
 
 
 def single_alternating_maxflow(positive_edge_df, negative_edge_df, min_flow, max_edges=None):
-    all_baits = set(negative_edge_df["bait"]) & set(positive_edge_df["bait"])
-    all_prey = set(negative_edge_df["prey"]) & set(positive_edge_df["prey"])
-
-    node_map, node_map_idx = get_node_map(all_baits | all_prey)
+    all_nodes = (
+        set(positive_edge_df["bait"]) | set(positive_edge_df["prey"]) |
+        set(negative_edge_df["bait"]) | set(negative_edge_df["prey"])
+    )
+    node_map, node_map_idx = get_node_map(all_nodes)
     g_pos = generate_graph(positive_edge_df, node_map)
     target_bait_pos, target_prey_pos = get_degree(g_pos)
 
@@ -156,7 +158,11 @@ def single_alternating_maxflow(positive_edge_df, negative_edge_df, min_flow, max
     current_flow_map = [flow_node_map_pos, None]
     subset_edges = [positive_edge_df, negative_edge_df]
 
-    while percent_flow_value < min_flow or max_edges is not None:
+    edge_count_msg_count = positive_edge_df.shape[0]
+
+    while percent_flow_value < min_flow or (
+        max_edges is not None and any(se.shape[0] > max_edges for se in subset_edges)
+    ):
         residual = max_flow(
             current_g[i % 2],
             current_source[i % 2],
@@ -168,8 +174,6 @@ def single_alternating_maxflow(positive_edge_df, negative_edge_df, min_flow, max
         percent_flow_value = sum(
             current_capacity[i % 2][e] - residual[e] for e in capacity_edges
         ) / sum(current_capacity[i % 2][e] for e in capacity_edges)
-
-        print(f"Flow value {percent_flow_value}")
 
         g_selected = extract_selected_edges(
             flow_g=current_g[i % 2],
@@ -184,6 +188,9 @@ def single_alternating_maxflow(positive_edge_df, negative_edge_df, min_flow, max
         g_next = Graph(directed=True)
         capacity_next = g_next.new_edge_property("int")
         subset_edges[(i + 1) % 2] = graph_to_edge_df(g_selected, node_map_idx)
+        if edge_count_msg_count - subset_edges[0].shape[0] >= 1000:
+            print(f"Flow value {percent_flow_value}: positive edges {subset_edges[0].shape[0]}, negative edges {subset_edges[1].shape[0]}, max edges {max_edges}")
+            edge_count_msg_count = subset_edges[0].shape[0]
 
         (
             current_g[(i + 1) % 2],
@@ -200,19 +207,19 @@ def single_alternating_maxflow(positive_edge_df, negative_edge_df, min_flow, max
             capacity=capacity_next,
             node_map=node_map,
         )
-        if max_edges is not None:
-            if any([se.shape[0] > max_edges for se in subset_edges]):
-                if max_flow == 1.0:
-                    print("Flow is at 100% but edges are above max limit, removing random node.")
-                    while True:
-                        random_node_idx = np.random.choice(len(new_target_bait)*2)
-                        if current_capacity[(i + 1) % 2][random_node_idx] > 0:
-                            current_capacity[(i + 1) % 2][random_node_idx] = 0
-                            break
-                continue
+        if (
+            max_edges is not None
+            and any(se.shape[0] > max_edges for se in subset_edges)
+            and percent_flow_value >= 0.999
+        ):
+            cap = current_capacity[(i + 1) % 2]
+            nonzero_indices = np.where(cap.a > 0)[0]
+            if len(nonzero_indices) > 0:
+                cap.a[np.random.choice(nonzero_indices)] = 0
         i += 1
 
-    return subset_edges[0], subset_edges[1]
+    pos, neg = drop_exclusive_nodes(subset_edges[0], subset_edges[1])
+    return pos, neg
 
 
 def build_multi_network_flow_graph(edge_list_a, edge_list_b):
@@ -445,48 +452,89 @@ def get_edge_list(
     return edge_list_pos, edge_list_neg, pair_order
 
 
+def _run_single_maxflow(args):
+    openmp_set_num_threads(1)
+    pos_df, neg_df, min_flow, max_edges = args
+    return single_alternating_maxflow(pos_df, neg_df, min_flow, max_edges)
+
+
 def parallel_maxflow_multi_network(
     edge_list_a,
     edge_list_b,
     edge_deviation_threshold=0.1,
-    min_flow=0.9,
+    min_flow=0.95,
+    n_workers=None,
 ):
-
-
     i = 0
-    current_edge_deviations = np.array([1.0]*len(edge_list_a))
+    current_edge_deviations = np.ones(len(edge_list_a))
 
+    with ProcessPoolExecutor(max_workers=n_workers) as executor:
+        selected_networks = list(executor.map(
+            _run_single_maxflow,
+            [(a, b, min_flow, None) for a, b in zip(edge_list_a, edge_list_b)],
+        ))
 
-    selected_networks = [
-        single_alternating_maxflow(a_edge_df, b_edge_df, min_flow)
-        for a_edge_df, b_edge_df in zip(edge_list_a, edge_list_b)
-    ]
-    
-    while any(current_edge_deviations > edge_deviation_threshold):
-        current_edges = np.array([pos.shape[0] for pos, neg in selected_networks])
-        
-        if any(current_edges == 0):
-            raise ValueError("One of the selected networks has zero edges. Cannot proceed.")
-        
-        current_min_edges = min(current_edges)
-        current_edge_deviations = np.array([(pos.shape[0] - current_min_edges)/current_min_edges for pos, _ in selected_networks])
+        while any(current_edge_deviations > edge_deviation_threshold):
+            current_edges = np.array([pos.shape[0] for pos, _ in selected_networks])
 
-        c_max_edges = current_min_edges*(1+edge_deviation_threshold)        
-        for net_i, current_edge_deviation in enumerate(current_edge_deviations):
-            if current_edge_deviation > edge_deviation_threshold:
-                selected_networks[net_i] = single_alternating_maxflow(
-                    selected_networks[net_i][0], selected_networks[net_i][1], min_flow, c_max_edges
-                )
+            if 0 in current_edges:
+                raise ValueError("One of the selected networks has zero edges. Cannot proceed.")
+
+            current_min_edges = int(min(current_edges))
+            current_edge_deviations = np.array([
+                (pos.shape[0] - current_min_edges) / current_min_edges
+                for pos, _ in selected_networks
+            ])
+
+            c_max_edges = current_min_edges * (1 + edge_deviation_threshold)
+            futures = {
+                executor.submit(_run_single_maxflow, (
+                    selected_networks[net_i][0],
+                    selected_networks[net_i][1],
+                    min_flow,
+                    c_max_edges,
+                )): net_i
+                for net_i, dev in enumerate(current_edge_deviations)
+                if dev > edge_deviation_threshold
+            }
+            for fut in as_completed(futures):
+                selected_networks[futures[fut]] = fut.result()
+
+            msg = f"Iteration {i}\tEdges\tRebalance\tDeviation\tMax Edges: {current_min_edges}\n"
+            for net_i, (pos, neg) in enumerate(selected_networks):
+                msg += f"Network {net_i}\t{pos.shape[0]}\t{current_edge_deviations[net_i] > edge_deviation_threshold}\t{current_edge_deviations[net_i]:.2f}\n"
+            print(msg)
+            i += 1
+
+    return (
+        [pos for pos, _ in selected_networks],
+        [neg for _, neg in selected_networks],
+    )
+     
+     
+def sanity_check(selected_pos, selected_neg, edge_list_pos, edge_list_neg):
+    def _make_sure_same_bait_prey(df1, df2):
+        bait_same = set(df1["bait"]) == set(df2["bait"])
+        prey_same = set(df1["prey"]) == set(df2["prey"])
+        assert bait_same, "Bait sets do not match between selected and original edge lists."
+        assert prey_same, "Prey sets do not match between selected and original edge lists."
         
-        msg = f"Iteration {i}\tEdges\tRebalance\tDevation\tMax Egges: {current_min_edges}\n" 
-        for net_i, (pos, neg) in enumerate(selected_networks):
-            msg += f"Network {net_i}\t{pos.shape[0]}\t{current_edge_deviations[net_i]>edge_deviation_threshold}\t{current_edge_deviations[net_i]:.2f}\n"
-        print(msg)
-        i += 1
-            
+        
+    for i, (pos_df, neg_df, orig_pos_df, orig_neg_df) in enumerate(zip(selected_pos, selected_neg, edge_list_pos, edge_list_neg)):
+        pos_edges_set = set(zip(pos_df["bait"], pos_df["prey"]))
+        neg_edges_set = set(zip(neg_df["bait"], neg_df["prey"]))
+        orig_pos_edges_set = set(zip(orig_pos_df["bait"], orig_pos_df["prey"]))
+        orig_neg_edges_set = set(zip(orig_neg_df["bait"], orig_neg_df["prey"]))
+
+        assert pos_edges_set.issubset(orig_pos_edges_set), f"Selected positive edges for network {i} are not a subset of original positive edges."
+        assert neg_edges_set.issubset(orig_neg_edges_set), f"Selected negative edges for network {i} are not a subset of original negative edges."
+        assert pos_edges_set.isdisjoint(neg_edges_set), f"Selected positive and negative edges for network {i} overlap."
+        
+        _make_sure_same_bait_prey(pos_df, neg_df)       
 
 
 def main():
+    workers = snakemake.params.threads
     test_set = snakemake.input.test_set
     validation_set = snakemake.input.validation_set
 
@@ -516,9 +564,11 @@ def main():
     )
 
     selected_pos, selected_neg = parallel_maxflow_multi_network(
-        edge_list_pos, edge_list_neg
+        edge_list_pos, edge_list_neg, n_workers=workers
     )
 
+    sanity_check(selected_pos, selected_neg, edge_list_pos, edge_list_neg)
+    
     balanced_edges_positive = snakemake.output.balanced_edges_positive
     balanced_edges_negative = snakemake.output.balanced_edges_negative
     for i, (output_pos, output_neg) in enumerate(
@@ -526,6 +576,7 @@ def main():
     ):
         selected_pos[i].to_csv(output_pos, index=False, sep="\t")
         selected_neg[i].to_csv(output_neg, index=False, sep="\t")
+
 
 
 main()
