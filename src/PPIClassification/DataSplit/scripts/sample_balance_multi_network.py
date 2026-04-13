@@ -120,7 +120,7 @@ def graph_to_edge_df(g, node_map_idx):
     return pd.DataFrame(edge_list, columns=["bait", "prey"])
 
 
-def single_alternating_maxflow(positive_edge_df, negative_edge_df, min_flow):
+def single_alternating_maxflow(positive_edge_df, negative_edge_df, min_flow, max_edges=None):
     all_baits = set(negative_edge_df["bait"]) & set(positive_edge_df["bait"])
     all_prey = set(negative_edge_df["prey"]) & set(positive_edge_df["prey"])
 
@@ -156,7 +156,7 @@ def single_alternating_maxflow(positive_edge_df, negative_edge_df, min_flow):
     current_flow_map = [flow_node_map_pos, None]
     subset_edges = [positive_edge_df, negative_edge_df]
 
-    while percent_flow_value < min_flow:
+    while percent_flow_value < min_flow or max_edges is not None:
         residual = max_flow(
             current_g[i % 2],
             current_source[i % 2],
@@ -200,9 +200,19 @@ def single_alternating_maxflow(positive_edge_df, negative_edge_df, min_flow):
             capacity=capacity_next,
             node_map=node_map,
         )
+        if max_edges is not None:
+            if any([se.shape[0] > max_edges for se in subset_edges]):
+                if max_flow == 1.0:
+                    print("Flow is at 100% but edges are above max limit, removing random node.")
+                    while True:
+                        random_node_idx = np.random.choice(len(new_target_bait)*2)
+                        if current_capacity[(i + 1) % 2][random_node_idx] > 0:
+                            current_capacity[(i + 1) % 2][random_node_idx] = 0
+                            break
+                continue
         i += 1
 
-    return subset_edges[0], subset_edges[1], node_map_idx
+    return subset_edges[0], subset_edges[1]
 
 
 def build_multi_network_flow_graph(edge_list_a, edge_list_b):
@@ -274,7 +284,7 @@ def alternating_maxflow_multi_network(
     super_sink = [None, None]
     capacity = [None, None]
     smallest_edge_count = [None, None]
-    selected_edges = [edge_list_a, [None] * len(edge_list_a)]
+    selected_edges = [edge_list_a.copy(), [None] * len(edge_list_a)]
 
     (
         multi_flow_graph[0],
@@ -326,7 +336,7 @@ def alternating_maxflow_multi_network(
             for d, e in zip(single_network_degree, per_subnetwork_edge_count)
         ]
         current_edge_deviation = max(sample_balances)
-
+        test = [edge_list_a.copy(), []*len(edge_list_a)]
         for net_i in range(len(edge_list_a)):
             selected_edges[next_slot][net_i] = graph_to_edge_df(
                 extract_selected_edges(
@@ -340,9 +350,10 @@ def alternating_maxflow_multi_network(
                 ),
                 network_data[slot][net_i]["node_map_idx"],
             )
-            selected_edges[slot][net_i], selected_edges[next_slot][net_i] = (
+            selected_edges[next_slot][net_i] = test[next_slot][net_i]
+            test[slot][net_i], selected_edges[next_slot][net_i] = (
                 drop_exclusive_nodes(
-                    selected_edges[slot][net_i], selected_edges[next_slot][net_i]
+                    test[slot][net_i], test[next_slot][net_i]
                 )
             )
 
@@ -356,6 +367,16 @@ def alternating_maxflow_multi_network(
         ) = build_multi_network_flow_graph(
             selected_edges[next_slot], selected_edges[slot]
         )
+        print(
+            f"{smallest_edge_count[next_slot]} edge limit, least flow {current_least_flow}, edge deviation {current_edge_deviation}"
+        )
+        print(f"Selected Network edge counts:")
+        for net_i in range(len(edge_list_a)):
+            print(
+                f"Selected Network edge:\t"
+                f"pos: {selected_edges[1][net_i].shape[0]}\t"
+                f"neg: {selected_edges[0][net_i].shape[0]}"
+            )
         i += 1
 
     return [selected_edges[0][net_i] for net_i in range(len(edge_list_a))], [
@@ -396,29 +417,73 @@ def get_edge_list(
         ~full_detection_df["bait"].isin(nodes_to_exclude)
         & ~full_detection_df["prey"].isin(nodes_to_exclude)
     ]
+    pos_edges = pos_edges[pos_edges["n_observed"] != 0]
     neg_edges = full_detection_df[
         ~full_detection_df["bait"].isin(nodes_to_exclude)
         & ~full_detection_df["prey"].isin(nodes_to_exclude)
     ]
+    neg_edges = neg_edges[neg_edges["n_observed"] == 0]
 
     for pos_limit in positive_limits:
-        for neg_limit in negative_limits:
-            if pos_limit == "all":
-                c_pos = pos_edges[pos_edges["n_observed"] != 0]
-            else:
-                c_pos = pos_edges[pos_edges["n_observed"] >= float(pos_limit)]
+        if not pos_limit == "all":
+            c_pos = pos_edges[pos_edges["lower_bound_pod"] >= float(pos_limit)]
+        else:
+            c_pos = pos_edges
 
+        for neg_limit in negative_limits:
             c_neg = neg_edges[
                 (neg_edges["n_tested"] >= int(neg_limit))
                 & (neg_edges["n_observed"] == 0)
             ]
 
             pair_order.append((pos_limit, neg_limit))
-            c_pos, c_neg = drop_exclusive_nodes(c_pos, c_neg)
-            edge_list_pos.append(c_pos)
-            edge_list_neg.append(c_neg)
+            b_pos, b_neg = drop_exclusive_nodes(c_pos, c_neg)
+            print(f"Positive edges {b_pos.shape[0]}, negative edges {b_neg.shape[0]}")
+            edge_list_pos.append(b_pos)
+            edge_list_neg.append(b_neg)
 
     return edge_list_pos, edge_list_neg, pair_order
+
+
+def parallel_maxflow_multi_network(
+    edge_list_a,
+    edge_list_b,
+    edge_deviation_threshold=0.1,
+    min_flow=0.9,
+):
+
+
+    i = 0
+    current_edge_deviations = np.array([1.0]*len(edge_list_a))
+
+
+    selected_networks = [
+        single_alternating_maxflow(a_edge_df, b_edge_df, min_flow)
+        for a_edge_df, b_edge_df in zip(edge_list_a, edge_list_b)
+    ]
+    
+    while any(current_edge_deviations > edge_deviation_threshold):
+        current_edges = np.array([pos.shape[0] for pos, neg in selected_networks])
+        
+        if any(current_edges == 0):
+            raise ValueError("One of the selected networks has zero edges. Cannot proceed.")
+        
+        current_min_edges = min(current_edges)
+        current_edge_deviations = np.array([(pos.shape[0] - current_min_edges)/current_min_edges for pos, _ in selected_networks])
+
+        c_max_edges = current_min_edges*(1+edge_deviation_threshold)        
+        for net_i, current_edge_deviation in enumerate(current_edge_deviations):
+            if current_edge_deviation > edge_deviation_threshold:
+                selected_networks[net_i] = single_alternating_maxflow(
+                    selected_networks[net_i][0], selected_networks[net_i][1], min_flow, c_max_edges
+                )
+        
+        msg = f"Iteration {i}\tEdges\tRebalance\tDevation\tMax Egges: {current_min_edges}\n" 
+        for net_i, (pos, neg) in enumerate(selected_networks):
+            msg += f"Network {net_i}\t{pos.shape[0]}\t{current_edge_deviations[net_i]>edge_deviation_threshold}\t{current_edge_deviations[net_i]:.2f}\n"
+        print(msg)
+        i += 1
+            
 
 
 def main():
@@ -428,12 +493,14 @@ def main():
     full_detection_df = pd.read_parquet(snakemake.input.full_detection).rename(
         {"gene_name_bait": "bait", "gene_name_prey": "prey"}, axis=1
     )
-    
+
     positive_limits = snakemake.params.positive_limits
     negative_limits = snakemake.params.negative_limits
 
-    test_df = pd.read_csv(test_set, header=None, names=["bait", "prey"])
-    validation_df = pd.read_csv(validation_set, header=None, names=["bait", "prey"])
+    test_df = pd.read_csv(test_set, header=None, names=["bait", "prey"], sep="\t")
+    validation_df = pd.read_csv(
+        validation_set, header=None, names=["bait", "prey"], sep="\t"
+    )
     nodes_to_exclude = (
         set(test_df["bait"])
         | set(test_df["prey"])
@@ -448,7 +515,7 @@ def main():
         nodes_to_exclude,
     )
 
-    selected_pos, selected_neg = alternating_maxflow_multi_network(
+    selected_pos, selected_neg = parallel_maxflow_multi_network(
         edge_list_pos, edge_list_neg
     )
 
@@ -459,3 +526,6 @@ def main():
     ):
         selected_pos[i].to_csv(output_pos, index=False, sep="\t")
         selected_neg[i].to_csv(output_neg, index=False, sep="\t")
+
+
+main()

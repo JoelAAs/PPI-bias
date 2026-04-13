@@ -91,3 +91,6 @@ def main():
     nx.write_edgelist(G_validation_neg, snakemake.output.validation_neg, delimiter="\t", data=False)
     nx.write_edgelist(G_test_pos, snakemake.output.test_pos, delimiter="\t", data=False)
     nx.write_edgelist(G_test_neg, snakemake.output.test_neg, delimiter="\t", data=False)
+
+
+main()

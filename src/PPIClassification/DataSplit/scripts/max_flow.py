@@ -226,3 +226,5 @@ if __name__ == '__main__':
         with open(output_filename, "w") as w:
             for bait, prey in balanced_network.edges():
                 w.write(f"{node_map_idx[bait]}\t{node_map_idx[prey]}\n")
+
+
