@@ -2,10 +2,10 @@ rule random_forest:
     input:
         train_pos=f"work_folder{pn}/subsets/train/equal_edge/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
         train_neg=f"work_folder{pn}/subsets/train/equal_edge/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_neg.csv",
-        validation_pos=f"work_folder{pn}/subsets/validation/{{dataset}}_pos.csv",
-        validation_neg=f"work_folder{pn}/subsets/validation/{{dataset}}_neg.csv",
-        test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_pos.csv",
-        test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_neg.csv",
+        validation_pos=f"work_folder{pn}/subsets/validation/{{dataset}}_directional_pos.csv",
+        validation_neg=f"work_folder{pn}/subsets/validation/{{dataset}}_directional_neg.csv",
+        test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_directional_pos.csv",
+        test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_directional_neg.csv",
         protein_embeddings=f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
     output:
         params=f"work_folder{pn}/classification/randomforest/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_parameters.txt",
