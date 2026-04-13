@@ -12,7 +12,6 @@ rule get_model_metrics:
         metrics=f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_metrics.txt",
         pr_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_pr_curve.png",
         pr_neg_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_pr_neg_curve.png",
-        roc_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_roc_curve.png",
         ce_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_ce.png",
     shell:
         """
@@ -24,15 +23,14 @@ rule get_model_metrics:
             --output_file {output.metrics} \
             --plot_pr_png {output.pr_png} \
             --plot_neg_pr_png {output.pr_neg_png} \
-            --plot_roc_png {output.roc_png} \
             --plot_ce_png {output.ce_png}
         """
 
 rule all_metrics:
     input:
         metrics = expand(
-            f"work_folder{pn}/classification/randomforest/metrics/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}{random}_metrics.txt",
-            pn=pn, dataset=config["datasets"], pos_limit=config["positive_limits"], neg_limit=config["negative_limits"], random=["", "-random"])
+            f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_metrics.txt",
+            dataset=config["datasets"], pos_limit=config["positive_limits"], neg_limit=config["negative_limits"], random=["", "-random"])
     output:
         all_models = f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
     run:
