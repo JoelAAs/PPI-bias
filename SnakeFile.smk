@@ -65,7 +65,8 @@ wildcard_constraints:
     pos_limit="[0-9.]+",
     model_configuration="[a-z0-9]+",
     selected_data="[a-z0-9_.]+",
-    network_type="(directional|undirectional)"
+    network_type="(directional|undirectional)",
+    random="(-random)?"
 
 rule all:
     input:

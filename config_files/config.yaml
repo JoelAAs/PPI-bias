@@ -81,7 +81,7 @@ negative_max: 3
 
 positive_limits:
   - "all"
-  - 0.1
+  - 0.02
   - 0.15    
 
 negative_limits:
