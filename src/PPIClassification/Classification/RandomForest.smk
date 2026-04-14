@@ -10,7 +10,9 @@ rule random_forest:
     output:
         params=f"work_folder{pn}/classification/randomforest/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_parameters.txt",
         saved_model=f"work_folder{pn}/classification/randomforest/model/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_parameters.joblib",
-    threads: 23
+    log:
+        f"logs{pn}/classification/randomforest/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model.log"
+    threads: 15
     params:
         script_location="src/PPIClassification/Classification/ppi_classify_rf.py",
     shell:
@@ -26,5 +28,6 @@ rule random_forest:
             --params_out {output.params} \
             --threads {threads} \
             --randomstate 1234 \
-            --saved_model {output.saved_model} 
+            --saved_model {output.saved_model} \
+            > {log} 2>&1
         """

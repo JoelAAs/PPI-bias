@@ -43,8 +43,11 @@ def format_bioplex(bp_f, gene_name_df, cl):
 rule get_pubtator:
     output:
         f"work_folder{pn}/cell_line_annotation/cellline2pubtator3.txt"
+    log:
+        f"logs{pn}/cell_line_annotation/cellline2pubtator3.log"
     shell:
         """
+        exec > {log} 2>&1
         wget https://ftp.ncbi.nlm.nih.gov/pub/lu/PubTator3/cellline2pubtator3.gz
         gunzip cellline2pubtator3.gz
         mv cellline2pubtator3 {output}
@@ -55,8 +58,11 @@ rule get_bioplex:
     output:
         cvcl_0291_bp=f"work_folder{pn}/data/bioplex/CVCL_0291.csv",
         cvcl_0063_bp=f"work_folder{pn}/data/bioplex/CVCL_0063.csv"
+    log:
+        f"logs{pn}/data/bioplex/bioplex.log"
     shell:
         """
+        exec > {log} 2>&1
         wget https://bioplex.hms.harvard.edu/data/BioPlex_3.0_293T_DirectedEdges.tsv -O {output.cvcl_0063_bp}
         wget https://bioplex.hms.harvard.edu/data/BioPlex_3.0_HCT116_DirectedEdges.tsv -O {output.cvcl_0291_bp}
         """
@@ -64,9 +70,11 @@ rule get_bioplex:
 rule get_cellosaurus:
     output:
         cellosaurus = f"work_folder{pn}/data/cellosaurus/cellosaurus.txt"
+    log:
+        f"logs{pn}/data/cellosaurus/cellosaurus.log"
     shell:
         """
-        wget https://ftp.expasy.org/databases/cellosaurus/cellosaurus.txt -O {output.cellosaurus} 
+        wget https://ftp.expasy.org/databases/cellosaurus/cellosaurus.txt -O {output.cellosaurus} > {log} 2>&1
         """
 
 rule get_cellosaurus_human_cl:
@@ -75,6 +83,8 @@ rule get_cellosaurus_human_cl:
     output:
         cellosaurus_csv = f"work_folder{pn}/data/cellosaurus/taxon_cellosaurus.csv",
         cellosaurus_human = f"work_folder{pn}/data/cellosaurus/cellosaurus_human.txt"
+    log:
+        f"logs{pn}/data/cellosaurus/cellosaurus_human.log"
     run:
         parse_cellosaurus(input.cellosaurus, output.cellosaurus_csv)
         df_cellosaurus = pd.read_csv(output.cellosaurus_csv, sep="\t")
@@ -97,6 +107,8 @@ rule join_to_pid:
         gene_names = f"work_folder{pn}/gene_names/gene_names.csv"
     output:
         cvcl_ppi = f"work_folder{pn}/formated/bait_prey_CVCL.csv"
+    log:
+        f"logs{pn}/formated/bait_prey_CVCL.log"
     run:
         column_order =[
             'uniprot_id_bait', 'uniprot_id_prey', 'pubmed_id', 'detection_method',

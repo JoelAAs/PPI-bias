@@ -13,6 +13,8 @@ rule get_model_metrics:
         pr_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_pr_curve.png",
         pr_neg_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_pr_neg_curve.png",
         ce_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_ce.png",
+    log:
+        f"logs{pn}/classification/randomforest/metrics/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_metrics.log"
     shell:
         """
         python3 {params.script_location} \
@@ -23,7 +25,7 @@ rule get_model_metrics:
             --output_file {output.metrics} \
             --plot_pr_png {output.pr_png} \
             --plot_neg_pr_png {output.pr_neg_png} \
-            --plot_ce_png {output.ce_png}
+            --plot_ce_png {output.ce_png} > {log} 2>&1
         """
 
 rule all_metrics:
@@ -33,6 +35,8 @@ rule all_metrics:
             dataset=config["datasets"], pos_limit=config["positive_limits"], neg_limit=config["negative_limits"], random=["", "-random"])
     output:
         all_models = f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
+    log:
+        f"logs{pn}/classification/randomforest/metrics/all_metrics.log"
     run:
         with open(output[0], "a") as w:
             w.write("model\tpr_auc\tpr_auc_base\tpr_auc_neg\tpr_auc_neg_base\troc_auc\troc_auc_base\tce_obs\tce_baseline\tsamples\n")

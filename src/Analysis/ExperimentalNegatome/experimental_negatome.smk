@@ -12,6 +12,8 @@ rule all_methods_filter_out:
         method_aggregate=f"work_folder{pn}/inferred_search_space/aggregated/methods/{{data}}_experimental_wise.csv"
     output:
         full_detection=f"work_folder{pn}/analysis/POD/{{network_type}}/POD_{{data}}.pq"
+    log:
+        f"logs{pn}/analysis/POD/{{network_type}}/POD_{{data}}.log"
     run:
         inferred_negative_df = pd.read_csv(
             input.method_aggregate,
@@ -117,6 +119,8 @@ rule all_methods_filter_out_cell_line:
         method_aggregate=f"work_folder{pn}/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
     output:
         full_detection=f"work_folder{pn}/analysis/POD/{{network_type}}/POD_cell_line.pq"
+    log:
+        f"logs{pn}/analysis/POD/{{network_type}}/POD_cell_line.log"
     run:
         inferred_negative_df = pd.read_csv(
             input.method_aggregate,
@@ -246,6 +250,8 @@ rule get_hcl_degree:
     output:
         pos_01 = f"work_folder{pn}/degree/{{method}}_t0.1.csv",
         neg_gt5 = f"work_folder{pn}/degree/{{method}}_gt_5.csv"
+    log:
+        f"logs{pn}/degree/{{method}}_hcl_degree.log"
     run:
         df = pd.read_csv(input.ppis, sep="\t")
         t_threshold_degree(df, 0.1).to_csv(output.pos_01, sep="\t", index=False)

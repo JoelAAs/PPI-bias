@@ -246,7 +246,6 @@ def back_and_forth_max_flow(G_pos, G_neg, allowed_imbalance=.9):
         flow_idx_gene = {i: node_idx_gene[idx[1]] for idx, i in flow_idx.items()}
 
         percent_flow = flow_value / sum(target_bait.values())
-        print(f"Current_flow is {percent_flow}")
 
         selected_G = get_graph_from_selected_edges(flow_dict, flow_idx_gene)
         balanced_source, discarded_nodes = remove_all_nonovelapping_nodes(target_G.copy(), selected_G.copy())

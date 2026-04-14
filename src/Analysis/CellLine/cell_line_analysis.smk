@@ -40,19 +40,21 @@ def get_input_for_aggregation(wc, filename, cell_line_methods):
 
 rule aggregate_inferred_studies_cell_line:
     """
-    Aggregate experiments assuming that any prey observed in studies is tested against all baits 
+    Aggregate experiments assuming that any prey observed in studies is tested against all baits
     """
     input:
         ppi_file = f"work_folder{pn}/formated/bait_prey_CVCL.csv",
         cl_pids = lambda wc: get_input_for_aggregation(wc, f"work_folder{pn}/formated/bait_prey_CVCL.csv", config["cell_line_methods"])
     output:
         cell_line_counts = f"work_folder{pn}/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
+    log:
+        f"logs{pn}/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.log"
     run:
         aggregate_inferred_experiments(input.cl_pids, output.cell_line_counts, "gene_name", single=True)
 
 rule infer_bait_wise_tests_cell_line:
     """
-    Expand tests under the assumption that any prey that has been seen is tested in all 
+    Expand tests under the assumption that any prey that has been seen is tested in all
     other experiments with the same bait.
     Params:
         remove_single_ppi_papers = True # Remove single ppi studies, assuming that they only focused on one interaction
@@ -64,6 +66,8 @@ rule infer_bait_wise_tests_cell_line:
 
     output:
         baitwise_infered = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_bait_wise.csv"
+    log:
+        "logs/inferred_search_space/aggregated/cell_line/cell_line_bait_wise.log"
     run:
         ppi_df = pd.read_csv(input.df, sep="\t")
 
@@ -122,8 +126,8 @@ rule infer_bait_wise_tests_cell_line:
 rule test_prey_probability:
     """
     Assuming the probability of observing an interaction is the same regardless of experiment.
-    As P(p|b1) = P(p|b2) if P(p|b1), P(p|b2) != 0 
-    We test selected cell lines on a prey basis against all other cell lines (not only selected)  
+    As P(p|b1) = P(p|b2) if P(p|b1), P(p|b2) != 0
+    We test selected cell lines on a prey basis against all other cell lines (not only selected)
     """
     params:
         selected_celllines = config["selected_cell_lines"]
@@ -131,6 +135,8 @@ rule test_prey_probability:
         bait_wise_inferred = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_bait_wise.csv"
     output:
         prey_bait_wise_tested = "work_folder/inferred_search_space/analysis/cell_line/bait_wise_prey_tested.csv"
+    log:
+        "logs/inferred_search_space/analysis/cell_line/bait_wise_prey_tested.log"
     run:
         bait_wise_inferred      = pd.read_csv(input.bait_wise_inferred, sep="\t")
         bait_wise_inferred_prey = bait_wise_inferred.groupby("gene_name_prey", as_index=False).sum()
@@ -181,6 +187,8 @@ rule filter_tests:
     output:
         differential_interactions_filtered = "work_folder/inferred_search_space/analysis/cell_line/bait_wise_prey_filtered.csv",
         differential_interactions_ploting  = "work_folder/inferred_search_space/analysis/cell_line/bait_wise_prey_plotting.csv"
+    log:
+        "logs/inferred_search_space/analysis/cell_line/bait_wise_prey_filtered.log"
     run:
         results_df = pd.read_csv(input.prey_bait_wise_tested, sep="\t")
         results_df = results_df[
@@ -229,6 +237,8 @@ rule create_cell_line_negatome_HCL:
     output:
         cell_line_negatome = "work_folder/inferred_search_space/analysis/cell_line/negatome_cl.csv",
         hcl = "work_folder/inferred_search_space/analysis/cell_line/HCL_cl.csv"
+    log:
+        "logs/inferred_search_space/analysis/cell_line/negatome_cl.log"
     run:
         cl_diff = pd.read_csv(input.differential_interactions_filtered, sep = "\t")
         experimental_df = pd.read_csv(input.experiment_wise, sep = "\t")
@@ -277,6 +287,8 @@ rule marginalised_prey_probability:
     output:
         bait_based_prior = "work_folder/inferred_search_space/analysis/cell_line/bait_prior.csv",
         bait_based_prior_long= "work_folder/inferred_search_space/analysis/cell_line/bait_prior_long.csv",
+    log:
+        "logs/inferred_search_space/analysis/cell_line/bait_prior.log"
     run:
         df_tests = pd.read_csv(input.bait_wise_inferred, sep="\t")
         df_tests["total_not_observed"] = df_tests[f"total_tested"] - df_tests[f"total_observed"]

@@ -42,7 +42,7 @@ def define_validation_test(G_pos, G_neg, max_iterations):
         G_test_pos, G_test_neg = G_pos.subgraph(test_nodes), G_neg.subgraph(test_nodes)
         # validate_balance = np.abs(G_validate_pos.number_of_edges() - G_validate_neg.number_of_edges()) always gonna be fine
         size_balance = G_validate_pos.number_of_edges() - G_test_pos.number_of_edges()
-
+        print(f"iteration {current_iteration}: size balance = {size_balance} (Validation: {G_validate_pos.number_of_edges()}, Test: {G_test_pos.number_of_edges()} )")
         step_size = size_balance / (
             G_validate_pos.number_of_edges() + G_test_pos.number_of_edges()
         )
@@ -67,6 +67,11 @@ def define_validation_test(G_pos, G_neg, max_iterations):
 
     return *best_validation, *best_test
 
+def write_edgelist(G, output_file):
+    with open(output_file, "w") as f:
+        f.write("bait\tprey\n")
+        for u, v in G.edges():
+            f.write(f"{u}\t{v}\n")
 
 def main():
     hci_df = pd.read_csv(snakemake.input.interaction_data, sep="\t")[
@@ -84,13 +89,13 @@ def main():
     )
 
     G_validation_pos, G_validation_neg, G_test_pos, G_test_neg = define_validation_test(
-        G_pos, G_neg, 500
+        G_pos, G_neg, 20
     )
 
-    nx.write_edgelist(G_validation_pos, snakemake.output.validation_pos, delimiter="\t", data=False)
-    nx.write_edgelist(G_validation_neg, snakemake.output.validation_neg, delimiter="\t", data=False)
-    nx.write_edgelist(G_test_pos, snakemake.output.test_pos, delimiter="\t", data=False)
-    nx.write_edgelist(G_test_neg, snakemake.output.test_neg, delimiter="\t", data=False)
+    write_edgelist(G_validation_pos, snakemake.output.validation_pos)
+    write_edgelist(G_validation_neg, snakemake.output.validation_neg)
+    write_edgelist(G_test_pos, snakemake.output.test_pos)
+    write_edgelist(G_test_neg, snakemake.output.test_neg)
 
 
 main()

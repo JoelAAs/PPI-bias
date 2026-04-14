@@ -5,6 +5,8 @@ rule subset_fasta:
         fasta=f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
     output:
         fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}.fasta"
+    log:
+        f"logs{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}.log"
     run:
         with open(input.partition, "r") as f:
             for line in f:
@@ -27,9 +29,11 @@ rule cdhit:
         fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/{{selected_data}}.fasta"
     output:
         sim_reduced_fasta=f"work_folder{pn}/subsets/{{subset}}/genes/fasta/cdhit/{{selected_data}}.fasta"
+    log:
+        f"logs{pn}/subsets/{{subset}}/genes/fasta/cdhit/{{selected_data}}.log"
     shell:
         """
-        {params.cdhit_location}/cdhit -i {input.fasta} -o {output.sim_reduced_fasta} -c {params.identity_threshold} -n 2 -T {threads}
+        {params.cdhit_location}/cdhit -i {input.fasta} -o {output.sim_reduced_fasta} -c {params.identity_threshold} -n 2 -T {threads} > {log} 2>&1
         """
 
 rule cdhit_redudance_between_subsets:
@@ -48,8 +52,11 @@ rule cdhit_redudance_between_subsets:
         sim_trainclr=f"work_folder{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_train.out.clstr",
         sim_validationclr=f"work_folder{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_validation.out.clstr",
         sim_testclr=f"work_folder{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_test.out.clstr",
+    log:
+        f"logs{pn}/subsets/interset_similarity/cdhit/{{selected_data}}.log"
     shell:
         """
+        exec > {log} 2>&1
         {params.cdhit_location}/cd-hit-2d -i {input.train_sim_reduced_fasta} -i2 {input.test_sim_reduced_fasta} \
             -o {output.sim_train} -c 0.4 -n 2 -T {threads}
         {params.cdhit_location}/cd-hit-2d -i {input.train_sim_reduced_fasta} -i2 {input.validation_sim_reduced_fasta} \
@@ -66,8 +73,11 @@ rule get_redundant_list:
         sim_testclr=f"work_folder{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_test.out.clstr",
     output:
         redundant_proteins=f"work_folder{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_redundant_proteins.txt"
+    log:
+        f"logs{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_redundant.log"
     shell:
         r"""
+        exec > {log} 2>&1
         sed -nE 's/.*>([A-Za-z0-9-]+)....*%$/\1/p' {input.sim_trainclr} > {output.redundant_proteins}
         sed -nE 's/.*>([A-Za-z0-9-]+)....*%$/\1/p' {input.sim_validationclr} >> {output.redundant_proteins}
         sed -nE 's/.*>([A-Za-z0-9-]+)....*%$/\1/p' {input.sim_testclr} >> {output.redundant_proteins}
@@ -81,6 +91,8 @@ rule cdhit_to_gene_list:
         between_reduced_redundant_proteins=f"work_folder{pn}/subsets/interset_similarity/cdhit/{{selected_data}}_redundant_proteins.txt"
     output:
         gene_list=f"work_folder{pn}/subsets/{{subset}}/genes/cdhit/genes_{{selected_data}}.txt"
+    log:
+        f"logs{pn}/subsets/{{subset}}/genes/cdhit/{{selected_data}}.log"
     run:
         with open(input.between_reduced_redundant_proteins, "r") as f:
             redundant_genes = set(line.strip() for line in f)

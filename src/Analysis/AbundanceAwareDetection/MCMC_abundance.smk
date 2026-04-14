@@ -32,6 +32,8 @@ rule get_shared_detections:
         all_genes="data/normalised_log_ra.csv"
     output:
         detectable_genes="work_folder/analysis/abundance/detectable_genes.csv"
+    log:
+        "logs/analysis/abundance/detectable_genes.log"
     run:
         cl_abundances = pd.read_csv(input.all_genes,sep="\t")
         genes = cl_abundances.select_dtypes(np.float64).columns
@@ -49,6 +51,8 @@ checkpoint estimate_bait_interaction:
         cl_specific_interactions="data/CL_annotated_bait_prey.csv"
     output:
         bait_folder=directory("work_folder/analysis/abundance_aware/baits")
+    log:
+        "logs/analysis/abundance_aware/baits.log"
     run:
         os.makedirs(output.bait_folder,exist_ok=True)
         PPI_interactions = pd.read_csv(input.cl_specific_interactions,sep="\t")
@@ -111,6 +115,8 @@ rule get_shared_tests:
         bait_parameters=get_cell_line_total
     output:
         unique_prey_test_combinations="work_folder/analysis/abundance_aware/uniquely_tested_prey.csv"
+    log:
+        "logs/analysis/abundance_aware/uniquely_tested_prey.log"
     run:
         all_dfs = [
             pd.read_csv(bait_file,sep="\t") for bait_file in input.bait_parameters
@@ -144,6 +150,8 @@ checkpoint batch_tests:
         unique_prey_test_combinations="work_folder/analysis/abundance_aware/uniquely_tested_prey.csv"
     output:
         batch_folder=directory("work_folder/analysis/abundance_aware/batched_prey_tests")
+    log:
+        "logs/analysis/abundance_aware/batched_prey_tests.log"
     run:
         os.makedirs(output.batch_folder,exist_ok=True)
         unique_per_prey_df = pd.read_csv(input.unique_prey_test_combinations,sep="\t")
@@ -169,6 +177,8 @@ rule fit_parameters_abundance:
         abundance_cell_lines="data/normalised_log_ra.csv"
     output:
         bait_parameters="work_folder/analysis/abundance_aware/parameters_abundance/batch_{batch}_parameters.csv"
+    log:
+        "logs/analysis/abundance_aware/parameters_abundance/batch_{batch}_parameters.log"
     shell:
         """
         python src/Analysis/AbundanceAwareDetection/fit_model_mp.py \
@@ -179,7 +189,8 @@ rule fit_parameters_abundance:
             --workers {params.workers} \
             --batch_size {params.batch_size} \
             --samples {params.samples} \
-            --burin_samples {params.burin_samples}
+            --burin_samples {params.burin_samples} \
+            > {log} 2>&1
         """
 
 
@@ -194,6 +205,8 @@ rule fit_parameters_pod:
         abundance_cell_lines="data/normalised_log_ra.csv"
     output:
         bait_parameters="work_folder/analysis/abundance_aware/parameters_pod/batch_{batch}_parameters.csv"
+    log:
+        "logs/analysis/abundance_aware/parameters_pod/batch_{batch}_parameters.log"
     shell:
         """
         python src/Analysis/AbundanceAwareDetection/fit_model_mp.py \
@@ -204,7 +217,8 @@ rule fit_parameters_pod:
             --workers {params.workers} \
             --batch_size {params.batch_size} \
             --samples {params.samples} \
-            --burin_samples {params.burin_samples}
+            --burin_samples {params.burin_samples} \
+            > {log} 2>&1
         """
 
 
@@ -215,6 +229,8 @@ rule get_divergent:
         aggregate_parameters="work_folder/analysis/abundance_aware/parameters_{model}/all_parameters.csv"
     output:
         divergent="work_folder/analysis/abundance_aware/parameters_{model}/divergent.csv"
+    log:
+        "logs/analysis/abundance_aware/parameters_{model}/divergent.log"
     run:
         param_df = pd.read_csv(input.aggregate_parameters,sep="\t")
         div_df = param_df[param_df["n_divergences"] > 0][param_df.columns[:7]]
@@ -232,6 +248,8 @@ rule rerun_divergent:
         abundance_cell_lines="data/normalised_log_ra.csv"
     output:
         div_parameters="work_folder/analysis/abundance_aware/parameters_abundance/divergent_rerun_{model}.csv"
+    log:
+        "logs/analysis/abundance_aware/parameters_abundance/divergent_rerun_{model}.log"
     shell:
         """
         python src/Analysis/AbundanceAwareDetection/fit_model_mp.py \
@@ -243,7 +261,7 @@ rule rerun_divergent:
             --batch_size {params.batch_size} \
             --samples {params.samples} \
             --burin_samples {params.burin_samples}
-            --stepsize
+            --stepsize > {log} 2>&1
         """
 
 
@@ -254,6 +272,8 @@ rule aggregate:
         bait_parameters=lambda wc: get_bait_parameters(wc)
     output:
         aggregate_parameters="work_folder/analysis/abundance_aware/parameters_{model}/all_parameters.csv"
+    log:
+        "logs/analysis/abundance_aware/parameters_{model}/all_parameters.log"
     run:
         betas = [f"beta_prediction_{c}_{suffix}" for c in
                  params.selected_cell_lines for suffix in ["mean", "sd"]]
@@ -282,6 +302,8 @@ rule join_divergent:
         div_parameters="work_folder/analysis/abundance_aware/parameters_abundance/divergent_rerun_{model}.csv"
     output:
         models="work_folder/analysis/abundance_aware/parameters_{model}/all_rerun_parameters.csv"
+    log:
+        "logs/analysis/abundance_aware/parameters_{model}/all_rerun_parameters.log"
     run:
         df_param = pd.read_csv(input.aggregate_parameters,sep="\t")
         #df_div = pd.read_csv(input.div_parameters, sep="\t")
@@ -297,6 +319,8 @@ rule get_bait_prey_pairs:
         models="work_folder/analysis/abundance_aware/parameters_{model}/all_rerun_parameters.csv"
     output:
         all_bait_prey_models="work_folder/analysis/abundance_aware/bait_prey_{model}.csv"
+    log:
+        "logs/analysis/abundance_aware/bait_prey_{model}.log"
     run:
         all_bait_dfs = [pd.read_csv(bp,sep="\t") for bp in input.baits_preys]
         all_bait_dfs = pd.concat(all_bait_dfs)
@@ -331,6 +355,8 @@ rule get_pod_bounds:
         all_bait_prey_models="work_folder/analysis/abundance_aware/bait_prey_{model}.csv"
     output:
         pod="work_folder/analysis/POD/POD_{model}_mcmc.csv"
+    log:
+        "logs/analysis/POD/POD_{model}_mcmc.log"
     run:
         model_data = pd.read_csv(input.all_bait_prey_models,sep="\t")
         model_data["total_tested"] = model_data[[f"n_tested_{c}" for c in params.selected_cell_lines]].sum(axis=1)

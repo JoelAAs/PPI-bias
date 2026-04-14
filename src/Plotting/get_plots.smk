@@ -6,12 +6,14 @@ rule get_cell_line_prey_plot:
         cl_prey = f"work_folder{pn}/inferred_search_space/analysis/cell_line/bait_wise_prey_plotting.csv"
     output:
         plot = f"work_folder{pn}/plots/cell_line_prey.png"
+    log:
+        f"logs{pn}/plots/cell_line_prey.log"
     shell:
         """
         Rscript {params.script_location} \
              {input.cl_prey} \
              {params.part_or_difference_cutoff} \
-             {output.plot}
+             {output.plot} > {log} 2>&1
         """
 
 
@@ -26,9 +28,11 @@ rule get_localisation_y2h_ms_plot:
         y2h_diff_localisation=f"work_folder{pn}/inferred_search_space/analysis/localisation/diff_localisation_y2h.csv"
     output:
         plot = f"work_folder{pn}/plots/localisation_OR_y2h_ms.png"
+    log:
+        f"logs{pn}/plots/localisation_OR_y2h_ms.log"
     shell:
         """
-        Rscript {params.script_location} 
+        Rscript {params.script_location} > {log} 2>&1
         """
 
 
@@ -41,9 +45,11 @@ rule plot_go:
     output:
         plot_jaccard = f"work_folder{pn}/plots/AccumulationPOD/go_{{data}}_jaccard.png",
         plot_accumulation= f"work_folder{pn}/plots/AccumulationPOD/go_{{data}}_accumulation.png"
+    log:
+        f"logs{pn}/plots/AccumulationPOD/go_{{data}}_jaccard.log"
     shell:
         """
-        Rscript {params.script_location} {input.greater_go} {input.lesser_go} {wildcards.data} {output.plot_jaccard} {output.plot_accumulation}
+        Rscript {params.script_location} {input.greater_go} {input.lesser_go} {wildcards.data} {output.plot_jaccard} {output.plot_accumulation} > {log} 2>&1
         """
 
 
@@ -56,9 +62,11 @@ rule plot_do:
     output:
         plot_jaccard=f"work_folder{pn}/plots/AccumulationPOD/do_{{data}}_jaccard.png",
         plot_accumulation=f"work_folder{pn}/plots/AccumulationPOD/do_{{data}}_accumulation.png"
+    log:
+        f"logs{pn}/plots/AccumulationPOD/do_{{data}}_jaccard.log"
     shell:
         """
-        Rscript {params.script_location} {input.greater_go} {input.lesser_go} {wildcards.data} {output.plot_jaccard} {output.plot_accumulation}
+        Rscript {params.script_location} {input.greater_go} {input.lesser_go} {wildcards.data} {output.plot_jaccard} {output.plot_accumulation} > {log} 2>&1
         """
 
 
@@ -71,9 +79,11 @@ rule plot_naive_colocalisation:
         lesser_colocalisation=f"work_folder{pn}/analysis/localisation/cumulative/POD_{{data}}_localisation_lesser.csv",
     output:
         plot = f"work_folder{pn}/plots/AccumulationPOD/colocalisation_{{data}}.png"
+    log:
+        f"logs{pn}/plots/AccumulationPOD/colocalisation_{{data}}.log"
     shell:
         """
-        Rscript {params.script_location} {input.greater_colocalisation} {input.lesser_colocalisation} {wildcards.data} {output.plot}
+        Rscript {params.script_location} {input.greater_colocalisation} {input.lesser_colocalisation} {wildcards.data} {output.plot} > {log} 2>&1
         """
 
 rule plot_matched_colocalisation:

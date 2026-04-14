@@ -8,6 +8,8 @@ rule get_bait_occurrence:
         pod=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
     output:
         edge_list_shared=f"work_folder{pn}/analysis/negatome/bait_shared_studies_{{data}}.csv"
+    log:
+        f"logs{pn}/analysis/negatome/bait_shared_studies_{{data}}.log"
     run:
         df_pod = pd.read_csv(input.pod,sep="\t")
         bait_usage = df_pod[~df_pod[["gene_name_bait", "pubmed_id"]].duplicated(keep="first")].copy()
@@ -33,6 +35,8 @@ rule get_bait_bait_degree:
         edge_list_shared=f"work_folder{pn}/analysis/negatome/bait_shared_studies_{{data}}.csv"
     output:
         bait_bait_degree=f"work_folder{pn}/analysis/negatome/bait_bait_degree_{{data}}.csv"
+    log:
+        f"logs{pn}/analysis/negatome/bait_bait_degree_{{data}}.log"
     run:
         df_bait_bait = pd.read_csv(input.edge_list_shared,sep="\t")
 
@@ -55,6 +59,8 @@ rule negative_data_vs_bait_degree:
         bait_bait_degree=f"work_folder{pn}/analysis/negatome/bait_bait_degree_{{data}}.csv"
     output:
         neg_bait_degree=f"work_folder{pn}/analysis/negatome/neg_bait_bait_degree_{{data}}.csv"
+    log:
+        f"logs{pn}/analysis/negatome/neg_bait_bait_degree_{{data}}.log"
     run:
         df_pod = pd.read_csv(input.pod,sep="\t")
         df_pod_neg = df_pod[df_pod["n_observed"] == 0]
@@ -81,6 +87,8 @@ rule non_interaction_prey_entropy_entropy:
         bait_prey_degree=f"work_folder{pn}/formated/bait_prey_publications.csv"
     output:
         entropy_annotated=f"work_folder{pn}/analysis/negatome/test_entropy_{{data}}_limit_{{min_tests}}.csv"
+    log:
+        f"logs{pn}/analysis/negatome/test_entropy_{{data}}_limit_{{min_tests}}.log"
     run:
         df_pod = pd.read_csv(input.pod,sep="\t")
         df_pod_neg = df_pod[df_pod["n_observed"] == 0]

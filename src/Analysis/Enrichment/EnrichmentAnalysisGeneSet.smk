@@ -16,6 +16,8 @@ rule get_enrichment:
         go_enrichment_prey=f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_prey_go.csv",
         do_enrichment_bait=f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_bait_do.csv",
         do_enrichment_prey=f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_prey_do.csv"
+    log:
+        f"logs{pn}/degree/enrichment/{{data_set_limit}}.log"
     conda: "do_enrichment"
     shell:
         """
@@ -24,7 +26,8 @@ rule get_enrichment:
             {output.go_enrichment_bait} \
             {output.go_enrichment_prey} \
             {output.do_enrichment_bait} \
-            {output.do_enrichment_prey}
+            {output.do_enrichment_prey} \
+            > {log} 2>&1
         """
 
 
@@ -72,6 +75,8 @@ rule n_enriched_per_method:
             wc,["HCI", "delta", "HCNI"],[config["hci_limits"], config["hcni_tested"]],["go", "do"])
     output:
         n_enrichments=f"work_folder{pn}/degree/enrichment/significant_ontologies/{{data}}.csv"
+    log:
+        f"logs{pn}/degree/enrichment/significant_ontologies/{{data}}.log"
     run:
         with open(output.n_enrichments,"w") as w:
             w.write("data\ttype\tsource\tlimit\tont\tn_enrichments\n")
@@ -103,6 +108,8 @@ rule n_enriched_intact:
         )
     output:
         n_enrichments=f"work_folder{pn}/degree/enrichment/intact_significant_ontologies/intact.csv"
+    log:
+        f"logs{pn}/degree/enrichment/intact_significant_ontologies/intact.log"
     run:
         with open(output.n_enrichments,"w") as w:
             w.write("data\ttype\tsource\tlimit\tont\tn_enrichments\n")
@@ -123,6 +130,8 @@ rule n_doids_gene_degree:
         degree=f"work_folder{pn}/degree/{{data_set_limit}}.csv"
     output:
         doid_degree=f"work_folder{pn}/degree/doid/{{data_set_limit}}_doid.csv"
+    log:
+        f"logs{pn}/degree/doid/{{data_set_limit}}_doid.log"
     params:
         script="src/Analysis/Enrichment/get_ndoids.R"
     conda: "do_enrichment"
@@ -130,7 +139,8 @@ rule n_doids_gene_degree:
         """
         Rscript {params.script} \
             {input.degree} \
-            {output.doid_degree}
+            {output.doid_degree} \
+            > {log} 2>&1
         """
 
 
@@ -166,6 +176,8 @@ rule test_top_degree_against_naive:
         summed_degree=f"work_folder{pn}/degree/doid/{{data}}_summed.csv"
     output:
         doid_test=f"work_folder{pn}/degree/doid/{{data}}_tested.csv"
+    log:
+        f"logs{pn}/degree/doid/{{data}}_tested.log"
     run:
         df_naive_degree = pd.read_csv(input.naive_degree,sep="\t")
         top_naive_bait = df_naive_degree.nlargest(params.n_top_genes,"degree_bait")
@@ -210,22 +222,25 @@ rule top_degree_get_doids:
             pn=pn,source=["bait", "prey"]),
         doid_annotated=expand("work_folder{pn}/degree/doid/freq/{{data_set_limit}}_annotated_{source}.csv",
             pn=pn,source=["bait", "prey"])
+    log:
+        f"logs{pn}/degree/doid/freq/{{data_set_limit}}.log"
     conda: "do_enrichment"
     shell:
         """
+        exec > {log} 2>&1
         Rscript {params.script} \
             {input.degree} \
             {params.n_top_genes} \
             degree_bait \
             {output.doid_freq[0]} \
-            {output.doid_annotated[0]} 
-            
+            {output.doid_annotated[0]}
+
         Rscript {params.script} \
             {input.degree} \
             {params.n_top_genes} \
             degree_prey \
             {output.doid_freq[1]} \
-            {output.doid_annotated[1]} 
+            {output.doid_annotated[1]}
         """
 
 
@@ -239,6 +254,8 @@ rule get_go_annotation:
             "work_folder{pn}/degree/GO/{{data_set_limit}}_count_{source}.csv",
             pn=pn,source=["bait", "prey"]
         )
+    log:
+        f"logs{pn}/degree/GO/{{data_set_limit}}.log"
     run:
         degree_df = pd.read_csv(input.degree,sep="\t")
         for source, output_file in zip(["bait", "prey"],output.go_frequency):
@@ -293,6 +310,8 @@ rule test_go_terms:
             pn=pn,limit=config["hcni_tested"])
     output:
         test_csv = f"work_folder{pn}/degree/GO/tested/{{data}}_{{source}}.csv"
+    log:
+        f"logs{pn}/degree/GO/tested/{{data}}_{{source}}.log"
     run:
         naive_go_frequency_df = pd.read_csv(
             input.naive_go_frequency_df,sep="\t"

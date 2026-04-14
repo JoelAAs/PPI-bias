@@ -12,6 +12,8 @@ rule negatome_comparison:
         uniprot=f"work_folder{pn}/gene_names/gene_names.csv"
     output:
         table=f"work_folder{pn}/analysis/neg2compare/{{data}}.txt"
+    log:
+        f"logs{pn}/analysis/neg2compare/{{data}}.log"
     run:
         uniprot_2_gene = pd.read_csv(input.uniprot,sep="\t")
         pod_df = pd.read_csv(input.pod_data,sep="\t")

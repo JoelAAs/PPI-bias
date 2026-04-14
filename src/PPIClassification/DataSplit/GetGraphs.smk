@@ -10,8 +10,11 @@ rule blast_sequence_similarity:
         fasta=f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
     output:
         similarity_tsv=f"work_folder{pn}/protein_sequences/similarity/all_vs_all.tsv"
+    log:
+        f"logs{pn}/protein_sequences/similarity/all_vs_all.log"
     shell:
         """
+        exec > {log} 2>&1
         makeblastdb -dbtype prot -in {input.fasta} -title "Gene Name SP DB"
         blastp -query {input.fasta} -db {input.fasta} \
         -outfmt "6 qseqid stitle evalue bitscore"  \
@@ -26,6 +29,8 @@ rule get_sequence_similarity_graph:
         aa_seq_fasta=f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
     output:
         sequence_similarity_graph=f"work_folder{pn}/subsets/graphs/sequencesimilarity.graphml"
+    log:
+        f"logs{pn}/subsets/graphs/sequencesimilarity.log"
     run:
         gene_seq_dict = read_fasta(input.aa_seq_fasta)
         mean_length = round(sum([len(s) for s in gene_seq_dict.values()]) / len(gene_seq_dict))
@@ -56,6 +61,8 @@ rule get_min_cut_pos_partitions:
         full_pos=f"work_folder{pn}/subsets/{{dataset}}_{{network_type}}_full_{{pos_limit}}_pos.pq"
     output:
         ppi_graph=f"work_folder{pn}/subsets/graphs/{{dataset}}_{{network_type}}_limit_{{pos_limit}}.graphml"
+    log:
+        f"logs{pn}/subsets/graphs/{{dataset}}_{{network_type}}_limit_{{pos_limit}}.log"
     run:
         pos_df = pd.read_parquet(input.full_pos)
         pos_df["edge_weight"] = 1
@@ -69,6 +76,8 @@ rule get_pre_balanced_neg_pos_network:
         set_neg=f"work_folder{pn}/subsets/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv"
     output:
         ppi_graph=f"work_folder{pn}/subsets/graphs/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}.graphml"
+    log:
+        f"logs{pn}/subsets/graphs/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}.log"
     run:
         pos_df = pd.read_csv(input.set_pos, sep="\t", header=None)
         neg_df = pd.read_csv(input.set_neg, sep="\t", header=None)

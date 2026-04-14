@@ -534,7 +534,7 @@ def sanity_check(selected_pos, selected_neg, edge_list_pos, edge_list_neg):
 
 
 def main():
-    workers = snakemake.params.threads
+    workers = snakemake.threads
     test_set = snakemake.input.test_set
     validation_set = snakemake.input.validation_set
 

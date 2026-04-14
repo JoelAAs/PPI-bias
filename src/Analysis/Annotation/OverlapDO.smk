@@ -53,10 +53,12 @@ rule get_gene_do_terms:
         pod_df=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
     output:
         do_terms=f"work_folder{pn}/analysis/DO/gene_do_{{data}}.txt"
+    log:
+        f"logs{pn}/analysis/DO/gene_do_{{data}}.log"
     conda: "do_enrichment"
     shell:
         """
-        Rscript {params.script} {input.pod_df} {output.do_terms}
+        Rscript {params.script} {input.pod_df} {output.do_terms} > {log} 2>&1
         """
 
 rule get_jaccard_do_bait_prey:
@@ -65,6 +67,8 @@ rule get_jaccard_do_bait_prey:
         pod_df=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv",
     output:
         do_jaccard=f"work_folder{pn}/analysis/DO/pairs_{{data}}_jaccard.csv"
+    log:
+        f"logs{pn}/analysis/DO/pairs_{{data}}_jaccard.log"
     run:
         do_cols = [
             "ji_do",
@@ -91,6 +95,8 @@ rule get_do_accumulation:
     output:
         jaccard_greater=f"work_folder{pn}/analysis/DO/cumulative/POD_{{data}}_jaccard_greater.csv",
         jaccard_lesser=f"work_folder{pn}/analysis/DO/cumulative/POD_{{data}}_jaccard_lesser.csv"
+    log:
+        f"logs{pn}/analysis/DO/cumulative/POD_{{data}}_jaccard.log"
     run:
         do_data = pd.read_csv(
             input.do_jaccard,sep="\t"

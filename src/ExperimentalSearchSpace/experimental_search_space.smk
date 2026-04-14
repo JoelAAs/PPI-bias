@@ -65,7 +65,7 @@ def get_input_ppi_file(cell_line_wc):
 checkpoint infer_experimental_search_space:
     """
     Inferres negative data for baits of other preys seen in multibait experiments.
-    If {cell_line} is "cell_line" it will infere using cell line specific data specified in config "cell_line_ppis" 
+    If {cell_line} is "cell_line" it will infere using cell line specific data specified in config "cell_line_ppis"
     """
     params:
         id_pattern = config["id_pattern"]
@@ -73,6 +73,8 @@ checkpoint infer_experimental_search_space:
         bait_prey_file = lambda wc: get_input_ppi_file(wc.cell_line)
     output:
         directory(f"work_folder{pn}/inferred_search_space/experimental{{cell_line}}")
+    log:
+        f"logs{pn}/inferred_search_space/experimental{{cell_line}}.log"
     run:
         os.makedirs(output[0], exist_ok=True)
         bait_prey_df = pd.read_csv(input.bait_prey_file, sep="\t")

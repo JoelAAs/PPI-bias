@@ -62,7 +62,7 @@ wildcard_constraints:
     dataset="[_a-zA-Z0-9-]+",
     pid="[:a-zA-Z0-9-]+",
     neg_limit="[0-9.]+",
-    pos_limit="[0-9.]+",
+    pos_limit="([0-9.]+|all)",
     model_configuration="[a-z0-9]+",
     selected_data="[a-z0-9_.]+",
     network_type="(directional|undirectional)",

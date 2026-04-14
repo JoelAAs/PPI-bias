@@ -43,6 +43,8 @@ rule get_all_canonical_sequences:
         intact_uniprot_genes = f"work_folder{pn}/gene_names/uniprot_to_gene_name.csv"
     output:
         fasta = f"work_folder{pn}/protein_sequences/gene_name_sp.fasta"
+    log:
+        f"logs{pn}/protein_sequences/gene_name_sp.log"
     run:
         gene_name_uniprot_df = pd.read_csv(
             input.intact_uniprot_genes, sep="\t"
@@ -72,6 +74,8 @@ rule swissprot_gn_to_intact_gn:
     output:
         intact_to_sp = f"work_folder{pn}/gene_names/uniprot_to_sp.csv",
         fasta_dedup = f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
+    log:
+        f"logs{pn}/gene_names/uniprot_to_sp.log"
     run:
         with open(output.intact_to_sp, "w") as w:
             w.write("sp_gene_name\tintact_gene_name\n")
@@ -130,11 +134,14 @@ rule get_esm_embeddings:
         fasta = f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
     output:
         embeddings_csv = f"work_folder{pn}/embeddings/canonical_embedding.csv.gz"
+    log:
+        f"logs{pn}/embeddings/canonical_embedding.log"
     container: "/beegfs/scratch/ieo7513/.snakemake/apptainer/huggingface-transformers-all-latest-gpu-latest.sif" # run with --apptainer-args="--nv"
     shell:
         """
         python3 {params.script_location} \
         --protein_fasta {input.fasta} \
         --model_name {params.model} \
-        --embedding_csv {output.embeddings_csv}
+        --embedding_csv {output.embeddings_csv} \
+        > {log} 2>&1
         """

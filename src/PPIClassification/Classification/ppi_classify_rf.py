@@ -15,12 +15,8 @@ global RANDOM_STATE
 
 
 def get_dataset(pos_data_file, neg_data_file, embedding_dict, embed_length):
-    if pos_data_file[-3:] == "csv":
-        df_pos = pd.read_csv(pos_data_file, sep="\t", usecols=[0, 1], header=None)
-        df_negative = pd.read_csv(neg_data_file, sep="\t", usecols=[0, 1], header=None, comment="#")
-    else:
-        df_pos = pd.read_parquet(pos_data_file).iloc[:,0:2]
-        df_negative = pd.read_parquet(neg_data_file).iloc[:,0:2]
+    df_pos = pd.read_csv(pos_data_file, sep="\t")[["bait", "prey"]]
+    df_negative = pd.read_csv(neg_data_file, sep="\t")[["bait", "prey"]]
     df_samples = pd.concat([df_pos, df_negative], ignore_index=True)
 
     baits = df_samples.iloc[:, 0].to_numpy()
@@ -194,4 +190,16 @@ if __name__ == '__main__':
     param_file.close()
     
 
+
+dataset= "y2h"
+neg_limit = 2 
+pos_limit = 0.15
+pn = "/per_gene"
+train_ppi_data_pos = f"work_folder{pn}/subsets/train/equal_edge/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}_pos.csv"
+train_ppi_data_neg = f"work_folder{pn}/subsets/train/equal_edge/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}{random}_neg.csv"
+validation_ppi_data_pos = f"work_folder{pn}/subsets/validation/{dataset}_directional_pos.csv"
+validation_ppi_data_neg = f"work_folder{pn}/subsets/validation/{dataset}_directional_neg.csv"
+test_ppi_data_pos = f"work_folder{pn}/subsets/test/{dataset}_directional_pos.csv"
+test_ppi_data_neg = f"work_folder{pn}/subsets/test/{dataset}_directional_neg.csv"
+protein_embeddings = "work_folder/per_gene/embeddings/canonical_embedding.csv.gz"
 

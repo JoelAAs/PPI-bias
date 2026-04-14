@@ -5,9 +5,11 @@ from formating import *
 rule get_intact:
     output:
         intact="work_folder/data/intact/human.txt"
+    log:
+        "logs/data/intact/human.log"
     shell:
         """
-        wget https://ftp.ebi.ac.uk/pub/databases/intact/current/psimitab/species/human.txt -O {output.intact}
+        wget https://ftp.ebi.ac.uk/pub/databases/intact/current/psimitab/species/human.txt -O {output.intact} > {log} 2>&1
         """
 
 rule get_gene_name_uniprot:
@@ -18,6 +20,8 @@ rule get_gene_name_uniprot:
         miTab = "work_folder/data/intact/human.txt"
     output:
         uniprot = f"work_folder{pn}/gene_names/uniprot_to_gene_name.csv"
+    log:
+        f"logs{pn}/gene_names/uniprot_to_gene_name.log"
     run:
         get_gene_names(input.miTab, output.uniprot)
 
@@ -33,6 +37,8 @@ rule format_miTab:
     output:
         formated = f"work_folder{pn}/formated/bait_prey_publications.csv",
         gene_names = f"work_folder{pn}/gene_names/gene_names.csv"
+    log:
+        f"logs{pn}/formated/bait_prey_publications.log"
     run:
         mitab_df     = filter_mitab(input.miTab)
         bait_prey_df = reform_to_bait_prey(mitab_df)

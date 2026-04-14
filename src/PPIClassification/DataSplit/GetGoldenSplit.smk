@@ -17,6 +17,8 @@ rule set_gene_names:
         gs_validation_neg=f"work_folder{pn}/subsets/validation/goldensplit/data_neg.csv",
         gs_test_pos=f"work_folder{pn}/subsets/test/goldensplit/data_pos.csv",
         gs_test_neg=f"work_folder{pn}/subsets/test/goldensplit/data_neg.csv"
+    log:
+        f"logs{pn}/subsets/goldensplit/set_gene_names.log"
     run:
         gene_names = pd.read_csv(input.gene_names,sep="\t")
         for sp_id, gene_id in zip(input[1:], output):

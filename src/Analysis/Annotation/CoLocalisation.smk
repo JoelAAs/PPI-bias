@@ -42,6 +42,8 @@ rule format_localisation_data:
         localisation_csv=config["localisation_file"]
     output:
         formated_localisation=f"work_folder{pn}/analysis/localisation/gene_to_localisation.csv"
+    log:
+        f"logs{pn}/analysis/localisation/gene_to_localisation.log"
     run:
         df_unformated = pd.read_csv(input.localisation_csv,sep="\t")
         df_unformated = df_unformated[df_unformated["Reliability"].isin(params.reliability_score)]
@@ -66,6 +68,8 @@ rule method_comparison:
         method_diff_localisation=f"work_folder{pn}/inferred_search_space/analysis/localisation/same_localisation_method_diff.csv",
         ms_diff_localisation=f"work_folder{pn}/inferred_search_space/analysis/localisation/diff_localisation_ms.csv",
         y2h_diff_localisation=f"work_folder{pn}/inferred_search_space/analysis/localisation/diff_localisation_y2h.csv"
+    log:
+        f"logs{pn}/inferred_search_space/analysis/localisation/method_comparison.log"
     run:
         df_ms = pd.read_csv(input.multi_method_ms,sep="\t")
         df_y2h = pd.read_csv(input.multi_method_y2h,sep="\t")
@@ -138,6 +142,8 @@ rule accumulation_colocalisation:
         localisation_annotated=f"work_folder{pn}/analysis/localisation/POD_{{data}}_localisation.csv",
         localisation_lesser=f"work_folder{pn}/analysis/localisation/cumulative/POD_{{data}}_localisation_lesser.csv",
         localisation_greater=f"work_folder{pn}/analysis/localisation/cumulative/POD_{{data}}_localisation_greater.csv"
+    log:
+        f"logs{pn}/analysis/localisation/accumulation_colocalisation_{{data}}.log"
     run:
         df_localisation = pd.read_csv(input.localisation_csv,sep="\t")
         bait_model = pd.read_csv(input.pod_data,sep="\t")
@@ -189,6 +195,8 @@ rule get_per_study_localisation:
         study=f"work_folder{pn}/inferred_search_space/experimental_method/{{pid}}_{{method}}.csv"
     output:
         probability=f"work_folder{pn}/analysis/localisation/study_match_probability/{{pid}}_{{method}}.json"
+    log:
+        f"logs{pn}/analysis/localisation/study_match_probability/{{pid}}_{{method}}.log"
     run:
         study_df = pd.read_csv(input.study,sep="\t")
 
@@ -231,6 +239,8 @@ rule get_bait_test_localisation_probability:
         localisations=get_expected_localisations
     output:
         all_probs=f"work_folder{pn}/analysis/localisation/study_match_probability/subsets/{{data}}_unique_prob.json"
+    log:
+        f"logs{pn}/analysis/localisation/study_match_probability/subsets/{{data}}_unique_prob.log"
     run:
         unique_probs = pd.read_csv(input.pod_data,sep="\t")[["gene_name_bait", "pubmed_id"]].drop_duplicates()
         unique_probs = unique_probs.groupby("pubmed_id",as_index=False)["gene_name_bait"].unique()
@@ -278,6 +288,8 @@ rule annotate_per_study_prob:
         all_probs=f"work_folder{pn}/analysis/localisation/study_match_probability/subsets/{{data}}_unique_prob.json"
     output:
         expected_df=f"work_folder{pn}/analysis/localisation/study_match_probability/expected/pairs_{{data}}_expected.csv"
+    log:
+        f"logs{pn}/analysis/localisation/study_match_probability/expected/pairs_{{data}}_expected.log"
     run:
         localisation_df = pd.read_csv(input.localisation_csv,sep="\t")
         localisation_dict = localisation_df.groupby('gene_name')['localisation'].apply(set).to_dict()
@@ -314,7 +326,7 @@ rule annotate_per_study_prob:
 rule accumulation_matched_colocalisation:
     """
     Same as "accumulation_colocalisation" but we now consider the assumed prey pool of each study.
-    Calculates the mean number of localisation matches over the studies where a bait-prey combination could be observed  
+    Calculates the mean number of localisation matches over the studies where a bait-prey combination could be observed
     """
     input:
         expected_df=f"work_folder{pn}/analysis/localisation/study_match_probability/expected/pairs_{{data}}_expected.csv",
@@ -322,6 +334,8 @@ rule accumulation_matched_colocalisation:
     output:
         localisation_lesser=f"work_folder{pn}/analysis/localisation/study_match_probability/cumulative/POD_{{data}}_localisation_lesser.csv",
         localisation_greater=f"work_folder{pn}/analysis/localisation/study_match_probability/cumulative/POD_{{data}}_localisation_greater.csv"
+    log:
+        f"logs{pn}/analysis/localisation/study_match_probability/cumulative/POD_{{data}}.log"
     run:
         mco_data = pd.read_csv(
             input.expected_df,sep="\t"

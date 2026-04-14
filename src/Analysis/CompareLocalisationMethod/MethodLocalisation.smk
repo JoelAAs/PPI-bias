@@ -7,12 +7,14 @@ from src.Analysis.Annotation.localisation_support import add_localisation
 
 rule get_huri:
     """
-    must be annotated on gene name as bioplex is reported on gene name 
+    must be annotated on gene name as bioplex is reported on gene name
     """
     input:
         intact=f"work_folder{pn}/formated/bait_prey_publications.csv"
     output:
         huri=f"work_folder{pn}/data/huri/intact_huri.csv"
+    log:
+        f"logs{pn}/data/huri/intact_huri.log"
     run:
         intact = pd.read_csv(input.intact,sep="\t")
         huri_df = intact[intact["pubmed_id"] == 32296183]
@@ -27,6 +29,8 @@ rule localisation_delta:
         localisation_csv=f"work_folder{pn}/analysis/localisation/gene_to_localisation.csv"
     output:
         localisation_method=f"work_folder{pn}/analysis/localisation/HuRI_vs_Bioplex.csv"
+    log:
+        f"logs{pn}/analysis/localisation/HuRI_vs_Bioplex.log"
     run:
         n_permutations = 100000
 
@@ -216,6 +220,8 @@ rule membrane_delta:
         huri=f"work_folder{pn}/data/huri/intact_huri.csv"
     output:
         membrane_ppis = f"work_folder{pn}/analysis/membrane/HuRI_vs_Bioplex_total_mean.csv"
+    log:
+        f"logs{pn}/analysis/membrane/HuRI_vs_Bioplex_total_mean.log"
     run:
         bp_df = pd.read_csv(input.cvcl_0063_bp,sep="\t")[["Bait Symbol", "Prey Symbol"]]
         bp_df.columns = ["gene_name_bait", "gene_name_prey"]

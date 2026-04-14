@@ -11,6 +11,8 @@ rule get_hyrdophobicity_delta:
         pod_data=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
     output:
         hydro_annotated=f"work_folder{pn}/analysis/hydrophobicity/pairs_{{data}}_netsurfp2.csv"
+    log:
+        f"logs{pn}/analysis/hydrophobicity/pairs_{{data}}_netsurfp2.log"
     run:
         ## NetSurfP2.0
         uniprot_2_gene = pd.read_csv(input.uniprot_gene,sep="\t")
@@ -41,7 +43,7 @@ rule get_hyrdophobicity_delta:
 
 rule get_hydro_accumulation:
     """
-    Get sliding average of hydrophobicity given POD 
+    Get sliding average of hydrophobicity given POD
     """
     input:
         pod_data=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv",
@@ -49,6 +51,8 @@ rule get_hydro_accumulation:
     output:
         hydro_lesser=f"work_folder{pn}/analysis/hydrophobicity/cumulative/POD_{{data}}_netsurfp2_lesser.csv",
         hydro_greater=f"work_folder{pn}/analysis/hydrophobicity/cumulative/POD_{{data}}_netsurfp2_greater.csv"
+    log:
+        f"logs{pn}/analysis/hydrophobicity/cumulative/POD_{{data}}_netsurfp2.log"
     run:
         measurement_columns = [
             "thsa_netsurfp2_delta",

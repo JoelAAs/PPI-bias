@@ -7,6 +7,8 @@ rule count_tested_pairs:
         pod = f"work_folder{pn}/analysis/POD/POD_{{method}}.csv"
     output:
         pp_counts = f"work_folder{pn}/analysis/POD/summary/POD_{{method}}.csv"
+    log:
+        f"logs{pn}/analysis/POD/summary/POD_{{method}}.log"
     run:
         pod_df = pd.read_csv(input.pod, sep="\t")
         tested_counts = pod_df.groupby(
@@ -20,6 +22,8 @@ rule join_counts:
         counts = expand(f"work_folder{pn}/analysis/POD/summary/POD_{{data}}.csv", data = datasets)
     output:
         all_counts = f"work_folder{pn}/analysis/POD/summary/all.csv"
+    log:
+        f"logs{pn}/analysis/POD/summary/all.log"
     run:
 
         all_dfs = [pd.read_csv(single_count, sep="\t") for single_count in input.counts]

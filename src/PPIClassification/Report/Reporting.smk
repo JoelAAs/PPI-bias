@@ -46,6 +46,8 @@ rule generate_balance_report:
         test_balanced_neg=f"work_folder{pn}/subsets/test/{{balance_method}}/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
     output:
         html_report=f"work_folder{pn}/subsets/report/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_{{balance_method}}.nb.html"
+    log:
+        f"logs{pn}/subsets/report/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_{{balance_method}}.log"
     script:
         "render_balance_report.R"
 
@@ -59,5 +61,7 @@ rule generate_classification_report:
         undirectional_metrics = f"work_folder{pn}/subsets/degree_balance/all_undirectional.csv"
     output:
         html_report=f"work_folder{pn}/subsets/report/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_roc_curve.nb.html"
+    log:
+        f"logs{pn}/subsets/report/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_roc_curve.log"
     script:
         "render_classification_report.R"

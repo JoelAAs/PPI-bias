@@ -51,6 +51,8 @@ rule aggregate_pids:
         subsets = lambda wc: get_subsets(wc)
     output:
         method_aggregate = f"work_folder{pn}/inferred_search_space/aggregated/methods/{{subset}}_experimental_wise.csv"
+    log:
+        f"logs{pn}/inferred_search_space/aggregated/methods/{{subset}}_experimental_wise.log"
     run:
         single = wildcards.subset not in config
         aggregate_inferred_experiments(input.subsets, output.method_aggregate, params.id_pattern, single)
