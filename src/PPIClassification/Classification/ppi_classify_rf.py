@@ -190,16 +190,3 @@ if __name__ == '__main__':
     param_file.close()
     
 
-
-dataset= "y2h"
-neg_limit = 2 
-pos_limit = 0.15
-pn = "/per_gene"
-train_ppi_data_pos = f"work_folder{pn}/subsets/train/equal_edge/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}_pos.csv"
-train_ppi_data_neg = f"work_folder{pn}/subsets/train/equal_edge/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}{random}_neg.csv"
-validation_ppi_data_pos = f"work_folder{pn}/subsets/validation/{dataset}_directional_pos.csv"
-validation_ppi_data_neg = f"work_folder{pn}/subsets/validation/{dataset}_directional_neg.csv"
-test_ppi_data_pos = f"work_folder{pn}/subsets/test/{dataset}_directional_pos.csv"
-test_ppi_data_neg = f"work_folder{pn}/subsets/test/{dataset}_directional_neg.csv"
-protein_embeddings = "work_folder/per_gene/embeddings/canonical_embedding.csv.gz"
-

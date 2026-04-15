@@ -178,3 +178,5 @@ work_folder
 .idea/
 .snakemake/
 data/
+manual_figures/
+intermidiate_data
