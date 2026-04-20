@@ -86,5 +86,7 @@ rule generate_negative_sample:
         random_negative_edges = f"work_folder{pn}/subsets/train/equal_edge/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}-random_neg.csv"
     log:
         f"logs{pn}/subsets/train/equal_edge/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_random_neg.log"
+    resources:
+        mem_gb=30
     script:
         "scripts/random_negative.py"

@@ -4,8 +4,8 @@ import datetime
 import numpy as np
 import pandas as pd
 from skopt import Optimizer
-from skopt.space import Integer, Real, Categorical
-from sklearn.ensemble import RandomForestClassifier
+from skopt.space import Integer, Real
+from xgboost import XGBClassifier
 from sklearn.metrics import classification_report, balanced_accuracy_score
 from sklearn.metrics import log_loss
 import joblib
@@ -42,22 +42,22 @@ def get_embedding_dict(protein_embeddings_file):
     return embedding_dict, embed_length
 
 
-def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_validation, n_threads, fileout, n_iters=10):
+def hyperparameter_tuned_model(X_train, y_train, X_validation, y_validation, n_threads, fileout, n_iters=10):
     print("Hyperparameter tuning started", flush=True)
 
     param_dist = [
-        Integer(48, 480, prior="log-uniform", name="n_estimators"),
-        Categorical([None, 8, 10, 12, 16, 20, 24], name="max_depth"),
-        Integer(10, 500, name="min_samples_split"),
-        Integer(20, 300, name="min_samples_leaf"),
-        Categorical(["sqrt", "log2", 0.05, 0.1, 0.2, 0.3], name="max_features"),
-        Real(0.1, 0.3, name="max_samples")
+        Integer(50, 500, prior="log-uniform", name="n_estimators"),
+        Integer(3, 10, name="max_depth"),
+        Real(0.01, 0.3, prior="log-uniform", name="learning_rate"),
+        Integer(1, 50, name="min_child_weight"),
+        Real(0.0, 5.0, name="gamma"),
+        Real(0.3, 1.0, name="colsample_bytree"),
+        Real(0.5, 1.0, name="subsample"),
     ]
 
     best_score = np.inf
     best_model = None
     best_params = None
-    #best_t = 0.5
 
     hyper_optimizer = Optimizer(
         dimensions=param_dist,
@@ -68,17 +68,17 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
 
     for i in range(n_iters):
         s = datetime.datetime.now()
-        X_train = X_train_full
-        y_train = y_train_full
 
         params = hyper_optimizer.ask()
         params_dict = dict(zip([d.name for d in param_dist], params))
 
-        model = RandomForestClassifier(
+        model = XGBClassifier(
             **params_dict,
-            bootstrap=True,
+            use_label_encoder=False,
+            eval_metric="logloss",
             random_state=RANDOM_STATE,
-            n_jobs=n_threads
+            n_jobs=n_threads,
+            verbosity=0
         )
         model.fit(X_train, y_train)
         probs = model.predict_proba(X_validation)[:, 1]
@@ -106,7 +106,6 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
     fileout.write("Best params: " + str(best_params) + "\n")
     best_params = dict(zip([d.name for d in param_dist], best_params))
     return best_model, best_score, best_params
-
 
 
 if __name__ == '__main__':
@@ -158,20 +157,23 @@ if __name__ == '__main__':
     _, score, parameters = hyperparameter_tuned_model(
         X_train, y_train, X_validate, y_validate, threads, param_file, n_iters=60)
 
-    rfc = RandomForestClassifier(
+    xgb = XGBClassifier(
         **parameters,
-        bootstrap=True,
+        use_label_encoder=False,
+        eval_metric="logloss",
         random_state=RANDOM_STATE,
-        n_jobs=threads)
+        n_jobs=threads,
+        verbosity=0
+    )
 
-    rfc.fit(
-        np.vstack([X_train,X_validate]),
+    xgb.fit(
+        np.vstack([X_train, X_validate]),
         np.concatenate([y_train, y_validate])
     )
-    joblib.dump(rfc, args.saved_model)
+    joblib.dump(xgb, args.saved_model)
 
-    # probs_test = rfc.predict_proba(X_test)[:, 1]
-
+    # probs_test = xgb.predict_proba(X_test)[:, 1]
+    # 
     # precision, recall, _ = precision_recall_curve(y_test, probs_test)
     # pr_auc = auc(recall, precision)
     # y_test_pred = (probs_test > 0.5).astype(int)
@@ -179,5 +181,3 @@ if __name__ == '__main__':
     # param_file.write(f"Precision-Recall AUC: {pr_auc:.4f}\n")
     # param_file.write(classification_report(y_test, y_test_pred))
     param_file.close()
-    
-

@@ -102,6 +102,8 @@ def get_baseline_plot(obs_performance, obs_auc, base_dist, auc_base_dist, output
 def get_dataset(pos_data_file, neg_data_file, embedding_dict, embed_length):
     df_pos = pd.read_csv(pos_data_file, sep="\t")[["bait", "prey"]]
     df_negative = pd.read_csv(neg_data_file, sep="\t")[["bait", "prey"]]
+    if df_negative.shape[0] > df_pos.shape[0]*20:
+        df_negative = df_negative.sample(df_pos.shape[0]*20)
     df_samples = pd.concat([df_pos, df_negative], ignore_index=True)
 
     baits = df_samples.iloc[:, 0].to_numpy()
@@ -157,3 +159,11 @@ if __name__ == "__main__":
         f.write(f"CE (baseline): {base_ce:.4f}\n")
         y_test = y_test.astype(np.int32)
         f.write(f"Samples (pos/neg): {sum(y_test)} / {len(y_test) - sum(y_test)}")
+
+
+pos_data_file = "work_folder/per_gene/subsets/test/flat_directional_pos.csv"
+neg_data_file = "work_folder/per_gene/subsets/test/flat_directional_neg.csv"
+embedding_dict, embed_length = get_embedding_dict("work_folder/per_gene/embeddings/canonical_embedding.csv.gz")
+
+model = joblib.load("work_folder/per_gene/classification/randomforest/model/flat_directional_limit_1_poslim_0.15-random_model_parameters.joblib")
+X_test, y_test = get_dataset(pos_data_file,neg_data_file, embedding_dict, embed_length)

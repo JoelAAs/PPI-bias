@@ -50,7 +50,7 @@ include: "src/PPIClassification/DataSplit/CheckRedundancy.smk"
 include: "src/PPIClassification/ModelEvaluation/Evaluations.smk"
 
 
-include: "src/PPIClassification/Classification/RandomForest.smk"
+include: "src/PPIClassification/Classification/Classifiers.smk"
 include: "src/PPIClassification/Report/Reporting.smk"
 include: "src/Plotting/get_plots.smk"
 
@@ -70,4 +70,4 @@ wildcard_constraints:
 
 rule all:
     input:
-        all_models = f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
+        all_models = f"work_folder{pn}/classification/xgboost/metrics/all_metrics.csv"

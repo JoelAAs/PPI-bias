@@ -6,16 +6,18 @@ rule get_model_metrics:
     input:
         test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_directional_pos.csv",
         test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_directional_neg.csv",
-        saved_model = f"work_folder{pn}/classification/randomforest/model/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_parameters.joblib",
+        saved_model = f"work_folder{pn}/classification/{{classifier}}/model/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_parameters.joblib",
         protein_embeddings = f"work_folder{pn}/embeddings/canonical_embedding.csv.gz"
     output:
-        metrics=f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_metrics.txt",
-        pr_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_pr_curve.png",
-        pr_neg_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_pr_neg_curve.png",
-        ce_png=f"work_folder{pn}/classification/randomforest/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_ce.png",
+        metrics=f"work_folder{pn}/classification/{{classifier}}/metrics/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_metrics.txt",
+        pr_png=f"work_folder{pn}/classification/{{classifier}}/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_pr_curve.png",
+        pr_neg_png=f"work_folder{pn}/classification/{{classifier}}/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_pr_neg_curve.png",
+        ce_png=f"work_folder{pn}/classification/{{classifier}}/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_ce.png",
     threads: 10
+    resources:
+        mem_gb=80
     log:
-        f"logs{pn}/classification/randomforest/metrics/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_metrics.log"
+        f"logs{pn}/classification/{{classifier}}/metrics/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_metrics.log"
     shell:
         """
         python3 {params.script_location} \
@@ -32,12 +34,12 @@ rule get_model_metrics:
 rule all_metrics:
     input:
         metrics = expand(
-            f"work_folder{pn}/classification/randomforest/metrics/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_metrics.txt",
-            dataset=config["datasets"], pos_limit=config["positive_limits"], neg_limit=config["negative_limits"], random=["", "-random"])
+            "work_folder{pn}/classification/{{classifier}}/metrics/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}{random}_metrics.txt",
+            pn = pn, dataset=config["datasets"], pos_limit=config["positive_limits"], neg_limit=config["negative_limits"], random=["", "-random"])
     output:
-        all_models = f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv"
+        all_models = f"work_folder{pn}/classification/{{classifier}}/metrics/all_metrics.csv"
     log:
-        f"logs{pn}/classification/randomforest/metrics/all_metrics.log"
+        f"logs{pn}/classification/{{classifier}}/metrics/all_metrics.log"
     run:
         with open(output[0], "a") as w:
             w.write("model\tpr_auc\tpr_auc_base\tpr_auc_neg\tpr_auc_neg_base\troc_auc\troc_auc_base\tce_obs\tce_baseline\tsamples\n")
