@@ -6,12 +6,12 @@ rule random_forest:
         validation_neg=f"work_folder{pn}/subsets/validation/{{dataset}}_directional_neg.csv",
         test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_directional_pos.csv",
         test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_directional_neg.csv",
-        protein_embeddings=f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
+        protein_embeddings=f"work_folder{pn}/embeddings/canonical_{{esm_model}}_mean_max.csv.gz",
     output:
-        params=f"work_folder{pn}/classification/randomforest/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_parameters.txt",
-        saved_model=f"work_folder{pn}/classification/randomforest/model/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_parameters.joblib",
+        params=f"work_folder{pn}/classification/randomforest/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_{{esm_model}}_parameters.txt",
+        saved_model=f"work_folder{pn}/classification/randomforest/model/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_{{esm_model}}_parameters.joblib",
     log:
-        f"logs{pn}/classification/randomforest/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model.log"
+        f"logs{pn}/classification/randomforest/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_{{esm_model}}_model.log"
     threads: 15
     resources:
         mem_gb=40
@@ -43,12 +43,12 @@ rule xgboost:
         validation_neg=f"work_folder{pn}/subsets/validation/{{dataset}}_directional_neg.csv",
         test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_directional_pos.csv",
         test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_directional_neg.csv",
-        protein_embeddings=f"work_folder{pn}/embeddings/canonical_embedding.csv.gz",
+        protein_embeddings=f"work_folder{pn}/embeddings/canonical_{{esm_model}}_mean_max.csv.gz",
     output:
-        params=f"work_folder{pn}/classification/xgboost/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_parameters.txt",
-        saved_model=f"work_folder{pn}/classification/xgboost/model/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_parameters.joblib",
+        params=f"work_folder{pn}/classification/xgboost/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_{{esm_model}}_parameters.txt",
+        saved_model=f"work_folder{pn}/classification/xgboost/model/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_{{esm_model}}_parameters.joblib",
     log:
-        f"logs{pn}/classification/xgboost/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model.log"
+        f"logs{pn}/classification/xgboost/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_{{esm_model}}_model.log"
     threads: 15
     resources:
         mem_gb=40

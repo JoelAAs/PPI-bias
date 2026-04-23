@@ -11,6 +11,7 @@ if pn:
     pn = "/" + pn
 
 datasets = config["datasets"]
+esm_models = ["ESM2", "ESMC"]
 #expected_output += colocalisation_plot + go_jaccards_plot + hydro_delta_plot +  do_jaccards_plot
 #expected_output += negatome_compare + matched_colocalisation_plot + negatome_entropy
 
@@ -66,8 +67,12 @@ wildcard_constraints:
     model_configuration="[a-z0-9]+",
     selected_data="[a-z0-9_.]+",
     network_type="(directional|undirectional)",
-    random="(-random)?"
+    random="(-random)?",
+    esm_model="[A-Z0-9]+"
 
 rule all:
     input:
-        all_models = f"work_folder{pn}/classification/xgboost/metrics/all_metrics.csv"
+        all_models = expand(
+            f"work_folder{pn}/classification/xgboost/metrics/all_metrics_{{esm_model}}.csv",
+            esm_model=esm_models
+        )

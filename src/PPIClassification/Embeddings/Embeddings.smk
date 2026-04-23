@@ -126,22 +126,52 @@ rule swissprot_gn_to_intact_gn:
 
 
 
-rule get_esm_embeddings:
+rule get_esmc_embeddings:
     params:
-        model = config["embedding_model"],
-        script_location = "src/PPIClassification/Embeddings/get_embeddings.py"
+        model = config.get("esmc_model", "esmc_600m"),
+        script_location = "src/PPIClassification/Embeddings/get_embeddings_esmc.py"
     input:
         fasta = f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
     output:
-        embeddings_csv = f"work_folder{pn}/embeddings/canonical_embedding.csv.gz"
+        embeddings = f"work_folder{pn}/embeddings/canonical_ESMC.pt"
     log:
-        f"logs{pn}/embeddings/canonical_embedding.log"
+        f"logs{pn}/embeddings/canonical_ESMC.log"
     container: "/beegfs/scratch/ieo7513/.snakemake/apptainer/huggingface-transformers-all-latest-gpu-latest.sif" # run with --apptainer-args="--nv"
     shell:
         """
         python3 {params.script_location} \
         --protein_fasta {input.fasta} \
         --model_name {params.model} \
-        --embedding_csv {output.embeddings_csv} \
+        --embedding_output {output.embeddings} \
         > {log} 2>&1
         """
+
+
+rule get_esm2_embeddings:
+    params:
+        model = config["embedding_model"],
+        script_location = "src/PPIClassification/Embeddings/get_embeddings.py"
+    input:
+        fasta = f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
+    output:
+        embeddings = f"work_folder{pn}/embeddings/canonical_ESM2.pt"
+    log:
+        f"logs{pn}/embeddings/canonical_ESM2.log"
+    container: "/beegfs/scratch/ieo7513/.snakemake/apptainer/huggingface-transformers-all-latest-gpu-latest.sif" # run with --apptainer-args="--nv"
+    shell:
+        """
+        python3 {params.script_location} \
+        --protein_fasta {input.fasta} \
+        --model_name {params.model} \
+        --embedding_csv {output.embeddings} \
+        > {log} 2>&1
+        """
+
+
+rule get_mean_max_features:
+    input:
+        embeddings = f"work_folder{pn}/embeddings/canonical_{{esm_model}}.pt"
+    output:
+        protein_embeddings=f"work_folder{pn}/embeddings/canonical_{{esm_model}}_mean_max.csv.gz",
+    script:
+        "get_mean_max_embeddings.py"

@@ -1,34 +1,26 @@
 import datetime
 import torch
-from transformers import AutoModel, AutoTokenizer
 import re
 import argparse
+from esm.models.esmc import ESMC
+from esm.sdk.api import ESMProtein, LogitsConfig
 
-class EmbeddWorker:
-    def __init__(self, chosen_model):
-        self.tokenizer, self.model = self.download_setup_model(chosen_model)
+
+class EmbeddWorkerESMC:
+    def __init__(self, model_name):
+        self.model = ESMC.from_pretrained(model_name).to("cuda").eval()
 
     def get_embeddings(self, sequence, i, n):
-        inputs = self.tokenizer(sequence, return_tensors="pt")
-        m2 = datetime.datetime.now()
-        inputs = {k: v.to("cuda") for k, v in inputs.items()}
+        t0 = datetime.datetime.now()
+        protein = ESMProtein(sequence=sequence)
+        protein_tensor = self.model.encode(protein)
         with torch.no_grad():
-            outputs = self.model(**inputs)
-        emb = outputs.last_hidden_state.squeeze(0).float().cpu()
-        e = datetime.datetime.now()
-        print(f"Embedding_time: {e - m2} for sequence {i} / {n}")
-        del inputs, outputs
+            output = self.model.logits(protein_tensor, LogitsConfig(embeddings=True))
+        emb = output.embeddings[1:-1].float().cpu()  # strip BOS/EOS tokens
+        print(f"Embedding_time: {datetime.datetime.now() - t0} for sequence {i} / {n}")
         torch.cuda.empty_cache()
         return emb
 
-    @staticmethod
-    def download_setup_model(chosen_model):
-        tokenizer = AutoTokenizer.from_pretrained(chosen_model)
-        model = AutoModel.from_pretrained(
-            chosen_model,
-            dtype=torch.float16,
-            device_map="cuda").eval()
-        return tokenizer, model
 
 def read_fasta(fasta_filename):
     gene_name_seq_dict = dict()
@@ -52,23 +44,23 @@ def read_fasta(fasta_filename):
     return gene_name_seq_dict
 
 
-def get_all_embeddings(fasta_file, chosen_model):
+def get_all_embeddings(fasta_file, model_name):
     gene_name_seq_dict = read_fasta(fasta_file)
     genes = list(gene_name_seq_dict.keys())
     sequences = list(gene_name_seq_dict.values())
 
-    em = EmbeddWorker(chosen_model)
+    em = EmbeddWorkerESMC(model_name)
     n = len(sequences)
-    embeddings = {
+    return {
         gene: em.get_embeddings(seq, i + 1, n)
         for i, (gene, seq) in enumerate(zip(genes, sequences))
     }
-    return embeddings
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Get embeddings from protein fasta")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Get ESMC embeddings from protein fasta")
     parser.add_argument("--protein_fasta", required=True, help="Path to input protein fasta")
-    parser.add_argument("--model_name", required=True, help="Name of embedding model (huggingface)")
+    parser.add_argument("--model_name", required=True, help="ESMC model name (e.g. esmc_600m)")
     parser.add_argument("--embedding_output", required=True, help="Path to output .pt file")
     args = parser.parse_args()
 

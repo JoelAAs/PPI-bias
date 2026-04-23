@@ -4,15 +4,6 @@ import pandas as pd
 import numpy as np
 import networkx as nx
 
-def get_scaling_value(neg_file):
-    with open(neg_file, "r") as f:
-        first_line = f.readline()
-    
-    match = re.search(r"Scaled:\s*(\d+)", first_line)
-    if match:
-        return int(match.group(1))
-    else:
-        return None
 
 def get_degree_df(degree_dict_pos, degree_dict_neg):
     df_d_pos = pd.DataFrame(degree_dict_pos, columns=["gene_name", "pos_degree"])
