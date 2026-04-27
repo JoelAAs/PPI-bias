@@ -139,6 +139,7 @@ rule get_esmc_embeddings:
     container: "/beegfs/scratch/ieo7513/.snakemake/apptainer/huggingface-transformers-all-latest-gpu-latest.sif" # run with --apptainer-args="--nv"
     shell:
         """
+        pip install --user --quiet esm
         python3 {params.script_location} \
         --protein_fasta {input.fasta} \
         --model_name {params.model} \

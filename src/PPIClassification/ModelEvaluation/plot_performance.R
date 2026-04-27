@@ -37,15 +37,15 @@ auc_data$pos_limit <- factor(
 g <- ggplot(
   auc_data,
   aes(
-    y = pr_auc,
-    x = pr_auc_neg
+    x = ce_obs,
+    y = roc_auc
   )
 ) +
   geom_point(aes(color = random, shape = dataset)) +
   labs(
-    title = "PR AUC for interaction and non-interaction classification",
-    x = "Non-interaction PR AUC",
-    y = "Interaction PR AUC",
+    title = "ROC AUC and cross-entropy",
+    x = "Cross-entropy",
+    y = "ROC AUC",
     color = "Negative data",
     shape = "Data type"
   ) +
@@ -71,14 +71,14 @@ g <- ggplot(
         "0.15" = "P- >= 0.15"
       )
     )
-  ) +  geom_hline(yintercept = 0.05, linetype = "dashed") +
-  geom_vline(xintercept = 0.95, linetype = "dashed") +
+  ) + 
+  # geom_hline(yintercept = 0.5, linetype = "dashed") +
   theme(
     legend.position = "right",
     axis.text.x = element_text(angle = -45, hjust = 0, vjust = 0)
   )
 
-ggsave("manual_figures/PR_auc.png", g, height = 4, width = 6)
+ggsave("manual_figures/ROC_auc_ce.png", g, height = 4, width = 6)
 
 
 

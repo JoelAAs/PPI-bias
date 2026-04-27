@@ -2,12 +2,12 @@ import pandas as pd
 import numpy as np
 import argparse
 import joblib
-from sklearn.metrics import precision_recall_curve, auc, log_loss
+from sklearn.metrics import precision_recall_curve, roc_curve, roc_auc_score, auc, log_loss
 import matplotlib.pyplot as plt
 import math
 
 
-def generate_and_plot_performance(model, X_test, y_test, pr_png, neg_pr_png, ce_png):
+def generate_and_plot_performance(model, X_test, y_test, pr_png, neg_pr_png, ce_png, roc_png):
     y_pred = model.predict_proba(X_test)[:, 1]
     random_chance = np.mean(y_test)
 
@@ -32,7 +32,16 @@ def generate_and_plot_performance(model, X_test, y_test, pr_png, neg_pr_png, ce_
     dist_ce, obs_ce = get_baseline_log_loss(y_pred, y_test)
     get_cross_entropy_plot(dist_ce, obs_ce, ce_png)
 
-    return pr_auc, pr_auc_neg, obs_ce, np.mean(auc_base_dist_pr), np.mean(auc_base_dist_pr_neg), np.mean(dist_ce)
+    fpr, tpr, _ = roc_curve(y_test, y_pred)
+    roc_auc = roc_auc_score(y_test, y_pred)
+    auc_base_dist_roc = get_baseline_roc(y_pred, y_test)
+    print("plotting ROC curve", flush=True)
+    get_roc_plot((fpr, tpr), roc_auc, auc_base_dist_roc, roc_png)
+
+    return (
+        pr_auc, pr_auc_neg, obs_ce, roc_auc,
+        np.mean(auc_base_dist_pr), np.mean(auc_base_dist_pr_neg), np.mean(dist_ce), np.mean(auc_base_dist_roc)
+    )
 
 
 def get_baseline_log_loss(y_pred, y_test, n=1000):
@@ -53,6 +62,36 @@ def get_cross_entropy_plot(baseline_ce, obs_ce, ce_output):
     axes.legend()
     plt.tight_layout()
     plt.savefig(ce_output)
+    plt.close()
+
+
+def get_baseline_roc(y_pred, y_test, n=1000):
+    auc_base_dist = []
+    for _ in range(n):
+        y_pred_permut = np.random.permutation(y_pred)
+        auc_base_dist.append(roc_auc_score(y_test, y_pred_permut))
+    return auc_base_dist
+
+
+def get_roc_plot(obs_performance, obs_auc, auc_base_dist, output_png):
+    n_permutations = len(auc_base_dist)
+    fpr, tpr = obs_performance
+
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    axes[0].plot(fpr, tpr, color='blue', label=f'Observed ROC (AUC={obs_auc:.4f})')
+    axes[0].plot([0, 1], [0, 1], linestyle='--', color='grey', label='Random chance')
+    axes[0].set_xlabel('False Positive Rate')
+    axes[0].set_ylabel('True Positive Rate')
+    axes[0].set_title('ROC Curve')
+    axes[0].legend()
+
+    axes[1].hist(auc_base_dist, bins=int(math.sqrt(n_permutations)), alpha=0.7, label='Baseline AUC Distribution')
+    axes[1].axvline(obs_auc, color='blue', linestyle='--', label=f'Observed AUC: {obs_auc:.4f}')
+    axes[1].set_xlabel('ROC AUC')
+    axes[1].set_title('ROC AUC Distribution with Baseline')
+    axes[1].legend()
+    plt.tight_layout()
+    plt.savefig(output_png)
     plt.close()
 
 
@@ -102,8 +141,8 @@ def get_baseline_plot(obs_performance, obs_auc, base_dist, auc_base_dist, output
 def get_dataset(pos_data_file, neg_data_file, embedding_dict, embed_length):
     df_pos = pd.read_csv(pos_data_file, sep="\t")[["bait", "prey"]]
     df_negative = pd.read_csv(neg_data_file, sep="\t")[["bait", "prey"]]
-    if df_negative.shape[0] > df_pos.shape[0]*20:
-        df_negative = df_negative.sample(df_pos.shape[0]*20)
+    if df_negative.shape[0] > df_pos.shape[0]:
+        df_negative = df_negative.sample(df_pos.shape[0])
     df_samples = pd.concat([df_pos, df_negative], ignore_index=True)
 
     baits = df_samples.iloc[:, 0].to_numpy()
@@ -139,6 +178,7 @@ if __name__ == "__main__":
     parser.add_argument("--plot_pr_png", type=str)
     parser.add_argument("--plot_neg_pr_png", type=str)
     parser.add_argument("--plot_ce_png", type=str)
+    parser.add_argument("--plot_roc_png", type=str)
 
     args = parser.parse_args()
 
@@ -146,8 +186,8 @@ if __name__ == "__main__":
     X_test, y_test = get_dataset(args.pos_data_file, args.neg_data_file, embedding_dict, embed_length)
     model = joblib.load(args.model_file)
 
-    pr_auc, pr_auc_neg, obs_ce, base_pr_auc, base_pr_auc_neg, base_ce = generate_and_plot_performance(
-        model, X_test, y_test, args.plot_pr_png, args.plot_neg_pr_png, args.plot_ce_png
+    pr_auc, pr_auc_neg, obs_ce, roc_auc,base_pr_auc, base_pr_auc_neg, base_ce, base_roc = generate_and_plot_performance(
+        model, X_test, y_test, args.plot_pr_png, args.plot_neg_pr_png, args.plot_ce_png, args.plot_roc_png
     )
 
     with open(args.output_file, "w") as f:
@@ -157,6 +197,8 @@ if __name__ == "__main__":
         f.write(f"PR NEG AUC (baseline): {base_pr_auc_neg:.4f}\n")
         f.write(f"CE: {obs_ce:.4f}\n")
         f.write(f"CE (baseline): {base_ce:.4f}\n")
+        f.write(f"ROC: {roc_auc:.4f}\n")
+        f.write(f"ROC (baseline): {base_roc:.4f}\n")
         y_test = y_test.astype(np.int32)
         f.write(f"Samples (pos/neg): {sum(y_test)} / {len(y_test) - sum(y_test)}")
 

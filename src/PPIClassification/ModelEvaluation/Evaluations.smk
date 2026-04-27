@@ -53,6 +53,7 @@ rule get_model_metrics:
         pr_png=f"work_folder{pn}/classification/{{classifier}}/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_{{esm_model}}_pr_curve.png",
         pr_neg_png=f"work_folder{pn}/classification/{{classifier}}/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_{{esm_model}}_pr_neg_curve.png",
         ce_png=f"work_folder{pn}/classification/{{classifier}}/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_{{esm_model}}_ce.png",
+        roc_png=f"work_folder{pn}/classification/{{classifier}}/metrics/plot/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_{{esm_model}}_roc_curve.png",
     threads: 10
     resources:
         mem_gb=80
@@ -68,7 +69,8 @@ rule get_model_metrics:
             --output_file {output.metrics} \
             --plot_pr_png {output.pr_png} \
             --plot_neg_pr_png {output.pr_neg_png} \
-            --plot_ce_png {output.ce_png} > {log} 2>&1
+            --plot_ce_png {output.ce_png} \
+            --plot_roc_png {output.roc_png} > {log} 2>&1
         """
 
 rule all_metrics:
@@ -82,7 +84,7 @@ rule all_metrics:
         f"logs{pn}/classification/{{classifier}}/metrics/all_metrics_{{esm_model}}.log"
     run:
         with open(output[0], "a") as w:
-            w.write("model\tpr_auc\tpr_auc_base\tpr_auc_neg\tpr_auc_neg_base\tce_obs\tce_baseline\tsamples\n")
+            w.write("model\tpr_auc\tpr_auc_base\tpr_auc_neg\tpr_auc_neg_base\troc_auc\troc_auc_base\tce_obs\tce_baseline\tsamples\n")
             for metric_file in input.metrics:
                 with open(metric_file, "r") as f:
                     line_out = [line.strip().split(": ")[1] for line in f]
@@ -90,4 +92,3 @@ rule all_metrics:
                     model_name = metric_file.split("/")[-1].replace("_metrics.txt", "")
                     line_out = model_name + "\t" + line_out + "\n"
                     w.write(line_out)
-
