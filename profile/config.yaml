@@ -14,14 +14,14 @@ set-resources:
     slurm_partition: short  # or medium/long based on your needs
     slurm_constraint: gpu
     slurm_extra: "'--gpus=nvidia_h200'"
-    mem_mb: 16000 
+    mem_mb: 48000 
     cpus_per_task: 8  # Pair with sufficient CPUs (node has 96 total)
     runtime: 60  # Adjust based on partition limits (short=8h max)
   get_esmc_embeddings:
     slurm_partition: short  # or medium/long based on your needs
     slurm_constraint: gpu
     slurm_extra: "'--gpus=nvidia_h200'"
-    mem_mb: 16000 
+    mem_mb: 48000 
     cpus_per_task: 8  # Pair with sufficient CPUs (node has 96 total)
     runtime: 60  # Adjust based on partition limits (short=8h max)
 jobs: 10

@@ -14,20 +14,20 @@ class EmbeddWorker:
         inputs = {k: v.to("cuda") for k, v in inputs.items()}
         with torch.no_grad():
             outputs = self.model(**inputs)
-        emb = outputs.last_hidden_state.squeeze(0).float().cpu()
+        token_emb = outputs.last_hidden_state.squeeze(0)  # [L, D] on GPU
+        mean_vec = token_emb.mean(dim=0).float().cpu()
+        max_vec = token_emb.max(dim=0).values.float().cpu()
         e = datetime.datetime.now()
         print(f"Embedding_time: {e - m2} for sequence {i} / {n}")
-        del inputs, outputs
+        del inputs, outputs, token_emb
         torch.cuda.empty_cache()
-        return emb
+        return mean_vec, max_vec
 
     @staticmethod
     def download_setup_model(chosen_model):
         tokenizer = AutoTokenizer.from_pretrained(chosen_model)
-        model = AutoModel.from_pretrained(
-            chosen_model,
-            torch_dtype=torch.float16,
-            device_map="cuda").eval()
+        model = AutoModel.from_pretrained(chosen_model).eval()
+        model = model.half().to("cuda")
         return tokenizer, model
 
 def read_fasta(fasta_filename):

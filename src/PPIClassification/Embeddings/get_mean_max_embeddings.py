@@ -4,12 +4,10 @@ import pandas as pd
 embeddings: dict = torch.load(snakemake.input.embeddings)
 
 rows = []
-for gene_name, emb in embeddings.items():
-    mean_vec = emb.mean(dim=0).numpy()
-    max_vec = emb.max(dim=0).values.numpy()
-    rows.append([*mean_vec, *max_vec, gene_name])
+for gene_name, (mean_vec, max_vec) in embeddings.items():
+    rows.append([*mean_vec.numpy(), *max_vec.numpy(), gene_name])
 
-hidden_dim = next(iter(embeddings.values())).shape[1]
+hidden_dim = next(iter(embeddings.values()))[0].shape[0]
 columns = list(range(hidden_dim * 2)) + ["gene_name"]
 
 pd.DataFrame(rows, columns=columns).to_csv(
