@@ -26,7 +26,7 @@ class EmbeddWorker:
         tokenizer = AutoTokenizer.from_pretrained(chosen_model)
         model = AutoModel.from_pretrained(
             chosen_model,
-            dtype=torch.float16,
+            torch_dtype=torch.float16,
             device_map="cuda").eval()
         return tokenizer, model
 
