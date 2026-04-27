@@ -10,7 +10,14 @@ default-resources:
   cpus_per_task: 2
   runtime: 360 # 6 h
 set-resources:
-  get_esm_embeddings:  # Replace with your actual rule name
+  get_esm2_embeddings:
+    slurm_partition: short  # or medium/long based on your needs
+    slurm_constraint: gpu
+    slurm_extra: "'--gpus=nvidia_h200'"
+    mem_mb: 16000 
+    cpus_per_task: 8  # Pair with sufficient CPUs (node has 96 total)
+    runtime: 60  # Adjust based on partition limits (short=8h max)
+  get_esmc_embeddings:
     slurm_partition: short  # or medium/long based on your needs
     slurm_constraint: gpu
     slurm_extra: "'--gpus=nvidia_h200'"
