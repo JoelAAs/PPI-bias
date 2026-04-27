@@ -164,7 +164,7 @@ rule get_esm2_embeddings:
         python3 {params.script_location} \
         --protein_fasta {input.fasta} \
         --model_name {params.model} \
-        --embedding_csv {output.embeddings} \
+        --embedding_output {output.embeddings} \
         > {log} 2>&1
         """
 
