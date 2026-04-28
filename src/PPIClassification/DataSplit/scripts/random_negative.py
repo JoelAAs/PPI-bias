@@ -21,4 +21,6 @@ def main():
         for u, v in selected_G.edges():
             f.write(f"{u}\t{v}\n")
 
-main()
+
+if __name__ == "__main__":
+    main()

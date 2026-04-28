@@ -1,5 +1,5 @@
 import pandas as pd
-from sample_balance_multi_network import single_alternating_maxflow
+from sample_balance_multi_network_functions import single_alternating_maxflow
 
 
 def main():
@@ -19,4 +19,6 @@ def main():
     pos_permut_df.to_csv(snakemake.output.permuted_pos, index=False, sep="\t")
     neg_permut_df.to_csv(snakemake.output.permuted_neg, index=False, sep="\t")
 
-main()
+
+if __name__ == "__main__":
+    main()

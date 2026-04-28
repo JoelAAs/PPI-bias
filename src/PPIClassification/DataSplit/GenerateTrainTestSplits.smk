@@ -65,6 +65,8 @@ rule balance_to_equal_samples:
         validation_set = f"work_folder{pn}/subsets/validation/{{dataset}}_directional_pos.csv",
         full_detection=f"work_folder{pn}/analysis/POD/directional/POD_{{dataset}}.pq"
     threads: 10
+    resources:
+        mem_gb=50
     output:
         balanced_edges_positive = expand(
             "work_folder{pn}/subsets/train/equal_edge/{{dataset}}_directional_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
@@ -103,6 +105,8 @@ rule permute_balanced_samples:
     output:
         permuted_pos = f"work_folder{pn}/subsets/train/permuted/{{permutation}}/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
         permuted_neg = f"work_folder{pn}/subsets/train/permuted/{{permutation}}/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv"
+    resources:
+        mem_gb=30
     log:
         f"logs{pn}/subsets/train/permuted/{{permutation}}/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}.log"
     script:

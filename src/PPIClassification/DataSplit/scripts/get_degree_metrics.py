@@ -73,4 +73,6 @@ def main():
             fraction_total = n_edges[0]/original_edges
             w.write(f"{dataset}\t{split_name}\t{spearman}\t{div_degrees}\t{n_edges[0]}\t{fraction_total}\t{n_edges[0]/n_edges[1]}\n")
 
-main()
+
+if __name__ == "__main__":
+    main()

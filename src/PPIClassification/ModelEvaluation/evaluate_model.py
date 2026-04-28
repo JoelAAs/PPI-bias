@@ -36,7 +36,7 @@ def get_dataset(pos_data_file, neg_data_file, embedding_dict, embed_length):
     df_pos = pd.read_csv(pos_data_file, sep="\t")[["bait", "prey"]]
     df_negative = pd.read_csv(neg_data_file, sep="\t")[["bait", "prey"]]
     if df_negative.shape[0] > df_pos.shape[0]:
-        df_negative = df_negative.sample(df_pos.shape[0], seed = 1234)
+        df_negative = df_negative.sample(df_pos.shape[0], random_state = 1234)
     df_samples = pd.concat([df_pos, df_negative], ignore_index=True)
 
     baits = df_samples.iloc[:, 0].to_numpy()

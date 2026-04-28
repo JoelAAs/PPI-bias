@@ -98,4 +98,6 @@ def main():
     write_edgelist(G_test_neg, snakemake.output.test_neg)
 
 
-main()
+
+if __name__ == "__main__":
+    main()
