@@ -79,6 +79,36 @@ rule balance_to_equal_samples:
 
 
 
+rule generate_permuted_random_negative:
+    input:
+        balanced_positive_edges = f"work_folder{pn}/subsets/train/permuted/{{permutation}}/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
+    output:
+        random_negative_edges = f"work_folder{pn}/subsets/train/permuted/{{permutation}}/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}-random_neg.csv"
+    log:
+        f"logs{pn}/subsets/train/permuted/{{permutation}}/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_random_neg.log"
+    resources:
+        mem_gb=30
+    script:
+        "scripts/random_negative.py"
+
+
+rule permute_balanced_samples:
+    params:
+        fraction  = config.get("permutation_fraction", 0.95),
+        base_seed = config["seed"],
+        min_flow  = config.get("permutation_min_flow", 0.95)
+    input:
+        balanced_pos = f"work_folder{pn}/subsets/train/equal_edge/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
+        balanced_neg = f"work_folder{pn}/subsets/train/equal_edge/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv"
+    output:
+        permuted_pos = f"work_folder{pn}/subsets/train/permuted/{{permutation}}/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
+        permuted_neg = f"work_folder{pn}/subsets/train/permuted/{{permutation}}/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv"
+    log:
+        f"logs{pn}/subsets/train/permuted/{{permutation}}/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}.log"
+    script:
+        "scripts/permute_balanced_set.py"
+
+
 rule generate_negative_sample:
     input:
         balanced_positive_edges = f"work_folder{pn}/subsets/train/equal_edge/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",

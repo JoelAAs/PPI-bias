@@ -68,11 +68,18 @@ wildcard_constraints:
     selected_data="[a-z0-9_.]+",
     network_type="(directional|undirectional)",
     random="(-random)?",
-    esm_model="[A-Z0-9]+"
+    esm_model="[A-Z0-9]+",
+    permutation="[0-9]+",
+    classifier="[a-z]+"
 
 rule all:
     input:
-        all_models = expand(
+        expand(
             f"work_folder{pn}/classification/xgboost/metrics/all_metrics_{{esm_model}}.csv",
-            esm_model=esm_models
+            esm_model=["ESM2"]
+        ),
+        expand(
+            f"work_folder{pn}/classification/{{classifier}}/permuted/all_metrics_{{esm_model}}.csv",
+            classifier=["xgboost", "randomforest"],
+            esm_model=["ESM2"]
         )

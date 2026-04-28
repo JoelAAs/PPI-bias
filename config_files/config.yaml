@@ -87,3 +87,6 @@ positive_limits:
 negative_limits:
   - 1
   - 2
+
+permutation_fraction: 0.95
+n_permutations: 10

@@ -42,13 +42,11 @@ def get_embedding_dict(protein_embeddings_file):
     return embedding_dict, embed_length
 
 
-def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_validation, n_threads, fileout, n_iters=10):
+def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_validation, n_threads, fileout, n_iters=60):
     print("Hyperparameter tuning started", flush=True)
 
     param_dist = [
-        Integer(48, 480, prior="log-uniform", name="n_estimators"),
         Categorical([None, 8, 10, 12, 16, 20, 24], name="max_depth"),
-        Integer(10, 500, name="min_samples_split"),
         Integer(20, 300, name="min_samples_leaf"),
         Categorical(["sqrt", "log2", 0.05, 0.1, 0.2, 0.3], name="max_features"),
         Real(0.1, 0.3, name="max_samples")
@@ -76,6 +74,7 @@ def hyperparameter_tuned_model(X_train_full, y_train_full, X_validation, y_valid
 
         model = RandomForestClassifier(
             **params_dict,
+            n_estimators=100,
             bootstrap=True,
             random_state=RANDOM_STATE,
             n_jobs=n_threads
@@ -115,8 +114,6 @@ if __name__ == '__main__':
     parser.add_argument("--train_ppi_data_neg", required=True, help="")
     parser.add_argument("--validation_ppi_data_pos", required=True, help="Path to output csv file")
     parser.add_argument("--validation_ppi_data_neg", required=True, help="Path to output csv file")
-    parser.add_argument("--test_ppi_data_pos", required=True, help="Path to output csv file")
-    parser.add_argument("--test_ppi_data_neg", required=True, help="Path to output csv file")
     parser.add_argument("--protein_embeddings", required=True, help="Path to output csv file")
     parser.add_argument("--params_out", required=True, help="Path to output csv file")
     parser.add_argument("--saved_model", required=True, help="Path to output csv file")
@@ -146,20 +143,14 @@ if __name__ == '__main__':
         n_embedding
     )
 
-    # print("Reading test data ... ", flush=True)
-    # X_test, y_test = get_dataset(
-    #     args.test_ppi_data_pos,
-    #     args.test_ppi_data_neg,
-    #     embed_dict,
-    #     n_embedding
-    # )
 
     param_file = open(args.params_out, "w")
     _, score, parameters = hyperparameter_tuned_model(
-        X_train, y_train, X_validate, y_validate, threads, param_file, n_iters=60)
+        X_train, y_train, X_validate, y_validate, threads, param_file, n_iters=30)
 
     rfc = RandomForestClassifier(
         **parameters,
+        n_estimators=100,
         bootstrap=True,
         random_state=RANDOM_STATE,
         n_jobs=threads)
@@ -169,15 +160,6 @@ if __name__ == '__main__':
         np.concatenate([y_train, y_validate])
     )
     joblib.dump(rfc, args.saved_model)
-
-    # probs_test = rfc.predict_proba(X_test)[:, 1]
-
-    # precision, recall, _ = precision_recall_curve(y_test, probs_test)
-    # pr_auc = auc(recall, precision)
-    # y_test_pred = (probs_test > 0.5).astype(int)
-    # param_file.write("-----------------TEST ACCURACY----------------\n")
-    # param_file.write(f"Precision-Recall AUC: {pr_auc:.4f}\n")
-    # param_file.write(classification_report(y_test, y_test_pred))
     param_file.close()
     
 

@@ -46,11 +46,9 @@ def hyperparameter_tuned_model(X_train, y_train, X_validation, y_validation, n_t
     print("Hyperparameter tuning started", flush=True)
 
     param_dist = [
-        Integer(50, 500, prior="log-uniform", name="n_estimators"),
         Integer(3, 10, name="max_depth"),
         Real(0.01, 0.3, prior="log-uniform", name="learning_rate"),
         Integer(1, 50, name="min_child_weight"),
-        Real(0.0, 5.0, name="gamma"),
         Real(0.3, 1.0, name="colsample_bytree"),
         Real(0.5, 1.0, name="subsample"),
     ]
@@ -74,6 +72,8 @@ def hyperparameter_tuned_model(X_train, y_train, X_validation, y_validation, n_t
 
         model = XGBClassifier(
             **params_dict,
+            n_estimators=100,
+            gamma=0,
             use_label_encoder=False,
             eval_metric="logloss",
             random_state=RANDOM_STATE,
@@ -114,8 +114,6 @@ if __name__ == '__main__':
     parser.add_argument("--train_ppi_data_neg", required=True, help="")
     parser.add_argument("--validation_ppi_data_pos", required=True, help="Path to output csv file")
     parser.add_argument("--validation_ppi_data_neg", required=True, help="Path to output csv file")
-    parser.add_argument("--test_ppi_data_pos", required=True, help="Path to output csv file")
-    parser.add_argument("--test_ppi_data_neg", required=True, help="Path to output csv file")
     parser.add_argument("--protein_embeddings", required=True, help="Path to output csv file")
     parser.add_argument("--params_out", required=True, help="Path to output csv file")
     parser.add_argument("--saved_model", required=True, help="Path to output csv file")
@@ -145,20 +143,14 @@ if __name__ == '__main__':
         n_embedding
     )
 
-    # print("Reading test data ... ", flush=True)
-    # X_test, y_test = get_dataset(
-    #     args.test_ppi_data_pos,
-    #     args.test_ppi_data_neg,
-    #     embed_dict,
-    #     n_embedding
-    # )
-
     param_file = open(args.params_out, "w")
     _, score, parameters = hyperparameter_tuned_model(
-        X_train, y_train, X_validate, y_validate, threads, param_file, n_iters=60)
+        X_train, y_train, X_validate, y_validate, threads, param_file, n_iters=30)
 
     xgb = XGBClassifier(
         **parameters,
+        n_estimators=100,
+        gamma=0,
         use_label_encoder=False,
         eval_metric="logloss",
         random_state=RANDOM_STATE,
@@ -172,12 +164,4 @@ if __name__ == '__main__':
     )
     joblib.dump(xgb, args.saved_model)
 
-    # probs_test = xgb.predict_proba(X_test)[:, 1]
-    # 
-    # precision, recall, _ = precision_recall_curve(y_test, probs_test)
-    # pr_auc = auc(recall, precision)
-    # y_test_pred = (probs_test > 0.5).astype(int)
-    # param_file.write("-----------------TEST ACCURACY----------------\n")
-    # param_file.write(f"Precision-Recall AUC: {pr_auc:.4f}\n")
-    # param_file.write(classification_report(y_test, y_test_pred))
     param_file.close()

@@ -121,7 +121,7 @@ def graph_to_edge_df(g, node_map_idx):
     return pd.DataFrame(edge_list, columns=["bait", "prey"])
 
 
-def single_alternating_maxflow(positive_edge_df, negative_edge_df, min_flow, max_edges=None):
+def single_alternating_maxflow(positive_edge_df, negative_edge_df, min_flow, max_edges=None, seed=None):
     all_nodes = (
         set(positive_edge_df["bait"]) | set(positive_edge_df["prey"]) |
         set(negative_edge_df["bait"]) | set(negative_edge_df["prey"])
@@ -159,6 +159,9 @@ def single_alternating_maxflow(positive_edge_df, negative_edge_df, min_flow, max
     subset_edges = [positive_edge_df, negative_edge_df]
 
     edge_count_msg_count = positive_edge_df.shape[0]
+
+    if seed is not None:
+        np.random.seed(seed)
 
     while percent_flow_value < min_flow or (
         max_edges is not None and any(se.shape[0] > max_edges for se in subset_edges)
@@ -277,118 +280,6 @@ def build_multi_network_flow_graph(edge_list_a, edge_list_b):
         mf_capacity,
         smallest_edge_count,
     )
-
-
-def alternating_maxflow_multi_network(
-    edge_list_a,
-    edge_list_b,
-    edge_deviation_threshold=0.1,
-    min_flow=0.9,
-):
-    multi_flow_graph = [None, None]
-    network_data = [None, None]
-    super_source = [None, None]
-    super_sink = [None, None]
-    capacity = [None, None]
-    smallest_edge_count = [None, None]
-    selected_edges = [edge_list_a.copy(), [None] * len(edge_list_a)]
-
-    (
-        multi_flow_graph[0],
-        network_data[0],
-        super_source[0],
-        super_sink[0],
-        capacity[0],
-        smallest_edge_count[0],
-    ) = build_multi_network_flow_graph(edge_list_a, edge_list_b)
-
-    i = 0
-    current_least_flow = 0.0
-    current_edge_deviation = 1.0
-
-    while (
-        current_least_flow < min_flow
-        or current_edge_deviation > edge_deviation_threshold
-    ):
-        slot = i % 2
-        next_slot = (i + 1) % 2
-
-        residual = max_flow(
-            multi_flow_graph[slot], super_source[slot], super_sink[slot], capacity[slot]
-        )
-
-        current_least_flow = 1
-        current_edge_deviation = 1
-
-        current_least_flow = min(
-            [
-                (capacity[slot][e] - residual[e]) / capacity[slot][e]
-                for e in super_source[slot].out_edges()
-            ]
-        )
-
-        single_network_degree = []
-        per_subnetwork_edge_count = [
-            capacity[slot][e] - residual[e] for e in super_source[slot].out_edges()
-        ]
-        for net_i in range(len(edge_list_a)):
-            single_network_degree.append(
-                sum(
-                    capacity[slot][e]
-                    for e in network_data[slot][net_i]["source"].out_edges()
-                )
-            )
-        sample_balances = [
-            abs(e / d - 1)
-            for d, e in zip(single_network_degree, per_subnetwork_edge_count)
-        ]
-        current_edge_deviation = max(sample_balances)
-        test = [edge_list_a.copy(), []*len(edge_list_a)]
-        for net_i in range(len(edge_list_a)):
-            selected_edges[next_slot][net_i] = graph_to_edge_df(
-                extract_selected_edges(
-                    multi_flow_graph[slot],
-                    capacity[slot],
-                    residual,
-                    network_data[slot][net_i]["flow_node_map_index"],
-                    network_data[slot][net_i]["node_map"],
-                    network_data[slot][net_i]["source"],
-                    network_data[slot][net_i]["sink"],
-                ),
-                network_data[slot][net_i]["node_map_idx"],
-            )
-            selected_edges[next_slot][net_i] = test[next_slot][net_i]
-            test[slot][net_i], selected_edges[next_slot][net_i] = (
-                drop_exclusive_nodes(
-                    test[slot][net_i], test[next_slot][net_i]
-                )
-            )
-
-        (
-            multi_flow_graph[next_slot],
-            network_data[next_slot],
-            super_source[next_slot],
-            super_sink[next_slot],
-            capacity[next_slot],
-            smallest_edge_count[next_slot],
-        ) = build_multi_network_flow_graph(
-            selected_edges[next_slot], selected_edges[slot]
-        )
-        print(
-            f"{smallest_edge_count[next_slot]} edge limit, least flow {current_least_flow}, edge deviation {current_edge_deviation}"
-        )
-        print(f"Selected Network edge counts:")
-        for net_i in range(len(edge_list_a)):
-            print(
-                f"Selected Network edge:\t"
-                f"pos: {selected_edges[1][net_i].shape[0]}\t"
-                f"neg: {selected_edges[0][net_i].shape[0]}"
-            )
-        i += 1
-
-    return [selected_edges[0][net_i] for net_i in range(len(edge_list_a))], [
-        selected_edges[1][net_i] for net_i in range(len(edge_list_a))
-    ]
 
 
 def drop_exclusive_nodes(edge_df_a, edge_df_b):
