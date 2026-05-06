@@ -17,8 +17,9 @@ rule blast_sequence_similarity:
         exec > {log} 2>&1
         makeblastdb -dbtype prot -in {input.fasta} -title "Gene Name SP DB"
         blastp -query {input.fasta} -db {input.fasta} \
+        -evalue 1000000 \
         -outfmt "6 qseqid stitle evalue bitscore"  \
-        -max_hsps 1 -num_threads {params.n_threads} -out {output.similarity_tsv}.tsv
+        -max_hsps 1 -num_threads {params.n_threads} -out {output.similarity_tsv}
         ## Eval > 10 not reported
         """
 
@@ -28,7 +29,8 @@ rule get_sequence_similarity_graph:
         similarity_tsv=f"work_folder{pn}/protein_sequences/similarity/all_vs_all.tsv",
         aa_seq_fasta=f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
     output:
-        sequence_similarity_graph=f"work_folder{pn}/subsets/graphs/sequencesimilarity.graphml"
+        sequence_similarity_graph=f"work_folder{pn}/subsets/graphs/sequencesimilarity.graphml",
+        similarity_tsv=f"work_folder{pn}/protein_sequences/similarity/sequencesimilarity.tsv"
     log:
         f"logs{pn}/subsets/graphs/sequencesimilarity.log"
     run:
@@ -52,6 +54,7 @@ rule get_sequence_similarity_graph:
         ava_blast_df["edge_id"] = ava_blast_df[["qgene", "sgene"]].apply(lambda x: "-".join(sorted(x)),axis=1)
         ava_blast_df = ava_blast_df[~ava_blast_df["edge_id"].duplicated(keep="first")]  # NOTE: we assume B->A ~ A->B
         ava_blast_df["edge_weight"] = ava_blast_df["bitscore_p_residue"]
+        ava_blast_df[["qgene", "sgene", "bitscore_p_residue"]].to_csv(output.similarity_tsv, sep="\t", index=False)
         G = nx.from_pandas_edgelist(ava_blast_df,"qgene","sgene",edge_attr="edge_weight")
         nx.write_graphml(G,output.sequence_similarity_graph)
 

@@ -225,62 +225,6 @@ def single_alternating_maxflow(positive_edge_df, negative_edge_df, min_flow, max
     return pos, neg
 
 
-def build_multi_network_flow_graph(edge_list_a, edge_list_b):
-    if len(edge_list_a) != len(edge_list_b):
-        raise ValueError("Positive and negative edge lists must have the same length.")
-    min_flow = 0.9
-
-    smallest_edge_count = min(
-        single_alternating_maxflow(a_edge_df, b_edge_df, min_flow)[0].shape[0]
-        for a_edge_df, b_edge_df in zip(edge_list_a, edge_list_b)
-    )
-    network_data = dict()
-    multi_flow_graph = Graph(directed=True)
-    mf_capacity = multi_flow_graph.new_edge_property("int")
-    super_source = multi_flow_graph.add_vertex()
-    super_sink = multi_flow_graph.add_vertex()
-
-    for net_i, (a_edge_df, b_edge_df) in enumerate(zip(edge_list_a, edge_list_b)):
-        shared_baits = set(a_edge_df["bait"]) & set(b_edge_df["bait"])
-        shared_prey = set(a_edge_df["prey"]) & set(b_edge_df["prey"])
-
-        node_map, node_map_idx = get_node_map(shared_baits | shared_prey)
-        g_a = generate_graph(a_edge_df, node_map)
-        target_bait, target_prey = get_degree(g_a)
-        (
-            multi_flow_graph,
-            mf_capacity,
-            source,
-            sink,
-            flow_node_map_index,
-            flow_node_map,
-        ) = build_bait_prey_flow_graph(
-            b_edge_df, target_bait, target_prey, multi_flow_graph, mf_capacity, node_map
-        )
-
-        ssoe = multi_flow_graph.add_edge(super_source, source)
-        ssie = multi_flow_graph.add_edge(sink, super_sink)
-        mf_capacity[ssoe] = smallest_edge_count
-        mf_capacity[ssie] = smallest_edge_count
-
-        network_data[net_i] = {
-            "source": source,
-            "sink": sink,
-            "flow_node_map_index": flow_node_map_index,
-            "flow_node_map": flow_node_map,
-            "node_map": node_map,
-            "node_map_idx": node_map_idx,
-        }
-
-    return (
-        multi_flow_graph,
-        network_data,
-        super_source,
-        super_sink,
-        mf_capacity,
-        smallest_edge_count,
-    )
-
 
 def drop_exclusive_nodes(edge_df_a, edge_df_b):
     while True:

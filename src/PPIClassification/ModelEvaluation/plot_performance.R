@@ -6,7 +6,7 @@ library(tidyverse)
 #  [5] "neg_limit" "pos_limit" "random"
 # >
 auc_data <- read.csv(
-  "work_folder/per_gene/classification/xgboost/metrics/all_metrics.csv",
+  "work_folder/per_gene/classification/xgboost/permuted/all_metrics_ESM2.csv",
   sep = "\t", header = TRUE
 )
 
@@ -46,7 +46,51 @@ g <- ggplot(
     y = roc_auc
   )
 ) +
-  geom_point(aes(color = random, shape = dataset)) +
+  geom_boxplot(aes(color = random)) +
+  labs(
+    title = "ROC AUC per datasets and threshold configurations",
+    x = "Detection dataset",
+    y = "ROC AUC",
+    color = "Negative data",
+    shape = "Data type"
+  ) +
+  scale_color_manual(
+    values = c("darkorange", "blue"),
+    labels = c("HCNI", "Non-observed")
+  ) +
+  theme_bw() +
+  facet_grid(
+    neg_limit ~ pos_limit,
+    labeller = labeller(
+      neg_limit = c(
+        "1" = "Negative tests >= 1",
+        "2" = "Negative tests >= 2"
+      ),
+      pos_limit = c(
+        "all" = "Any interactions",
+        "0.02" = "P- >= 0.02",
+        "0.15" = "P- >= 0.15"
+      )
+    )
+  ) +
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(angle = -45, hjust = 0, vjust = 0)
+  )
+
+ggsave("manual_figures/ROC_auc.png", g, height = 5, width = 6)
+
+
+
+
+g <- ggplot(
+  auc_data,
+  aes(
+    x = dataset,
+    y = ceiling()
+  )
+) +
+  geom_boxplot(aes(color = random, shape = dataset)) +
   labs(
     title = "ROC AUC per datasets and threshold configurations",
     x = "Detection dataset",
@@ -83,47 +127,3 @@ g <- ggplot(
   )
 
 ggsave("manual_figures/ROC_auc.png", g, height = 4, width = 6)
-
-
-degree_balance <- read.table(
-  "work_folder/per_gene/subsets/train/equal_edge/balance/all_metrics.csv",
-  sep = "\t", header = T
-)
-
-degree_balance$total_delta <-
-  degree_balance$bait_degree_delta + degree_balance$prey_degree_delta
-degree_balance$neg_type <- ifelse(degree_balance$random, "Non-observed", "HCNI")
-degree_balance$dataset <- factor(
-  degree_balance$dataset,
-  labels = c("flat" = "Combined", "ms" = "MS", "y2h" = "Y2H")
-)
-
-g_degree <- ggplot(
-  degree_balance,
-  aes(x = dataset, y = total_delta / num_edges, fill = neg_type)
-) +
-  geom_boxplot(outlier.size = 0.8) +
-  labs(
-    title = "Train set degree balance by dataset and \nnegative sampling strategy",
-    x = "Dataset",
-    y = "Degree delta per edge (bait + prey)/(|E+|+ |E-|)",
-    fill = "Negative data"
-  ) +
-  scale_fill_manual(values = c("HCNI" = "darkorange", "Non-observed" = "blue")) +
-  theme_bw()
-
-ggsave("manual_figures/degree_balance.png", g_degree, height = 5, width = 6)
-
-g_edges <- ggplot(
-  degree_balance[degree_balance$random != "True", ],
-  aes(x = dataset, y = num_edges)
-) +
-  geom_boxplot(outlier.size = 0.8, fill = "darkorange") +
-  labs(
-    title = "Number of edges per train set",
-    x = "Dataset",
-    y = "Number of edges (|E+| + |E-|)"
-  ) +
-  theme_bw()
-
-ggsave("manual_figures/num_edges.png", g_edges, height = 5, width = 6)

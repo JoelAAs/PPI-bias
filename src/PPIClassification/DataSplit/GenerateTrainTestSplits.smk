@@ -121,6 +121,6 @@ rule generate_negative_sample:
     log:
         f"logs{pn}/subsets/train/equal_edge/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_random_neg.log"
     resources:
-        mem_gb=30
+        mem_gb=45
     script:
         "scripts/random_negative.py"
