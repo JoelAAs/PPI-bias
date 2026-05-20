@@ -44,7 +44,7 @@ include: "src/Analysis/CompareLocalisationMethod/MethodLocalisation.smk"
 include: "src/PPIClassification/Embeddings/Embeddings.smk"
 include: "src/PPIClassification/DataSplit/GetGraphs.smk"
 include: "src/PPIClassification/DataSplit/GenePartitions.smk"
-include: "src/PPIClassification/DataSplit/GenerateTrainTestSplits.smk"
+include: "src/PPIClassification/DataSplit/GenerateSplits.smk"
 #include: "src/PPIClassification/DataSplit/BalanceSplits.smk"
 include: "src/PPIClassification/DataSplit/GetGoldenSplit.smk"
 include: "src/PPIClassification/DataSplit/CheckRedundancy.smk"
@@ -75,11 +75,15 @@ wildcard_constraints:
 rule all:
     input:
         expand(
-            f"work_folder{pn}/classification/xgboost/metrics/all_metrics_{{esm_model}}.csv",
-            esm_model=["ESM2"]
-        ),
-        expand(
-            f"work_folder{pn}/classification/{{classifier}}/permuted/all_metrics_{{esm_model}}.csv",
-            classifier=["xgboost", "randomforest"],
-            esm_model=["ESM2"]
-        )
+            "work_folder{pn}/subsets/train/equal_edge/flat_undirectional_{neg_limit}_poslim_{pos_limit}_neg.csv",
+            pn=pn, pos_limit=config["positive_limits"], neg_limit=config["negative_limits"])
+        # expand(
+        #     f"work_folder{pn}/classification/xgboost/metrics/all_metrics_{{esm_model}}.csv",
+        #     esm_model=["ESM2"]
+        # ),
+        # expand(
+        #     f"work_folder{pn}/classification/{{classifier}}/permuted/all_metrics_{{esm_model}}.csv",
+        #     classifier=["xgboost",],
+        #     esm_model=["ESM2"]
+        # ),
+        # expand(f"work_folder{pn}/analysis/train_similarity/plots/{{dataset}}_directional_limit_1_poslim_all_avg_protein_similarity.png", dataset=datasets)

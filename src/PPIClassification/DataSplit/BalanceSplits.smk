@@ -36,14 +36,8 @@ rule balance_undirectional:
         balanced_neg=f"work_folder{pn}/subsets/{{settype}}/undirectionalbalanced/{{dataset}}_undirectional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
     log:
         f"logs{pn}/subsets/{{settype}}/undirectionalbalanced/{{dataset}}_undirectional_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}.log"
-    shell:
-        """
-        python3 src/PPIClassification/DataSplit/balance_undirectional.py \
-            --positive_data {input.set_pos} \
-            --negative_data {input.set_neg} \
-            --output_positive {output.balanced_pos} \
-            --output_negative {output.balanced_neg} > {log} 2>&1
-        """
+    script:
+        "scripts/balance_undirectional.py"
 
 
 rule generate_random_negative_set:

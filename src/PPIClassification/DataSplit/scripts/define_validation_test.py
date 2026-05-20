@@ -1,28 +1,33 @@
-from degree_balancing_functions import *
+import numpy as np
 import pandas as pd
-import networkx as nx
+from sample_balance_multi_network_functions import drop_exclusive_nodes, degree_balace_edges
 
 
-def define_validation_test(G_pos, G_neg, max_iterations):
-    overlapping_G, non_overlapping_nodes = remove_all_nonovelapping_nodes(
-        G_pos.copy(), G_neg.copy()
+def define_validation_test(pos_edges, neg_edges, max_iterations, directed, min_flow=0.95):
+    original_pos = pos_edges.copy()
+    original_neg = neg_edges.copy()
+
+    pos_edges, neg_edges, non_overlapping_nodes = drop_exclusive_nodes(
+        pos_edges, neg_edges, directed=directed
     )
-    cG_pos, cG_neg = overlapping_G
 
-    remaining_nodes = list(set(cG_pos.nodes()) | set(cG_neg.nodes()))
+    remaining_nodes = list(
+        set(pos_edges["bait"]) | set(pos_edges["prey"])
+        | set(neg_edges["bait"]) | set(neg_edges["prey"])
+    )
     n_validate_nodes = round(len(remaining_nodes) * 0.9)
-    current_iteration = 0
 
     best_score = np.inf
+    best_test = None
+    best_validation = None
     max_tries = 5
     tries = 0
     prev_size_balance = None
 
-    while current_iteration < max_iterations:
-        current_iteration += 1
+    for current_iteration in range(1, max_iterations + 1):
         validation_nodes = set()
         test_nodes = non_overlapping_nodes.copy()
-        classes = np.zeros_like(remaining_nodes, dtype=int)
+        classes = np.zeros(len(remaining_nodes), dtype=int)
         classes[:n_validate_nodes] = 1
         np.random.shuffle(classes)
         for c, node in zip(classes, remaining_nodes):
@@ -31,32 +36,40 @@ def define_validation_test(G_pos, G_neg, max_iterations):
             else:
                 validation_nodes.add(node)
 
-        rG_validate_pos, rG_validate_neg = cG_pos.subgraph(
-            validation_nodes
-        ), cG_neg.subgraph(validation_nodes)
-        G_validate_pos, G_validate_neg, discarded_nodes = back_and_forth_max_flow(
-            rG_validate_pos, rG_validate_neg
+        val_pos = pos_edges[
+            pos_edges["bait"].isin(validation_nodes) & pos_edges["prey"].isin(validation_nodes)
+        ]
+        val_neg = neg_edges[
+            neg_edges["bait"].isin(validation_nodes) & neg_edges["prey"].isin(validation_nodes)
+        ]
+
+        G_validate_pos, G_validate_neg, discarded_nodes = degree_balace_edges(
+            val_pos, val_neg, min_flow=min_flow, directed=directed
         )
         test_nodes |= discarded_nodes
 
-        G_test_pos, G_test_neg = G_pos.subgraph(test_nodes), G_neg.subgraph(test_nodes)
-        # validate_balance = np.abs(G_validate_pos.number_of_edges() - G_validate_neg.number_of_edges()) always gonna be fine
-        size_balance = G_validate_pos.number_of_edges() - G_test_pos.number_of_edges()
-        print(f"iteration {current_iteration}: size balance = {size_balance} (Validation: {G_validate_pos.number_of_edges()}, Test: {G_test_pos.number_of_edges()} )")
-        step_size = size_balance / (
-            G_validate_pos.number_of_edges() + G_test_pos.number_of_edges()
+        test_pos = original_pos[
+            original_pos["bait"].isin(test_nodes) & original_pos["prey"].isin(test_nodes)
+        ]
+        test_neg = original_neg[
+            original_neg["bait"].isin(test_nodes) & original_neg["prey"].isin(test_nodes)
+        ]
+
+        size_balance = G_validate_pos.shape[0] - test_pos.shape[0]
+        print(
+            f"iteration {current_iteration}: size balance = {size_balance} "
+            f"(Validation: {G_validate_pos.shape[0]}, Test: {test_pos.shape[0]})"
         )
-        next_node_count = n_validate_nodes - round(step_size * len(classes))
-        if next_node_count < 1:
-            n_validate_nodes = 0
-        elif next_node_count > len(remaining_nodes):
-            n_validate_nodes = len(remaining_nodes)
-        else:
-            n_validate_nodes = next_node_count
+
+        total = G_validate_pos.shape[0] + test_pos.shape[0]
+        if total > 0:
+            step_size = size_balance / total
+            next_node_count = n_validate_nodes - round(step_size * len(classes))
+            n_validate_nodes = max(0, min(len(remaining_nodes), next_node_count))
 
         if np.abs(size_balance) < best_score:
-            best_test = [G_test_pos.copy(), G_test_neg.copy()]
-            best_validation = [G_validate_pos.copy(), G_validate_neg.copy()]
+            best_test = [test_pos, test_neg]
+            best_validation = [G_validate_pos, G_validate_neg]
             best_score = np.abs(size_balance)
 
         if size_balance == prev_size_balance:
@@ -67,36 +80,35 @@ def define_validation_test(G_pos, G_neg, max_iterations):
 
     return *best_validation, *best_test
 
-def write_edgelist(G, output_file):
-    with open(output_file, "w") as f:
-        f.write("bait\tprey\n")
-        for u, v in G.edges():
-            f.write(f"{u}\t{v}\n")
+
+def write_edgelist(df, output_file):
+    df.to_csv(output_file, sep="\t", index=False)
+
 
 def main():
     hci_df = pd.read_csv(snakemake.input.interaction_data, sep="\t")[
         ["gene_name_bait", "gene_name_prey"]
-    ]
+    ].rename(columns={"gene_name_bait": "bait", "gene_name_prey": "prey"})
     hcni_df = pd.read_csv(snakemake.input.max_negative, sep="\t")[
         ["gene_name_bait", "gene_name_prey"]
-    ]
+    ].rename(columns={"gene_name_bait": "bait", "gene_name_prey": "prey"})
 
-    G_pos = nx.from_pandas_edgelist(
-        hci_df, "gene_name_bait", "gene_name_prey", create_using=nx.DiGraph
-    )
-    G_neg = nx.from_pandas_edgelist(
-        hcni_df, "gene_name_bait", "gene_name_prey", create_using=nx.DiGraph
-    )
+    network_type = snakemake.wildcards.network_type
+    if network_type == "directional":
+        directed = True
+    elif network_type == "undirectional":
+        directed = False
+    else:
+        raise ValueError(f"{network_type} is not a valid network type.")
 
     G_validation_pos, G_validation_neg, G_test_pos, G_test_neg = define_validation_test(
-        G_pos, G_neg, 20
+        hci_df, hcni_df, 20, directed=directed
     )
 
     write_edgelist(G_validation_pos, snakemake.output.validation_pos)
     write_edgelist(G_validation_neg, snakemake.output.validation_neg)
     write_edgelist(G_test_pos, snakemake.output.test_pos)
     write_edgelist(G_test_neg, snakemake.output.test_neg)
-
 
 
 if __name__ == "__main__":

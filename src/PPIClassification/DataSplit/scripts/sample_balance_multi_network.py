@@ -2,9 +2,18 @@ import pandas as pd
 from sample_balance_multi_network_functions import *
 
 def main():
+    # still called bait and prey in columns but they are protein A and protein B
     workers = snakemake.threads
     test_set = snakemake.input.test_set
     validation_set = snakemake.input.validation_set
+    
+    network_type = snakemake.wildcards.network_type
+    if network_type == "directional":
+        directed = True
+    elif network_type == "undirectional":
+        directed = False
+    else:
+        raise CommandError("{network_type} is not a valid network type.")
 
     full_detection_df = pd.read_parquet(snakemake.input.full_detection).rename(
         {"gene_name_bait": "bait", "gene_name_prey": "prey"}, axis=1
@@ -31,8 +40,8 @@ def main():
         nodes_to_exclude,
     )
 
-    selected_pos, selected_neg = parallel_maxflow_multi_network(
-        edge_list_pos, edge_list_neg, n_workers=workers
+    selected_pos, selected_neg = sample_balance_multiple_networks(
+        edge_list_pos, edge_list_neg, n_workers=workers, directed=directed
     )
 
     sanity_check(selected_pos, selected_neg, edge_list_pos, edge_list_neg)
