@@ -60,8 +60,8 @@ def drop_exclusive_nodes(pos_edges, neg_edges, directed):
             prev_edges = edges
             ex_bait = set(pos_edges["bait"]) ^ set(neg_edges["bait"])
             ex_prey = set(pos_edges["prey"]) ^ set(neg_edges["prey"])
-            pos_edges = pos_edges[(~pos_edges["bait"].isin(ex_bait)) | (~pos_edges["prey"].isin(ex_prey))]
-            neg_edges = neg_edges[(~neg_edges["bait"].isin(ex_bait)) | (~neg_edges["prey"].isin(ex_prey))]
+            pos_edges = pos_edges[(~pos_edges["bait"].isin(ex_bait)) & (~pos_edges["prey"].isin(ex_prey))]
+            neg_edges = neg_edges[(~neg_edges["bait"].isin(ex_bait)) & (~neg_edges["prey"].isin(ex_prey))]
             edges = pos_edges.shape[0] + neg_edges.shape[0]
             excluded_nodes |= ex_bait | ex_prey
 
@@ -328,32 +328,72 @@ def build_undirected_flow_graph(
     return g, capacity, source, sink, flow_node_map_index, flow_node_map
 
 
-def extract_selected_edges( 
+def extract_selected_edges(
     flow_g, capacity, residual, flow_node_map_index, node_map, directed
-): # TODO: check if this needs to be modified for directed graphs (select greedily half edges are selected as edges)
+):
     g = Graph(directed=directed)
     g.add_vertex(len(node_map))
 
     n_verts = flow_g.num_vertices()
     valid = np.zeros(n_verts, dtype=bool)
     orig_idx = np.zeros(n_verts, dtype=int)
-    vids = np.array(list(flow_node_map_index.keys()))  # edge_id
-    idxs = np.array([v[1] for v in flow_node_map_index.values()])  # (0, nid) or (1, nid)
+    vids = np.array(list(flow_node_map_index.keys()))
+    idxs = np.array([v[1] for v in flow_node_map_index.values()])
     valid[vids] = True
     orig_idx[vids] = idxs
 
-    edges = flow_g.get_edges(
-        [flow_g.edge_index]
-    )  # (n_edges, 3): [source, target, edge_idx]
+    edges = flow_g.get_edges([flow_g.edge_index])
     edge_flows = capacity.a[edges[:, 2]] - residual.a[edges[:, 2]]
-
-    mask = (edge_flows == 1) & valid[edges[:, 0]] & valid[edges[:, 1]] # Will add all edges greedily for unidirected
+    mask = (edge_flows == 1) & valid[edges[:, 0]] & valid[edges[:, 1]]
     selected = orig_idx[edges[mask, :2]]
 
-    if len(selected):
+    if directed:
         g.add_edge_list(selected)
-    return g
+        return g
 
+    # ----- Undirected branch -----
+    # Each {A,B} in source generated TWO arcs in the flow graph:
+    #     (0,A) -> (1,B)   and   (0,B) -> (1,A)
+    # Pair them up:
+    #   both arcs saturated  -> full edge, include in H
+    #   only one arc         -> half-edge, greedy-round against remaining slack
+    if len(selected) == 0:
+        return g
+
+    sorted_pairs = np.sort(selected, axis=1)                     # canonical (min, max)
+    unique_pairs, counts = np.unique(sorted_pairs, axis=0, return_counts=True)
+    full_edges = unique_pairs[counts == 2]
+    half_edges = unique_pairs[counts == 1]
+
+    if len(full_edges):
+        g.add_edge_list(full_edges)
+
+    if len(half_edges):
+        # recover target_degree from source-side capacities
+        # (source vertex was the 2nd-to-last vertex added in build_undirected_flow_graph)
+        source_v = flow_g.vertex(flow_g.num_vertices() - 2)
+        target_degree = np.zeros(len(node_map), dtype=int)
+        for e in source_v.out_edges():
+            tgt = int(e.target())
+            if valid[tgt]:
+                target_degree[orig_idx[tgt]] = capacity[e]
+
+        remaining = target_degree - g.get_total_degrees(g.get_vertices()).astype(int)
+
+        # process half-edges by largest min-slack first
+        slacks = np.minimum(remaining[half_edges[:, 0]], remaining[half_edges[:, 1]])
+        order = np.argsort(-slacks)
+        added = []
+        for idx in order:
+            u, v = half_edges[idx]
+            if remaining[u] > 0 and remaining[v] > 0:
+                added.append((u, v))
+                remaining[u] -= 1
+                remaining[v] -= 1
+        if added:
+            g.add_edge_list(np.array(added))
+
+    return g
 def get_degree(g):
     """Return the out-degree and in-degree arrays for all vertices in a directed graph.
 

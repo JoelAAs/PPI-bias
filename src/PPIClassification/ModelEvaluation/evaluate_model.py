@@ -39,16 +39,27 @@ def get_dataset(pos_data_file, neg_data_file, embedding_dict, embed_length):
         df_negative = df_negative.sample(df_pos.shape[0], random_state = 1234)
     df_samples = pd.concat([df_pos, df_negative], ignore_index=True)
 
-    baits = df_samples.iloc[:, 0].to_numpy()
-    prey = df_samples.iloc[:, 1].to_numpy()
+    if not flip_and_double:
+        baits = df_samples.iloc[:, 0].to_numpy()
+        prey = df_samples.iloc[:, 1].to_numpy()
+        n_samples = df_samples.shape[0]
+        X = np.zeros((n_samples, embed_length * 2), dtype=np.float32)
+        X[:, :embed_length] = [embedding_dict[b] for b in baits]
+        X[:, embed_length:] = [embedding_dict[p] for p in prey]
+        y = np.zeros(n_samples, dtype=np.int8)
+        y[:df_pos.shape[0]] = 1
 
-    n_samples = df_samples.shape[0]
-    X = np.zeros((n_samples, embed_length * 2), dtype=np.float32)
-    X[:, :embed_length] = [embedding_dict[b] for b in baits]
-    X[:, embed_length:] = [embedding_dict[p] for p in prey]
-
-    y = np.zeros(n_samples, dtype=np.int8)
-    y[:df_pos.shape[0]] = 1
+    else:
+        protein_a = df_samples.iloc[:, 0].to_numpy()
+        protein_b = df_samples.iloc[:, 1].to_numpy()
+        n_samples = df_samples.shape[0] * 2
+        X = np.zeros((n_samples, embed_length * 2), dtype=np.float32)
+        X[:, :embed_length] = [embedding_dict[b] for b in np.concatenate([protein_a, protein_b])]
+        X[:, embed_length:] = [embedding_dict[p] for p in np.concatenate([protein_b, protein_a])]
+        y = np.zeros(n_samples, dtype=np.int8)
+        y[:df_pos.shape[0]] = 1
+        start_flipped = df_pos.shape[0] + df_negative.shape[0]
+        y[start_flipped:start_flipped + df_pos.shape[0]] = 1
 
     return X, y
 
@@ -70,11 +81,20 @@ if __name__ == "__main__":
     parser.add_argument("--model_file", type=str, required=True)
     parser.add_argument("--output_file", type=str)
     parser.add_argument("--plot_roc_png", type=str)
+    parser.add_argument("--network_type", required=True, type=str, help="Network type, how to setup data")
 
     args = parser.parse_args()
 
+    if args.network_type == "undirectional":
+        flip_and_double = True
+    elif args.network_type == "directional":
+        flip_and_double = False
+    else:
+        raise ValueError(f"{args.network_type} is an invalid network value")
+
+
     embedding_dict, embed_length = get_embedding_dict(args.protein_embeddings_file)
-    X_test, y_test = get_dataset(args.pos_data_file, args.neg_data_file, embedding_dict, embed_length)
+    X_test, y_test = get_dataset(args.pos_data_file, args.neg_data_file, embedding_dict, embed_length, flip_and_double)
     model = joblib.load(args.model_file)
 
     roc_auc = generate_and_plot_performance(model, X_test, y_test, args.plot_roc_png)

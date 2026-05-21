@@ -72,7 +72,7 @@ rule balance_directional_to_equal_samples:
             "work_folder{pn}/subsets/train/equal_edge/{{dataset}}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
             pn=pn, pos_limit=config["positive_limits"], neg_limit=config["negative_limits"]),
         balanced_edges_negative = expand(
-            "work_folder{pn}/subsets/train/equal_edge/{{dataset}}_{{network_type}}_{neg_limit}_poslim_{pos_limit}_neg.csv",
+            "work_folder{pn}/subsets/train/equal_edge/{{dataset}}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}_neg.csv",
             pn=pn, pos_limit=config["positive_limits"], neg_limit=config["negative_limits"])
     log:
         f"logs{pn}/subsets/train/equal_edge/{{dataset}}_{{network_type}}_balance.log"
