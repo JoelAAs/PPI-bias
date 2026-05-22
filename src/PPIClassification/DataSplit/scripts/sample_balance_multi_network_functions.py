@@ -506,9 +506,13 @@ def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None
         )
 
         capacity_edges = [e for e in current_source[i % 2].out_edges()]
-        percent_flow_value = sum(
-            current_capacity[i % 2][e] - residual[e] for e in capacity_edges
-        ) / sum(current_capacity[i % 2][e] for e in capacity_edges)
+        total_capacity = sum(current_capacity[i % 2][e] for e in capacity_edges)
+        if total_capacity == 0:
+            percent_flow_value = 1.0
+        else:
+            percent_flow_value = sum(
+                current_capacity[i % 2][e] - residual[e] for e in capacity_edges
+            ) / total_capacity
 
         g_selected = extract_selected_edges(
             flow_g=current_g[i % 2],
@@ -518,7 +522,7 @@ def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None
             node_map=node_map,
             directed=directed,
         )
-        g_next = Graph(directed=directed)
+        g_next = Graph(directed=True)
         capacity_next = g_next.new_edge_property("int")
         subset_edges[(i + 1) % 2] = graph_to_edge_df(g_selected, node_map_idx)
         if edge_count_msg_count - subset_edges[0].shape[0] >= 1000:
@@ -619,6 +623,10 @@ def sanity_check(selected_pos, selected_neg, edge_list_pos, edge_list_neg, direc
         orig_pos_edges_set = _edge_set(orig_pos_df)
         orig_neg_edges_set = _edge_set(orig_neg_df)
 
+        extra_pos = pos_edges_set - orig_pos_edges_set
+        if extra_pos:
+            print(f"DEBUG extra pos edges (first 5): {list(extra_pos)[:5]}")
+            print(f"DEBUG sample orig pos edges (first 5): {list(orig_pos_edges_set)[:5]}")
         assert pos_edges_set.issubset(orig_pos_edges_set), \
             f"Selected positive edges for network {i} are not a subset of original positive edges."
         assert neg_edges_set.issubset(orig_neg_edges_set), \

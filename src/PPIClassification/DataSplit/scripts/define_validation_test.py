@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from sample_balance_multi_network_functions import drop_exclusive_nodes, degree_balace_edges
+from sample_balance_multi_network_functions import drop_exclusive_nodes, degree_balace_edges, sanity_check
 
 
 def define_validation_test(pos_edges, neg_edges, max_iterations, directed, min_flow=0.95):
@@ -25,46 +25,61 @@ def define_validation_test(pos_edges, neg_edges, max_iterations, directed, min_f
     prev_size_balance = None
 
     for current_iteration in range(1, max_iterations + 1):
-        validation_nodes = set()
-        test_nodes = non_overlapping_nodes.copy()
         classes = np.zeros(len(remaining_nodes), dtype=int)
         classes[:n_validate_nodes] = 1
-        np.random.shuffle(classes)
-        for c, node in zip(classes, remaining_nodes):
-            if c == 0:
-                test_nodes.add(node)
-            else:
-                validation_nodes.add(node)
 
-        val_pos = pos_edges[
-            pos_edges["bait"].isin(validation_nodes) & pos_edges["prey"].isin(validation_nodes)
-        ]
-        val_neg = neg_edges[
-            neg_edges["bait"].isin(validation_nodes) & neg_edges["prey"].isin(validation_nodes)
-        ]
+        empty_graph_tries = 0
+        success = False
+        while(not success and empty_graph_tries < 5):
+            try:
+                validation_nodes = set()
+                test_nodes = non_overlapping_nodes.copy()
+                np.random.shuffle(classes)
+                for c, node in zip(classes, remaining_nodes):
+                    if c == 0:
+                        test_nodes.add(node)
+                    else:
+                        validation_nodes.add(node)
 
-        G_validate_pos, G_validate_neg, discarded_nodes = degree_balace_edges(
-            val_pos, val_neg, min_flow=min_flow, directed=directed
-        )
-        test_nodes |= discarded_nodes
+                print(f"{len(validation_nodes)} validation nodes")
 
-        test_pos = original_pos[
-            original_pos["bait"].isin(test_nodes) & original_pos["prey"].isin(test_nodes)
-        ]
-        test_neg = original_neg[
-            original_neg["bait"].isin(test_nodes) & original_neg["prey"].isin(test_nodes)
-        ]
+                val_pos = pos_edges[
+                    pos_edges["bait"].isin(validation_nodes) & pos_edges["prey"].isin(validation_nodes)
+                ]
+                val_neg = neg_edges[
+                    neg_edges["bait"].isin(validation_nodes) & neg_edges["prey"].isin(validation_nodes)
+                ]
 
-        size_balance = G_validate_pos.shape[0] - test_pos.shape[0]
-        print(
-            f"iteration {current_iteration}: size balance = {size_balance} "
-            f"(Validation: {G_validate_pos.shape[0]}, Test: {test_pos.shape[0]})"
-        )
+                G_validate_pos, G_validate_neg, discarded_nodes = degree_balace_edges(
+                    val_pos, val_neg, min_flow=min_flow, directed=directed
+                )
+            
+                test_nodes |= discarded_nodes
+
+                test_pos = original_pos[
+                    original_pos["bait"].isin(test_nodes) & original_pos["prey"].isin(test_nodes)
+                ]
+                test_neg = original_neg[
+                    original_neg["bait"].isin(test_nodes) & original_neg["prey"].isin(test_nodes)
+                ]
+
+                size_balance = G_validate_pos.shape[0] - test_pos.shape[0]
+                print(
+                    f"iteration {current_iteration}: size balance = {size_balance} "
+                    f"(Validation: {G_validate_pos.shape[0]}, Test: {test_pos.shape[0]})"
+                )
+                success= True
+            except ValueError as e:
+                print(e)
+                empty_graph_tries += 1
+            
+        if (not success and empty_graph_tries >= 5):
+            continue
 
         total = G_validate_pos.shape[0] + test_pos.shape[0]
         if total > 0:
             step_size = size_balance / total
-            next_node_count = n_validate_nodes - round(step_size * len(classes))
+            next_node_count = round(n_validate_nodes * (1 - step_size))
             n_validate_nodes = max(0, min(len(remaining_nodes), next_node_count))
 
         if np.abs(size_balance) < best_score:
@@ -100,11 +115,28 @@ def main():
         directed = False
     else:
         raise ValueError(f"{network_type} is not a valid network type.")
-
+    
     G_validation_pos, G_validation_neg, G_test_pos, G_test_neg = define_validation_test(
         hci_df, hcni_df, 20, directed=directed
     )
 
+    sanity_check(
+        [G_validation_pos],
+        [G_validation_neg],
+        [hci_df],
+        [hcni_df], directed=directed) # validation set
+
+    try: # test-set doesn't need the same node set
+        sanity_check(
+            [G_test_pos],
+            [G_test_neg],
+            [hci_df],
+            [hcni_df], directed=directed)
+    except AssertionError as e:
+        if "Node sets do not match" not in str(e):
+            raise e
+        
+    
     write_edgelist(G_validation_pos, snakemake.output.validation_pos)
     write_edgelist(G_validation_neg, snakemake.output.validation_neg)
     write_edgelist(G_test_pos, snakemake.output.test_pos)

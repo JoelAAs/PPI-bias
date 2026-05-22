@@ -66,8 +66,8 @@ flat:
   - "y2h"
 
 datasets:
-  - "ms"
-  - "y2h"
+#  - "ms"
+#  - "y2h"
   - "flat"
 
 # Classifier data configuration:

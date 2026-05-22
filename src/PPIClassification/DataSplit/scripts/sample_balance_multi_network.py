@@ -44,7 +44,7 @@ def main():
         edge_list_pos, edge_list_neg, n_workers=workers, directed=directed
     )
 
-    sanity_check(selected_pos, selected_neg, edge_list_pos, edge_list_neg)
+    sanity_check(selected_pos, selected_neg, edge_list_pos, edge_list_neg, directed=directed)
     
     balanced_edges_positive = snakemake.output.balanced_edges_positive
     balanced_edges_negative = snakemake.output.balanced_edges_negative

@@ -164,11 +164,11 @@ if __name__ == '__main__':
     )
 
     param_file = open(args.params_out, "w")
-    #_, score, parameters = hyperparameter_tuned_model(
-    #    X_train, y_train, X_validate, y_validate, threads, param_file, n_iters=5)
+    _, score, parameters = hyperparameter_tuned_model(
+        X_train, y_train, X_validate, y_validate, threads, param_file, n_iters=5)
 
     xgb = XGBClassifier(
-    #    **parameters,
+        **parameters,
         n_estimators=300,
         gamma=0,
         use_label_encoder=False,

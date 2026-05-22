@@ -74,9 +74,11 @@ wildcard_constraints:
 
 rule all:
     input:
-        expand(
-            "work_folder{pn}/subsets/train/equal_edge/flat_undirectional_{neg_limit}_poslim_{pos_limit}_neg.csv",
-            pn=pn, pos_limit=config["positive_limits"], neg_limit=config["negative_limits"])
+        all_models=f"work_folder{pn}/classification/xgboost/permuted/all_metrics_undirectional_ESM2.csv",
+
+        # expand(
+        #     "work_folder{pn}/subsets/train/equal_edge/flat_undirectional_{neg_limit}_poslim_{pos_limit}_neg.csv",
+        #     pn=pn, pos_limit=config["positive_limits"], neg_limit=config["negative_limits"])
         # expand(
         #     f"work_folder{pn}/classification/xgboost/metrics/all_metrics_{{esm_model}}.csv",
         #     esm_model=["ESM2"]
