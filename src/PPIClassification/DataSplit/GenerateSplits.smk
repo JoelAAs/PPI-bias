@@ -81,7 +81,7 @@ rule balance_directional_to_equal_samples:
 
 
 
-rule generate_directional_permuted_random_negative:
+rule generate_permuted_random_negative:
     input:
         balanced_positive_edges = f"work_folder{pn}/subsets/train/permuted/{{permutation}}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
     output:
@@ -91,10 +91,10 @@ rule generate_directional_permuted_random_negative:
     resources:
         mem_gb=30
     script:
-        "scripts/random_negative.py" # TODO check
+        "scripts/random_negative.py"
 
 
-rule permute_directional_balanced_samples:
+rule permute_balanced_samples:
     params:
         fraction  = config.get("permutation_fraction", 0.95),
         base_seed = config["seed"],
@@ -110,10 +110,10 @@ rule permute_directional_balanced_samples:
     log:
         f"logs{pn}/subsets/train/permuted/{{permutation}}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}.log"
     script:
-        "scripts/permute_balanced_set.py" #TODO CHECK
+        "scripts/permute_balanced_set.py"
 
 
-rule generate_directional_negative_sample:
+rule generate_negative_sample:
     input:
         balanced_positive_edges = f"work_folder{pn}/subsets/train/equal_edge/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
     output:

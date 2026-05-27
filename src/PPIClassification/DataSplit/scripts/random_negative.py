@@ -20,7 +20,7 @@ def main():
     )
     if not directed:
         comp_df["id"] = comp_df.apply(lambda row: "-".join(sorted(row)))
-        comp_df.drop_duplicates(inplace=T)
+        comp_df.drop_duplicates(inplace=True)
         del comp_df["id"] # no duplicates for faster loading later
 
     _, selected_neg, _ = degree_balace_edges(pos_df, comp_df, min_flow=0.95, directed=directed)

@@ -32,7 +32,7 @@ def get_roc_plot(obs_performance, obs_auc, output_png):
     plt.close()
 
 
-def get_dataset(pos_data_file, neg_data_file, embedding_dict, embed_length):
+def get_dataset(pos_data_file, neg_data_file, embedding_dict, embed_length, flip_and_double):
     df_pos = pd.read_csv(pos_data_file, sep="\t")[["bait", "prey"]]
     df_negative = pd.read_csv(neg_data_file, sep="\t")[["bait", "prey"]]
     if df_negative.shape[0] > df_pos.shape[0]:

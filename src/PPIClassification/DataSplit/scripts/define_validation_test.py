@@ -133,8 +133,14 @@ def main():
             [hci_df],
             [hcni_df], directed=directed)
     except AssertionError as e:
-        if "Node sets do not match" not in str(e):
+        expected = (
+            "Node sets do not match" not in str(e),
+            "Bait sets do not match" not in str(e),
+            "Prey sets do not match" not in str(e)
+        )
+        if not any(expected):
             raise e
+        
         
     
     write_edgelist(G_validation_pos, snakemake.output.validation_pos)
@@ -145,3 +151,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

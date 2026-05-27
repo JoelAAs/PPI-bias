@@ -74,7 +74,8 @@ rule get_model_metrics:
             --protein_embeddings_file {input.protein_embeddings} \
             --model_file {input.saved_model} \
             --output_file {output.metrics} \
-            --plot_roc_png {output.roc_png} > {log} 2>&1
+            --plot_roc_png {output.roc_png} \
+            --network_type  {wildcards.network_type} > {log} 2>&1
         """
 
 
@@ -130,7 +131,8 @@ rule get_model_metrics_permuted:
             --protein_embeddings_file {input.protein_embeddings} \
             --model_file {input.saved_model} \
             --output_file {output.metrics} \
-            --plot_roc_png {output.roc_png} > {log} 2>&1
+            --plot_roc_png {output.roc_png} \
+            --network_type  {wildcards.network_type} > {log} 2>&1
         """
 
 
@@ -143,7 +145,7 @@ rule all_metrics_permuted:
             dataset=config["datasets"],
             pos_limit=config["positive_limits"],
             neg_limit=config["negative_limits"],
-            random=[""],
+            random=["", "-random"],
         ),
     output:
         all_models=f"work_folder{pn}/classification/{{classifier}}/permuted/all_metrics_{{network_type}}_{{esm_model}}.csv",
