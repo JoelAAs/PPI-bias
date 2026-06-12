@@ -1,34 +1,55 @@
-project_name: "uniprot_pod"
-formated_ppi: "work_folder/uniprot_pod/formated/bait_prey_publications.csv" # TODO: make it get the project_name
+project_name: "per_gene"
+formated_ppi: "work_folder/formated/bait_prey_publications.csv"
 cell_line_ppis: "/home/joel/Projects/Cl-annotated-ppis/work_folder/CL_annotated_bait_prey.csv"
 
 remove_single_publications: True
+pid_to_remove:
+  - "33961781"
 min_total_tests: 30
 min_total_observed: 4
 part_or_difference_cutoff: 50
 pseudo_n: 1
 hci_frac: 0.8
 negatome_tested_threshold: 4
-id_pattern: "uniprot_id"
+id_pattern: "gene_name"
 prey_n_MCMC_batch: 2000
 MCMC_workers: 45
 batch_per_write: 2000
 mcmc_samples: 4000
 mcmc_burin: 500
 
-localisation_file: "data/localisation/gene_to_location.csv"
+hci_limits:
+  - 0.1
+  - 0.2
+hcni_tested:
+  - 3
+  - 4
+  - 5
+
+kahip_location: "/home/ieo7513/software/KaHIP/deploy/kaffpa"
+seed: 18362
+cdhit_location: "/home/ieo7513/software/cd-hit-v4.8.1-2019-0228"
+embedding_model: "facebook/esm2_t33_650M_UR50D"
+localisation_file: "data/localisation/subcellular_location.tsv"
 
 selected_cell_lines:
   - "CVCL_0030"
   - "CVCL_0063"
   - "CVCL_0291"
 
+cell_line_methods:
+  - "MI-0006"
+  - "MI-0007"
+  - "MI-0096"
+  - "MI-0676"
+  - "MI-1314"
+
 ms:
   - "MI-0006"
   - "MI-0007"
   - "MI-0096"
   - "MI-0676"
-  #- "MI-1314" # Bioid, proximity but MS detecting. Unclear if it should be included
+  #- "MI-1314"
 
 y2h:
   - "MI-0397" # (two hybrid array) usually involves a mating strategy
@@ -43,3 +64,29 @@ y2h:
 flat:
   - "ms"
   - "y2h"
+
+datasets:
+  - "ms"
+  - "y2h"
+  - "flat"
+
+# Classifier data configuration:
+partitions:
+  - "sequencesimilarity"
+  - "maxpos"
+
+
+positive_max: 0.29
+negative_max: 3
+
+positive_limits:
+  - "all"
+  - 0.02
+  - 0.15    
+
+negative_limits:
+  - 1
+  - 2
+
+permutation_fraction: 0.95
+n_permutations: 10

@@ -15,12 +15,12 @@ def get_model_data(wc):
         else:
             raise ValueError(f"unkown networktype {wc.network_type}")
     return [
-        f"work_folder{pn}/subsets/train/{selection}/{data}_pos.csv",
-        f"work_folder{pn}/subsets/train/{selection}/{data}_neg.csv",
-        f"work_folder{pn}/subsets/validation/{selection}/{data}_pos.csv",
-        f"work_folder{pn}/subsets/validation/{selection}/{data}_neg.csv",
-        f"work_folder{pn}/subsets/test/{selection}/{data}_pos.csv",
-        f"work_folder{pn}/subsets/test/{selection}/{data}_neg.csv"
+        "work_folder/subsets/train/{selection}/{data}_pos.csv",
+        "work_folder/subsets/train/{selection}/{data}_neg.csv",
+        "work_folder/subsets/validation/{selection}/{data}_pos.csv",
+        "work_folder/subsets/validation/{selection}/{data}_neg.csv",
+        "work_folder/subsets/test/{selection}/{data}_pos.csv",
+        "work_folder/subsets/test/{selection}/{data}_neg.csv"
     ]
 
 
@@ -30,24 +30,24 @@ rule generate_balance_report:
         rmd="src/PPIClassification/Report/sample_balance.rmd",
         main_root = workflow.basedir
     input:
-        full_pos=f"work_folder{pn}/subsets/{{dataset}}_full_{{pos_limit}}_pos.csv",
-        full_neg=f"work_folder{pn}/subsets/{{dataset}}_full_{{neg_limit}}_neg.csv",
-        train_pos=f"work_folder{pn}/subsets/train/{{dataset}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv",
-        train_neg=f"work_folder{pn}/subsets/train/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
-        train_balanced_pos=f"work_folder{pn}/subsets/train/{{balance_method}}/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_pos.csv",
-        train_balanced_neg=f"work_folder{pn}/subsets/train/{{balance_method}}/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
-        validate_pos=f"work_folder{pn}/subsets/validation/{{dataset}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv",
-        validate_neg=f"work_folder{pn}/subsets/validation/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
-        validate_balanced_pos=f"work_folder{pn}/subsets/validation/{{balance_method}}/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_pos.csv",
-        validate_balanced_neg=f"work_folder{pn}/subsets/validation/{{balance_method}}/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
-        test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_limit_{{pos_limit}}_{{partition_name}}_pos.csv",
-        test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
-        test_balanced_pos=f"work_folder{pn}/subsets/test/{{balance_method}}/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_pos.csv",
-        test_balanced_neg=f"work_folder{pn}/subsets/test/{{balance_method}}/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_neg.csv",
+        full_pos="work_folder/subsets/{dataset}_full_{pos_limit}_pos.csv",
+        full_neg="work_folder/subsets/{dataset}_full_{neg_limit}_neg.csv",
+        train_pos="work_folder/subsets/train/{dataset}_limit_{pos_limit}_{partition_name}_pos.csv",
+        train_neg="work_folder/subsets/train/{dataset}_limit_{neg_limit}_poslim_{pos_limit}_{partition_name}_neg.csv",
+        train_balanced_pos="work_folder/subsets/train/{balance_method}/{dataset}_limit_{neg_limit}_poslim_{pos_limit}_{partition_name}_pos.csv",
+        train_balanced_neg="work_folder/subsets/train/{balance_method}/{dataset}_limit_{neg_limit}_poslim_{pos_limit}_{partition_name}_neg.csv",
+        validate_pos="work_folder/subsets/validation/{dataset}_limit_{pos_limit}_{partition_name}_pos.csv",
+        validate_neg="work_folder/subsets/validation/{dataset}_limit_{neg_limit}_poslim_{pos_limit}_{partition_name}_neg.csv",
+        validate_balanced_pos="work_folder/subsets/validation/{balance_method}/{dataset}_limit_{neg_limit}_poslim_{pos_limit}_{partition_name}_pos.csv",
+        validate_balanced_neg="work_folder/subsets/validation/{balance_method}/{dataset}_limit_{neg_limit}_poslim_{pos_limit}_{partition_name}_neg.csv",
+        test_pos="work_folder/subsets/test/{dataset}_limit_{pos_limit}_{partition_name}_pos.csv",
+        test_neg="work_folder/subsets/test/{dataset}_limit_{neg_limit}_poslim_{pos_limit}_{partition_name}_neg.csv",
+        test_balanced_pos="work_folder/subsets/test/{balance_method}/{dataset}_limit_{neg_limit}_poslim_{pos_limit}_{partition_name}_pos.csv",
+        test_balanced_neg="work_folder/subsets/test/{balance_method}/{dataset}_limit_{neg_limit}_poslim_{pos_limit}_{partition_name}_neg.csv",
     output:
-        html_report=f"work_folder{pn}/subsets/report/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_{{balance_method}}.nb.html"
+        html_report="work_folder/subsets/report/{dataset}_limit_{neg_limit}_poslim_{pos_limit}_{partition_name}_{balance_method}.nb.html"
     log:
-        f"logs{pn}/subsets/report/{{dataset}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_{{partition_name}}_{{balance_method}}.log"
+        "logs/subsets/report/{dataset}_limit_{neg_limit}_poslim_{pos_limit}_{partition_name}_{balance_method}.log"
     script:
         "render_balance_report.R"
 
@@ -56,12 +56,12 @@ rule generate_classification_report:
     params:
         rmd="src/PPIClassification/Report/classification_report.rmd",
     input:
-        all_models = f"work_folder{pn}/classification/randomforest/metrics/all_metrics.csv",
-        directional_metrics = f"work_folder{pn}/subsets/degree_balance/all_directional.csv",
-        undirectional_metrics = f"work_folder{pn}/subsets/degree_balance/all_undirectional.csv"
+        all_models = "work_folder/classification/randomforest/metrics/all_metrics.csv",
+        directional_metrics = "work_folder/subsets/degree_balance/all_directional.csv",
+        undirectional_metrics = "work_folder/subsets/degree_balance/all_undirectional.csv"
     output:
-        html_report=f"work_folder{pn}/subsets/report/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_roc_curve.nb.html"
+        html_report="work_folder/subsets/report/{dataset}_{network_type}_{model_configuration}_{partition}_roc_curve.nb.html"
     log:
-        f"logs{pn}/subsets/report/{{dataset}}_{{network_type}}_{{model_configuration}}_{{partition}}_roc_curve.log"
+        "logs/subsets/report/{dataset}_{network_type}_{model_configuration}_{partition}_roc_curve.log"
     script:
         "render_classification_report.R"

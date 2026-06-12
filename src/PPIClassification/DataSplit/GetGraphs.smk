@@ -7,11 +7,11 @@ rule blast_sequence_similarity:
     params:
         n_threads=45
     input:
-        fasta=f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
+        fasta="work_folder/protein_sequences/gene_name_sp_dedub.fasta"
     output:
-        similarity_tsv=f"work_folder{pn}/protein_sequences/similarity/all_vs_all.tsv"
+        similarity_tsv="work_folder/protein_sequences/similarity/all_vs_all.tsv"
     log:
-        f"logs{pn}/protein_sequences/similarity/all_vs_all.log"
+        "logs/protein_sequences/similarity/all_vs_all.log"
     shell:
         """
         exec > {log} 2>&1
@@ -26,13 +26,13 @@ rule blast_sequence_similarity:
 
 rule get_sequence_similarity_graph:
     input:
-        similarity_tsv=f"work_folder{pn}/protein_sequences/similarity/all_vs_all.tsv",
-        aa_seq_fasta=f"work_folder{pn}/protein_sequences/gene_name_sp_dedub.fasta"
+        similarity_tsv="work_folder/protein_sequences/similarity/all_vs_all.tsv",
+        aa_seq_fasta="work_folder/protein_sequences/gene_name_sp_dedub.fasta"
     output:
-        sequence_similarity_graph=f"work_folder{pn}/subsets/graphs/sequencesimilarity.graphml",
-        similarity_tsv=f"work_folder{pn}/protein_sequences/similarity/sequencesimilarity.tsv"
+        sequence_similarity_graph="work_folder/subsets/graphs/sequencesimilarity.graphml",
+        similarity_tsv="work_folder/protein_sequences/similarity/sequencesimilarity.tsv"
     log:
-        f"logs{pn}/subsets/graphs/sequencesimilarity.log"
+        "logs/subsets/graphs/sequencesimilarity.log"
     run:
         gene_seq_dict = read_fasta(input.aa_seq_fasta)
         mean_length = round(sum([len(s) for s in gene_seq_dict.values()]) / len(gene_seq_dict))
@@ -61,11 +61,11 @@ rule get_sequence_similarity_graph:
 
 rule get_min_cut_pos_partitions:
     input:
-        full_pos=f"work_folder{pn}/subsets/{{dataset}}_{{network_type}}_full_{{pos_limit}}_pos.pq"
+        full_pos="work_folder/subsets/{dataset}_{network_type}_full_{pos_limit}_pos.pq"
     output:
-        ppi_graph=f"work_folder{pn}/subsets/graphs/{{dataset}}_{{network_type}}_limit_{{pos_limit}}.graphml"
+        ppi_graph="work_folder/subsets/graphs/{dataset}_{network_type}_limit_{pos_limit}.graphml"
     log:
-        f"logs{pn}/subsets/graphs/{{dataset}}_{{network_type}}_limit_{{pos_limit}}.log"
+        "logs/subsets/graphs/{dataset}_{network_type}_limit_{pos_limit}.log"
     run:
         pos_df = pd.read_parquet(input.full_pos)
         pos_df["edge_weight"] = 1
@@ -75,12 +75,12 @@ rule get_min_cut_pos_partitions:
 
 rule get_pre_balanced_neg_pos_network:
     input:
-        set_pos=f"work_folder{pn}/subsets/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
-        set_neg=f"work_folder{pn}/subsets/maxflow/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv"
+        set_pos="work_folder/subsets/maxflow/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
+        set_neg="work_folder/subsets/maxflow/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}_neg.csv"
     output:
-        ppi_graph=f"work_folder{pn}/subsets/graphs/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}.graphml"
+        ppi_graph="work_folder/subsets/graphs/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}.graphml"
     log:
-        f"logs{pn}/subsets/graphs/{{dataset}}_directional_limit_{{neg_limit}}_poslim_{{pos_limit}}.log"
+        "logs/subsets/graphs/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}.log"
     run:
         pos_df = pd.read_csv(input.set_pos, sep="\t", header=None)
         neg_df = pd.read_csv(input.set_neg, sep="\t", header=None)

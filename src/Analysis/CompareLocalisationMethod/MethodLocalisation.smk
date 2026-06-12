@@ -10,11 +10,11 @@ rule get_huri:
     must be annotated on gene name as bioplex is reported on gene name
     """
     input:
-        intact=f"work_folder{pn}/formated/bait_prey_publications.csv"
+        intact="work_folder/formated/bait_prey_publications.csv"
     output:
-        huri=f"work_folder{pn}/data/huri/intact_huri.csv"
+        huri="work_folder/data/huri/intact_huri.csv"
     log:
-        f"logs{pn}/data/huri/intact_huri.log"
+        "logs/data/huri/intact_huri.log"
     run:
         intact = pd.read_csv(input.intact,sep="\t")
         huri_df = intact[intact["pubmed_id"] == 32296183]
@@ -24,13 +24,13 @@ rule get_huri:
 rule localisation_delta:
     # TODO: reformat
     input:
-        cvcl_0063_bp=f"work_folder{pn}/data/bioplex/CVCL_0063.csv",
-        huri=f"work_folder{pn}/data/huri/intact_huri.csv",
-        localisation_csv=f"work_folder{pn}/analysis/localisation/gene_to_localisation.csv"
+        cvcl_0063_bp="work_folder/data/bioplex/CVCL_0063.csv",
+        huri="work_folder/data/huri/intact_huri.csv",
+        localisation_csv="work_folder/analysis/localisation/gene_to_localisation.csv"
     output:
-        localisation_method=f"work_folder{pn}/analysis/localisation/HuRI_vs_Bioplex.csv"
+        localisation_method="work_folder/analysis/localisation/HuRI_vs_Bioplex.csv"
     log:
-        f"logs{pn}/analysis/localisation/HuRI_vs_Bioplex.log"
+        "logs/analysis/localisation/HuRI_vs_Bioplex.log"
     run:
         n_permutations = 100000
 
@@ -216,12 +216,12 @@ def sum_and_permute(ppi_df, type, dataset, mean):
 
 rule membrane_delta:
     input:
-        cvcl_0063_bp=f"work_folder{pn}/data/bioplex/CVCL_0063.csv",
-        huri=f"work_folder{pn}/data/huri/intact_huri.csv"
+        cvcl_0063_bp="work_folder/data/bioplex/CVCL_0063.csv",
+        huri="work_folder/data/huri/intact_huri.csv"
     output:
-        membrane_ppis = f"work_folder{pn}/analysis/membrane/HuRI_vs_Bioplex_total_mean.csv"
+        membrane_ppis = "work_folder/analysis/membrane/HuRI_vs_Bioplex_total_mean.csv"
     log:
-        f"logs{pn}/analysis/membrane/HuRI_vs_Bioplex_total_mean.log"
+        "logs/analysis/membrane/HuRI_vs_Bioplex_total_mean.log"
     run:
         bp_df = pd.read_csv(input.cvcl_0063_bp,sep="\t")[["Bait Symbol", "Prey Symbol"]]
         bp_df.columns = ["gene_name_bait", "gene_name_prey"]

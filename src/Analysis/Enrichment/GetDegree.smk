@@ -87,9 +87,9 @@ rule get_degree_dist_hippie:
     input:
         hippie="data/HIPPIE-current.mitab.txt"
     output:
-        degree=f"work_folder{pn}/degree/full_hippie.csv"
+        degree="work_folder/degree/full_hippie.csv"
     log:
-        f"logs{pn}/degree/full_hippie.log"
+        "logs/degree/full_hippie.log"
     run:
         df_hippie = pd.read_csv(input.hippie,sep="\t")
         gene_cols = ["Gene Name Interactor A", "Gene Name Interactor B"]
@@ -113,18 +113,18 @@ rule get_degree_values:
         hci_limits=config["hci_limits"],
         hcni_tested=config["hcni_tested"]
     input:
-        pod_file=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
+        pod_file="work_folder/analysis/POD/POD_{data}.csv"
     output:
-        summed_probability=f"work_folder{pn}/degree/{{data}}_summed.csv",
-        naive_degree = f"work_folder{pn}/degree/{{data}}_naive.csv",
+        summed_probability="work_folder/degree/{data}_summed.csv",
+        naive_degree = "work_folder/degree/{data}_naive.csv",
         hci_threshold=expand(
-            "work_folder{pn}/degree/{{data}}_HCI_{hci_limit}.csv",
+            "work_folder/degree/{{data}}_HCI_{hci_limit}.csv",
             hci_limit=config["hci_limits"],pn=pn),
         hcni_tests=expand(
-            "work_folder{pn}/degree/{{data}}_HCNI_{hcni_tested}.csv",
+            "work_folder/degree/{{data}}_HCNI_{hcni_tested}.csv",
             hcni_tested=config["hcni_tested"],pn=pn)
     log:
-        f"logs{pn}/degree/{{data}}_summed.log"
+        "logs/degree/{data}_summed.log"
     run:
         df = pd.read_csv(input.pod_file,sep="\t")
 
@@ -147,11 +147,11 @@ rule get_degree_values:
 
 rule get_intact_bait_prey_degree:
     input:
-        intact_bp = "work_folder{pn}/formated/bait_prey_publications.csv"
+        intact_bp = "work_folder/formated/bait_prey_publications.csv"
     output:
-        intact_degree = f"work_folder{pn}/degree/intact.csv"
+        intact_degree = "work_folder/degree/intact.csv"
     log:
-        f"logs{pn}/degree/intact.log"
+        "logs/degree/intact.log"
     run:
         df_intact = pd.read_csv(input.intact_bp, sep="\t")
         df_bait_degree = df_intact.groupby("gene_name_bait",as_index=False).size()
@@ -169,16 +169,16 @@ rule get_intact_bait_prey_degree:
 
 rule get_delta_degree:
     input:
-        naive_degree = f"work_folder{pn}/degree/{{data}}_naive.csv",
+        naive_degree = "work_folder/degree/{data}_naive.csv",
         hci_threshold=expand(
-            "work_folder{pn}/degree/{{data}}_HCI_{hci_limit}.csv",
+            "work_folder/degree/{{data}}_HCI_{hci_limit}.csv",
             hci_limit=config["hci_limits"],pn=pn)
     output:
         delta_degree = expand(
-            "work_folder{pn}/degree/{{data}}_delta_{hci_limit}.csv",
+            "work_folder/degree/{{data}}_delta_{hci_limit}.csv",
             hci_limit=config["hci_limits"],pn=pn)
     log:
-        f"logs{pn}/degree/{{data}}_delta_degree.log"
+        "logs/degree/{data}_delta_degree.log"
     run:
         naive_df = pd.read_csv(input.naive_degree, sep = "\t")
         for hci_degree_file, delta_output in zip(input.hci_threshold, output.delta_degree):

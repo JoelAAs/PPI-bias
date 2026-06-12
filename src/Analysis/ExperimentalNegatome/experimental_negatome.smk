@@ -9,11 +9,11 @@ rule all_methods_filter_out:
         pseudo_n=config["pseudo_n"],
         id_pattern= config["id_pattern"]
     input:
-        method_aggregate=f"work_folder{pn}/inferred_search_space/aggregated/methods/{{data}}_experimental_wise.csv"
+        method_aggregate="work_folder/inferred_search_space/aggregated/methods/{data}_experimental_wise.csv"
     output:
-        full_detection=f"work_folder{pn}/analysis/POD/{{network_type}}/POD_{{data}}.pq"
+        full_detection="work_folder/analysis/POD/{network_type}/POD_{data}.pq"
     log:
-        f"logs{pn}/analysis/POD/{{network_type}}/POD_{{data}}.log"
+        "logs/analysis/POD/{network_type}/POD_{data}.log"
     run:
         inferred_negative_df = pd.read_csv(
             input.method_aggregate,
@@ -114,11 +114,11 @@ rule all_methods_filter_out_cell_line:
         pseudo_n=config["pseudo_n"],
         id_pattern= config["id_pattern"]
     input:
-        method_aggregate=f"work_folder{pn}/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
+        method_aggregate="work_folder/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
     output:
-        full_detection=f"work_folder{pn}/analysis/POD/{{network_type}}/POD_cell_line.pq"
+        full_detection="work_folder/analysis/POD/{network_type}/POD_cell_line.pq"
     log:
-        f"logs{pn}/analysis/POD/{{network_type}}/POD_cell_line.log"
+        "logs/analysis/POD/{network_type}/POD_cell_line.log"
     run:
         inferred_negative_df = pd.read_csv(
             input.method_aggregate,

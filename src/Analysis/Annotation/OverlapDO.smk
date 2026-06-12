@@ -50,11 +50,11 @@ rule get_gene_do_terms:
     params:
         script="src/Analysis/Annotation/get_DO.R"
     input:
-        pod_df=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
+        pod_df="work_folder/analysis/POD/POD_{data}.csv"
     output:
-        do_terms=f"work_folder{pn}/analysis/DO/gene_do_{{data}}.txt"
+        do_terms="work_folder/analysis/DO/gene_do_{data}.txt"
     log:
-        f"logs{pn}/analysis/DO/gene_do_{{data}}.log"
+        "logs/analysis/DO/gene_do_{data}.log"
     conda: "do_enrichment"
     shell:
         """
@@ -63,12 +63,12 @@ rule get_gene_do_terms:
 
 rule get_jaccard_do_bait_prey:
     input:
-        do_gene_df=f"work_folder{pn}/analysis/DO/gene_do_{{data}}.txt",
-        pod_df=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv",
+        do_gene_df="work_folder/analysis/DO/gene_do_{data}.txt",
+        pod_df="work_folder/analysis/POD/POD_{data}.csv",
     output:
-        do_jaccard=f"work_folder{pn}/analysis/DO/pairs_{{data}}_jaccard.csv"
+        do_jaccard="work_folder/analysis/DO/pairs_{data}_jaccard.csv"
     log:
-        f"logs{pn}/analysis/DO/pairs_{{data}}_jaccard.log"
+        "logs/analysis/DO/pairs_{data}_jaccard.log"
     run:
         do_cols = [
             "ji_do",
@@ -90,13 +90,13 @@ rule get_jaccard_do_bait_prey:
 
 rule get_do_accumulation:
     input:
-        pod_df=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv",
-        do_jaccard=f"work_folder{pn}/analysis/DO/pairs_{{data}}_jaccard.csv"
+        pod_df="work_folder/analysis/POD/POD_{data}.csv",
+        do_jaccard="work_folder/analysis/DO/pairs_{data}_jaccard.csv"
     output:
-        jaccard_greater=f"work_folder{pn}/analysis/DO/cumulative/POD_{{data}}_jaccard_greater.csv",
-        jaccard_lesser=f"work_folder{pn}/analysis/DO/cumulative/POD_{{data}}_jaccard_lesser.csv"
+        jaccard_greater="work_folder/analysis/DO/cumulative/POD_{data}_jaccard_greater.csv",
+        jaccard_lesser="work_folder/analysis/DO/cumulative/POD_{data}_jaccard_lesser.csv"
     log:
-        f"logs{pn}/analysis/DO/cumulative/POD_{{data}}_jaccard.log"
+        "logs/analysis/DO/cumulative/POD_{data}_jaccard.log"
     run:
         do_data = pd.read_csv(
             input.do_jaccard,sep="\t"

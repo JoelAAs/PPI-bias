@@ -8,12 +8,12 @@ rule negatome_comparison:
     params:
         negatome2="data/PFAM-manual-stringent-negatome2.csv"
     input:
-        pod_data=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv",
-        uniprot=f"work_folder{pn}/gene_names/gene_names.csv"
+        pod_data="work_folder/analysis/POD/POD_{data}.csv",
+        uniprot="work_folder/gene_names/gene_names.csv"
     output:
-        table=f"work_folder{pn}/analysis/neg2compare/{{data}}.txt"
+        table="work_folder/analysis/neg2compare/{data}.txt"
     log:
-        f"logs{pn}/analysis/neg2compare/{{data}}.log"
+        "logs/analysis/neg2compare/{data}.log"
     run:
         uniprot_2_gene = pd.read_csv(input.uniprot,sep="\t")
         pod_df = pd.read_csv(input.pod_data,sep="\t")

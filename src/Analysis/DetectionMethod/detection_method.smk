@@ -37,6 +37,10 @@ def get_subsets(wc):
     :return: either mulit-method (MS/y2h) aggregation or single method (MI-code) aggregation
     """
     if wc.subset in config:
+        # Explicitly trigger checkpoint check here so Snakemake can correctly defer
+        # this rule when the checkpoint hasn't run yet, rather than failing with
+        # MissingInputException when evaluating the indirect MI-method dependencies.
+        checkpoints.infer_experimental_search_space.get(cell_line="_method")
         return multi_method_aggregation(config[wc.subset])
     return get_input_files(wc.subset,config["id_pattern"],config["formated_ppi"])
 
@@ -50,9 +54,9 @@ rule aggregate_pids:
         input_ppi = storage.fs(config["formated_ppi"]),
         subsets = lambda wc: get_subsets(wc)
     output:
-        method_aggregate = f"work_folder{pn}/inferred_search_space/aggregated/methods/{{subset}}_experimental_wise.csv"
+        method_aggregate = "work_folder/inferred_search_space/aggregated/methods/{subset}_experimental_wise.csv"
     log:
-        f"logs{pn}/inferred_search_space/aggregated/methods/{{subset}}_experimental_wise.log"
+        "logs/inferred_search_space/aggregated/methods/{subset}_experimental_wise.log"
     run:
         single = wildcards.subset not in config
         aggregate_inferred_experiments(input.subsets, output.method_aggregate, params.id_pattern, single)

@@ -8,12 +8,12 @@ rule get_metis:
     params:
         script_location="src/PPIClassification/DataSplit/METIS_from_graph.py"
     input:
-        graph = f"work_folder{pn}/subsets/graphs/{{graph}}.graphml"
+        graph = "work_folder/subsets/graphs/{graph}.graphml"
     output:
-        metis_graph = f"work_folder{pn}/subsets/graphs/metis/{{graph}}.graph",
-        metis_id = f"work_folder{pn}/subsets/graphs/metis/{{graph}}_gene_id.txt"
+        metis_graph = "work_folder/subsets/graphs/metis/{graph}.graph",
+        metis_id = "work_folder/subsets/graphs/metis/{graph}_gene_id.txt"
     log:
-        f"logs{pn}/subsets/graphs/metis/{{graph}}.log"
+        "logs/subsets/graphs/metis/{graph}.log"
     shell:
         """
         python3 {params.script_location} \
@@ -29,11 +29,11 @@ rule get_kahip_partitions:
         seed=config["seed"],
         k = 20
     input:
-        metis_graph=f"work_folder{pn}/subsets/graphs/metis/{{graph}}.graph"
+        metis_graph="work_folder/subsets/graphs/metis/{graph}.graph"
     output:
-        partitions=f"work_folder{pn}/subsets/partitions/{{graph}}.txt"
+        partitions="work_folder/subsets/partitions/{graph}.txt"
     log:
-        f"logs{pn}/subsets/partitions/{{graph}}.log"
+        "logs/subsets/partitions/{graph}.log"
     shell:
         """
         {params.kahip_location}  {input.metis_graph} --seed={params.seed} --output_file={output.partitions} --k={params.k} --preconfiguration=strong > {log} 2>&1
@@ -41,12 +41,12 @@ rule get_kahip_partitions:
 
 rule get_gene_to_partition:
     input:
-        partitions = f"work_folder{pn}/subsets/partitions/{{graph}}.txt",
-        gene_int_id= f"work_folder{pn}/subsets/graphs/metis/{{graph}}_gene_id.txt"
+        partitions = "work_folder/subsets/partitions/{graph}.txt",
+        gene_int_id= "work_folder/subsets/graphs/metis/{graph}_gene_id.txt"
     output:
-        gene_partition = f"work_folder{pn}/subsets/partitions/{{graph}}_gene_name.txt"
+        gene_partition = "work_folder/subsets/partitions/{graph}_gene_name.txt"
     log:
-        f"logs{pn}/subsets/partitions/{{graph}}_gene_name.log"
+        "logs/subsets/partitions/{graph}_gene_name.log"
     run:
         rows = []
         int_id = 1

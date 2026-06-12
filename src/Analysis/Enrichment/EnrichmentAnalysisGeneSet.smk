@@ -10,14 +10,14 @@ rule get_enrichment:
     params:
         script="src/Analysis/Enrichment/enrichment_degree.R"
     input:
-        degree=f"work_folder{pn}/degree/{{data_set_limit}}.csv"
+        degree="work_folder/degree/{data_set_limit}.csv"
     output:
-        go_enrichment_bait=f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_bait_go.csv",
-        go_enrichment_prey=f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_prey_go.csv",
-        do_enrichment_bait=f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_bait_do.csv",
-        do_enrichment_prey=f"work_folder{pn}/degree/enrichment/{{data_set_limit}}_prey_do.csv"
+        go_enrichment_bait="work_folder/degree/enrichment/{data_set_limit}_bait_go.csv",
+        go_enrichment_prey="work_folder/degree/enrichment/{data_set_limit}_prey_go.csv",
+        do_enrichment_bait="work_folder/degree/enrichment/{data_set_limit}_bait_do.csv",
+        do_enrichment_prey="work_folder/degree/enrichment/{data_set_limit}_prey_do.csv"
     log:
-        f"logs{pn}/degree/enrichment/{{data_set_limit}}.log"
+        "logs/degree/enrichment/{data_set_limit}.log"
     conda: "do_enrichment"
     shell:
         """
@@ -41,7 +41,7 @@ def input_enrichments(wc, types, c_limits, c_ont):
         else:
             c_limit = c_limits[0]
         expected_input += expand(
-            "work_folder{pn}/degree/enrichment/{data}_{type}_{limit}_{source}_{ont}.csv",
+            "work_folder/degree/enrichment/{data}_{type}_{limit}_{source}_{ont}.csv",
             pn=pn,
             data=c_data,
             type=c_type,
@@ -50,14 +50,14 @@ def input_enrichments(wc, types, c_limits, c_ont):
             ont=c_ont
         )
     expected_input += expand(
-        "work_folder{pn}/degree/enrichment/{data}_summed_{source}_{ont}.csv",
+        "work_folder/degree/enrichment/{data}_summed_{source}_{ont}.csv",
         pn=pn,
         data=c_data,
         source=["bait", "prey"],
         ont=c_ont
     )
     expected_input += expand(
-        "work_folder{pn}/degree/enrichment/{data}_naive_{source}_{ont}.csv",
+        "work_folder/degree/enrichment/{data}_naive_{source}_{ont}.csv",
         pn=pn,
         data=c_data,
         source=["bait", "prey"],
@@ -74,9 +74,9 @@ rule n_enriched_per_method:
         all_degree_enrichments=lambda wc: input_enrichments(
             wc,["HCI", "delta", "HCNI"],[config["hci_limits"], config["hcni_tested"]],["go", "do"])
     output:
-        n_enrichments=f"work_folder{pn}/degree/enrichment/significant_ontologies/{{data}}.csv"
+        n_enrichments="work_folder/degree/enrichment/significant_ontologies/{data}.csv"
     log:
-        f"logs{pn}/degree/enrichment/significant_ontologies/{{data}}.log"
+        "logs/degree/enrichment/significant_ontologies/{data}.log"
     run:
         with open(output.n_enrichments,"w") as w:
             w.write("data\ttype\tsource\tlimit\tont\tn_enrichments\n")
@@ -103,13 +103,13 @@ rule n_enriched_per_method:
 rule n_enriched_intact:
     input:
         intact_enrichments=expand(
-            "work_folder{pn}/degree/enrichment/intact_{type}_{ont}.csv",
+            "work_folder/degree/enrichment/intact_{type}_{ont}.csv",
             pn=pn,type=["bait", "prey"],ont=["do", "go"]
         )
     output:
-        n_enrichments=f"work_folder{pn}/degree/enrichment/intact_significant_ontologies/intact.csv"
+        n_enrichments="work_folder/degree/enrichment/intact_significant_ontologies/intact.csv"
     log:
-        f"logs{pn}/degree/enrichment/intact_significant_ontologies/intact.log"
+        "logs/degree/enrichment/intact_significant_ontologies/intact.log"
     run:
         with open(output.n_enrichments,"w") as w:
             w.write("data\ttype\tsource\tlimit\tont\tn_enrichments\n")
@@ -127,11 +127,11 @@ rule n_enriched_intact:
 
 rule n_doids_gene_degree:
     input:
-        degree=f"work_folder{pn}/degree/{{data_set_limit}}.csv"
+        degree="work_folder/degree/{data_set_limit}.csv"
     output:
-        doid_degree=f"work_folder{pn}/degree/doid/{{data_set_limit}}_doid.csv"
+        doid_degree="work_folder/degree/doid/{data_set_limit}_doid.csv"
     log:
-        f"logs{pn}/degree/doid/{{data_set_limit}}_doid.log"
+        "logs/degree/doid/{data_set_limit}_doid.log"
     params:
         script="src/Analysis/Enrichment/get_ndoids.R"
     conda: "do_enrichment"
@@ -166,18 +166,18 @@ rule test_top_degree_against_naive:
         hcni_limits=config["hcni_tested"]
     input:
         hci_degree=expand(
-            "work_folder{pn}/degree/doid/{{data}}_HCI_{hci_limit}_doid.csv",
+            "work_folder/degree/doid/{{data}}_HCI_{hci_limit}_doid.csv",
             pn=pn,hci_limit=config["hci_limits"]),
         hcni_degree=expand(
-            "work_folder{pn}/degree/doid/{{data}}_HCNI_{hcni_limit}_doid.csv",
+            "work_folder/degree/doid/{{data}}_HCNI_{hcni_limit}_doid.csv",
             pn=pn,hcni_limit=config["hcni_tested"]),
 
-        naive_degree=f"work_folder{pn}/degree/doid/{{data}}_naive_doid.csv",
-        summed_degree=f"work_folder{pn}/degree/doid/{{data}}_summed.csv"
+        naive_degree="work_folder/degree/doid/{data}_naive_doid.csv",
+        summed_degree="work_folder/degree/doid/{data}_summed.csv"
     output:
-        doid_test=f"work_folder{pn}/degree/doid/{{data}}_tested.csv"
+        doid_test="work_folder/degree/doid/{data}_tested.csv"
     log:
-        f"logs{pn}/degree/doid/{{data}}_tested.log"
+        "logs/degree/doid/{data}_tested.log"
     run:
         df_naive_degree = pd.read_csv(input.naive_degree,sep="\t")
         top_naive_bait = df_naive_degree.nlargest(params.n_top_genes,"degree_bait")
@@ -216,14 +216,14 @@ rule top_degree_get_doids:
         n_top_genes=50,
         script="src/Analysis/Enrichment/get_doid_frequency.R"
     input:
-        degree=f"work_folder{pn}/degree/{{data_set_limit}}.csv"
+        degree="work_folder/degree/{data_set_limit}.csv"
     output:
-        doid_freq=expand("work_folder{pn}/degree/doid/freq/{{data_set_limit}}_count_{source}.csv",
+        doid_freq=expand("work_folder/degree/doid/freq/{data_set_limit}_count_{source}.csv",
             pn=pn,source=["bait", "prey"]),
-        doid_annotated=expand("work_folder{pn}/degree/doid/freq/{{data_set_limit}}_annotated_{source}.csv",
+        doid_annotated=expand("work_folder/degree/doid/freq/{data_set_limit}_annotated_{source}.csv",
             pn=pn,source=["bait", "prey"])
     log:
-        f"logs{pn}/degree/doid/freq/{{data_set_limit}}.log"
+        "logs/degree/doid/freq/{data_set_limit}.log"
     conda: "do_enrichment"
     shell:
         """
@@ -248,14 +248,14 @@ rule get_go_annotation:
     params:
         n_top_genes=50
     input:
-        degree=f"work_folder{pn}/degree/{{data_set_limit}}.csv"
+        degree="work_folder/degree/{data_set_limit}.csv"
     output:
         go_frequency=expand(
-            "work_folder{pn}/degree/GO/{{data_set_limit}}_count_{source}.csv",
+            "work_folder/degree/GO/{{data_set_limit}}_count_{source}.csv",
             pn=pn,source=["bait", "prey"]
         )
     log:
-        f"logs{pn}/degree/GO/{{data_set_limit}}.log"
+        "logs/degree/GO/{data_set_limit}.log"
     run:
         degree_df = pd.read_csv(input.degree,sep="\t")
         for source, output_file in zip(["bait", "prey"],output.go_frequency):
@@ -301,17 +301,17 @@ rule test_go_terms:
         hci_limit=[.2,],
         hcni_tested=[4,] # as it's what I chose for DOID comparison
     input:
-        naive_go_frequency_df=f"work_folder{pn}/degree/GO/{{data}}_naive_count_{{source}}.csv",
+        naive_go_frequency_df="work_folder/degree/GO/{data}_naive_count_{source}.csv",
         hci_observations=expand(
-            "work_folder{pn}/degree/GO/{{data}}_HCI_{limit}_count_{{source}}.csv",
+            "work_folder/degree/GO/{{data}}_HCI_{limit}_count_{{source}}.csv",
             pn=pn, limit=config["hci_limits"]),
         hcni_observations=expand(
-            "work_folder{pn}/degree/GO/{{data}}_HCNI_{limit}_count_{{source}}.csv",
+            "work_folder/degree/GO/{{data}}_HCNI_{limit}_count_{{source}}.csv",
             pn=pn,limit=config["hcni_tested"])
     output:
-        test_csv = f"work_folder{pn}/degree/GO/tested/{{data}}_{{source}}.csv"
+        test_csv = "work_folder/degree/GO/tested/{data}_{source}.csv"
     log:
-        f"logs{pn}/degree/GO/tested/{{data}}_{{source}}.log"
+        "logs/degree/GO/tested/{data}_{source}.log"
     run:
         naive_go_frequency_df = pd.read_csv(
             input.naive_go_frequency_df,sep="\t"

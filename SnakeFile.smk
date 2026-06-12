@@ -1,4 +1,4 @@
-configfile: "config_files/config.yaml"
+configfile: "config_files/config_uniport_pod.yaml"
 import pandas as pd
 from collections import defaultdict
 from scipy.stats import fisher_exact, false_discovery_control
@@ -28,14 +28,14 @@ include: "src/Analysis/DetectionMethod/detection_method.smk"
 include: "src/Analysis/ExperimentalNegatome/experimental_negatome.smk"
 include: "src/Analysis/AbundanceAwareDetection/MCMC_abundance.smk"
 
-include: "src/Analysis/Enrichment/GetDegree.smk"
-include: "src/Analysis/Enrichment/EnrichmentAnalysisGeneSet.smk"
+#include: "src/Analysis/Enrichment/GetDegree.smk"
+#include: "src/Analysis/Enrichment/EnrichmentAnalysisGeneSet.smk"
 
-include: "src/Analysis/Annotation/CoLocalisation.smk"
-include: "src/Analysis/Annotation/OverlapGO.smk"
-include: "src/Analysis/Annotation/OverlapDO.smk"
-include: "src/Analysis/Annotation/HydrophobicitySimilarity.smk"
-include: "src/Analysis/Annotation/InterfaceStatistics.smk"
+# include: "src/Analysis/Annotation/CoLocalisation.smk"
+# include: "src/Analysis/Annotation/OverlapGO.smk"
+# include: "src/Analysis/Annotation/OverlapDO.smk"
+# include: "src/Analysis/Annotation/HydrophobicitySimilarity.smk"
+# include: "src/Analysis/Annotation/InterfaceStatistics.smk"
 
 include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
 include: "src/Analysis/NegatomeComparison/CompareSharedBaits.smk"
@@ -74,18 +74,22 @@ wildcard_constraints:
 
 rule all:
     input:
-        all_models=f"work_folder{pn}/classification/xgboost/permuted/all_metrics_undirectional_ESM2.csv",
+        expand("work_folder/analysis/POD/{network_type}/POD_{data}.pq",
+            network_type= ["undirectional"], data=datasets)
 
+        
+        #"work_folder/classification/xgboost/permuted/all_metrics_undirectional_ESM2.csv",
+        #"work_folder/classification/xgboost/permuted/all_metrics_directional_ESM2.csv"
         # expand(
-        #     "work_folder{pn}/subsets/train/equal_edge/flat_undirectional_{neg_limit}_poslim_{pos_limit}_neg.csv",
+        #     "work_folder/subsets/train/equal_edge/flat_undirectional_{neg_limit}_poslim_{pos_limit}_neg.csv",
         #     pn=pn, pos_limit=config["positive_limits"], neg_limit=config["negative_limits"])
         # expand(
-        #     f"work_folder{pn}/classification/xgboost/metrics/all_metrics_{{esm_model}}.csv",
+        #     "work_folder/classification/xgboost/metrics/all_metrics_{{esm_model}}.csv",
         #     esm_model=["ESM2"]
         # ),
         # expand(
-        #     f"work_folder{pn}/classification/{{classifier}}/permuted/all_metrics_{{esm_model}}.csv",
+        #     "work_folder/classification/{{classifier}}/permuted/all_metrics_{{esm_model}}.csv",
         #     classifier=["xgboost",],
         #     esm_model=["ESM2"]
         # ),
-        # expand(f"work_folder{pn}/analysis/train_similarity/plots/{{dataset}}_directional_limit_1_poslim_all_avg_protein_similarity.png", dataset=datasets)
+        # expand("work_folder/analysis/train_similarity/plots/{dataset}_directional_limit_1_poslim_all_avg_protein_similarity.png", dataset=datasets)

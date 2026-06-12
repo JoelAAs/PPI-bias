@@ -42,10 +42,10 @@ def get_degree_difference(file_pattern):
 
 def get_order(dataset, typeset, datatype, pn="/per_gene"):
     order = (
-        f"work_folder{pn}/subsets/{dataset}_full_{datatype}.csv",
-        f"work_folder{pn}/subsets/{typeset}/{dataset}_{datatype}.csv",
-        f"work_folder{pn}/subsets/{typeset}/maxflow/{dataset}_{datatype}.edgelist",
-        f"work_folder{pn}/subsets/{typeset}/balanced/{dataset}_{datatype}.csv"
+        "work_folder/subsets/{dataset}_full_{datatype}.csv",
+        "work_folder/subsets/{typeset}/{dataset}_{datatype}.csv",
+        "work_folder/subsets/{typeset}/maxflow/{dataset}_{datatype}.edgelist",
+        "work_folder/subsets/{typeset}/balanced/{dataset}_{datatype}.csv"
     )
     n_rows = [get_nrow(o) for o in order]
     return n_rows
@@ -65,7 +65,7 @@ def get_cor_files(dataset, cor_file, pn="/per_gene"):
     with open(cor_file, "w") as w:
         # full
         lines = get_degree_difference(
-            f"work_folder{pn}/subsets/{dataset}_full_{datatype}.csv",
+            "work_folder/subsets/{dataset}_full_{datatype}.csv",
         )
         for line in lines:
             w.write(f"Full\tAll\t" + "\t".join(map(str, line)) + "\n")
@@ -73,19 +73,19 @@ def get_cor_files(dataset, cor_file, pn="/per_gene"):
         for typeset in ["train", "test", "validation"]:
             # kaffpa
             lines = get_degree_difference(
-                f"work_folder{pn}/subsets/{typeset}/{dataset}_{datatype}.csv"
+                "work_folder/subsets/{typeset}/{dataset}_{datatype}.csv"
             )
             for line in lines:
                 w.write(f"kaffpa\t{typeset}\t" + "\t".join(map(str, line)) + "\n")
             # maxflow
             lines = get_degree_difference(
-                f"work_folder{pn}/subsets/{typeset}/maxflow/{dataset}_{datatype}.edgelist"
+                "work_folder/subsets/{typeset}/maxflow/{dataset}_{datatype}.edgelist"
             )
             for line in lines:
                 w.write(f"maxflow\t{typeset}\t" + "\t".join(map(str, line)) + "\n")
             # ilp
             lines = get_degree_difference(
-                f"work_folder{pn}/subsets/{typeset}/balanced/{dataset}_{datatype}.csv"
+                "work_folder/subsets/{typeset}/balanced/{dataset}_{datatype}.csv"
             )
             for line in lines:
                 w.write(f"ILP\t{typeset}\t" + "\t".join(map(str, line)) + "\n")

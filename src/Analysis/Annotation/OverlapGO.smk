@@ -101,11 +101,11 @@ def get_pair_jaccard(gene1, gene2, gene_idx_dicts):
 
 rule get_jaccard_go_bait_prey:
     input:
-        pod_df=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
+        pod_df="work_folder/analysis/POD/POD_{data}.csv"
     output:
-        go_jaccard=f"work_folder{pn}/analysis/GO/pairs_{{data}}_jaccard.csv"
+        go_jaccard="work_folder/analysis/GO/pairs_{data}_jaccard.csv"
     log:
-        f"logs{pn}/analysis/GO/pairs_{{data}}_jaccard.log"
+        "logs/analysis/GO/pairs_{data}_jaccard.log"
     run:
         go_terms = ["bp", "cc", "mf"]
         go_cols = (
@@ -128,13 +128,13 @@ rule get_jaccard_go_bait_prey:
 
 rule get_go_accumulation:
     input:
-        go_jaccard=f"work_folder{pn}/analysis/GO/pairs_{{data}}_jaccard.csv",
-        pod_df=f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
+        go_jaccard="work_folder/analysis/GO/pairs_{data}_jaccard.csv",
+        pod_df="work_folder/analysis/POD/POD_{data}.csv"
     output:
-        jaccard_greater=f"work_folder{pn}/analysis/GO/cumulative/POD_{{data}}_jaccard_greater.csv",
-        jaccard_lesser=f"work_folder{pn}/analysis/GO/cumulative/POD_{{data}}_jaccard_lesser.csv"
+        jaccard_greater="work_folder/analysis/GO/cumulative/POD_{data}_jaccard_greater.csv",
+        jaccard_lesser="work_folder/analysis/GO/cumulative/POD_{data}_jaccard_lesser.csv"
     log:
-        f"logs{pn}/analysis/GO/cumulative/POD_{{data}}_jaccard.log"
+        "logs/analysis/GO/cumulative/POD_{data}_jaccard.log"
     run:
         go_data = pd.read_csv(
             input.go_jaccard,sep="\t"
@@ -177,9 +177,9 @@ rule abundance_go_plot:
     input:
         norm_log="data/normalised_log_ra.csv"
     output:
-        goterms_abundance=f"work_folder{pn}/analysis/GO/ra_pod_vs_go_terms.csv"
+        goterms_abundance="work_folder/analysis/GO/ra_pod_vs_go_terms.csv"
     log:
-        f"logs{pn}/analysis/GO/ra_pod_vs_go_terms.log"
+        "logs/analysis/GO/ra_pod_vs_go_terms.log"
     run:
         abundance_df = pd.read_csv(input.norm_log,sep="\t")
         del abundance_df["samples"]
@@ -211,11 +211,11 @@ rule abundance_go_plot:
 
 rule bait_usage:
     input:
-        bait_prey=f"work_folder{pn}/formated/bait_prey_publications.csv"
+        bait_prey="work_folder/formated/bait_prey_publications.csv"
     output:
-        goterms_studies=f"work_folder{pn}/analysis/GO/n_studies_go_terms.csv"
+        goterms_studies="work_folder/analysis/GO/n_studies_go_terms.csv"
     log:
-        f"logs{pn}/analysis/GO/n_studies_go_terms.log"
+        "logs/analysis/GO/n_studies_go_terms.log"
     run:
         df = pd.read_csv(input.bait_prey,sep="\t")
         df_bait = df[
@@ -244,13 +244,13 @@ rule bait_usage:
 
 rule get_huri_mf_counts:
     input:
-        cvcl_0063_bp=f"work_folder{pn}/data/bioplex/CVCL_0063.csv",
-        huri=f"work_folder{pn}/data/huri/intact_huri.csv"
+        cvcl_0063_bp="work_folder/data/bioplex/CVCL_0063.csv",
+        huri="work_folder/data/huri/intact_huri.csv"
     output:
-        compare_data=f"work_folder{pn}/analysis/GO/huri_vs_bioplex_annotation.csv",
-        summary_data=f"work_folder{pn}/analysis/GO/huri_vs_bioplex_shared_ji.csv"
+        compare_data="work_folder/analysis/GO/huri_vs_bioplex_annotation.csv",
+        summary_data="work_folder/analysis/GO/huri_vs_bioplex_shared_ji.csv"
     log:
-        f"logs{pn}/analysis/GO/huri_vs_bioplex_annotation.log"
+        "logs/analysis/GO/huri_vs_bioplex_annotation.log"
     run:
         bp_df = pd.read_csv(input.cvcl_0063_bp,sep="\t")[["Bait Symbol", "Prey Symbol"]]
         bp_df.columns = ["gene_name_bait", "gene_name_prey"]

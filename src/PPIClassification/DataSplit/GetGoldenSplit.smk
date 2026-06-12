@@ -3,7 +3,7 @@ import pandas as pd
 
 rule set_gene_names:
     input:
-        gene_names=f"work_folder{pn}/gene_names/gene_names.csv",
+        gene_names="work_folder/gene_names/gene_names.csv",
         gs_train_pos="data/golden_standard_split/21591618/Intra1_pos_rr.txt",
         gs_train_neg="data/golden_standard_split/21591618/Intra1_neg_rr.txt",
         gs_validation_pos="data/golden_standard_split/21591618/Intra0_pos_rr.txt",
@@ -11,14 +11,14 @@ rule set_gene_names:
         gs_test_pos="data/golden_standard_split/21591618/Intra2_pos_rr.txt",
         gs_test_neg="data/golden_standard_split/21591618/Intra2_neg_rr.txt"
     output:
-        gs_train_pos=f"work_folder{pn}/subsets/train/goldensplit/data_pos.csv",
-        gs_train_neg=f"work_folder{pn}/subsets/train/goldensplit/data_neg.csv",
-        gs_validation_pos=f"work_folder{pn}/subsets/validation/goldensplit/data_pos.csv",
-        gs_validation_neg=f"work_folder{pn}/subsets/validation/goldensplit/data_neg.csv",
-        gs_test_pos=f"work_folder{pn}/subsets/test/goldensplit/data_pos.csv",
-        gs_test_neg=f"work_folder{pn}/subsets/test/goldensplit/data_neg.csv"
+        gs_train_pos="work_folder/subsets/train/goldensplit/data_pos.csv",
+        gs_train_neg="work_folder/subsets/train/goldensplit/data_neg.csv",
+        gs_validation_pos="work_folder/subsets/validation/goldensplit/data_pos.csv",
+        gs_validation_neg="work_folder/subsets/validation/goldensplit/data_neg.csv",
+        gs_test_pos="work_folder/subsets/test/goldensplit/data_pos.csv",
+        gs_test_neg="work_folder/subsets/test/goldensplit/data_neg.csv"
     log:
-        f"logs{pn}/subsets/goldensplit/set_gene_names.log"
+        "logs/subsets/goldensplit/set_gene_names.log"
     run:
         gene_names = pd.read_csv(input.gene_names,sep="\t")
         for sp_id, gene_id in zip(input[1:], output):

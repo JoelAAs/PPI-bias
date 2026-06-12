@@ -14,7 +14,7 @@ def nested_dict():
 
 def get_input_for_aggregation(wc, filename, cell_line_methods):
     ckpt = checkpoints.infer_experimental_search_space.get(cell_line="_cell_line").output[0]
-    CL_FOLDER = f"work_folder{pn}/inferred_search_space/experimental_cell_line" # Explicit since it doesn't work otherwise
+    CL_FOLDER = "work_folder/inferred_search_space/experimental_cell_line" # Explicit since it doesn't work otherwise
     cl_df = pd.read_csv(filename, sep="\t")
     cl_df = cl_df[
         cl_df[f"gene_name_bait"] != cl_df[f"gene_name_prey"]
@@ -43,12 +43,12 @@ rule aggregate_inferred_studies_cell_line:
     Aggregate experiments assuming that any prey observed in studies is tested against all baits
     """
     input:
-        ppi_file = f"work_folder{pn}/formated/bait_prey_CVCL.csv",
-        cl_pids = lambda wc: get_input_for_aggregation(wc, f"work_folder{pn}/formated/bait_prey_CVCL.csv", config["cell_line_methods"])
+        ppi_file = "work_folder/formated/bait_prey_CVCL.csv",
+        cl_pids = lambda wc: get_input_for_aggregation(wc, "work_folder/formated/bait_prey_CVCL.csv", config["cell_line_methods"])
     output:
-        cell_line_counts = f"work_folder{pn}/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
+        cell_line_counts = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
     log:
-        f"logs{pn}/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.log"
+        "logs/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.log"
     run:
         aggregate_inferred_experiments(input.cl_pids, output.cell_line_counts, "gene_name", single=True)
 
@@ -62,7 +62,7 @@ rule infer_bait_wise_tests_cell_line:
     params:
         remove_single_ppi_papers = config["remove_single_publications"]
     input:
-        df = f"work_folder{pn}/formated/bait_prey_CVCL.csv",
+        df = "work_folder/formated/bait_prey_CVCL.csv",
 
     output:
         baitwise_infered = "work_folder/inferred_search_space/aggregated/cell_line/cell_line_bait_wise.csv"

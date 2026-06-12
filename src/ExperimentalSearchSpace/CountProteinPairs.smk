@@ -4,11 +4,11 @@ rule count_tested_pairs:
     params:
         id_pattern = config["id_pattern"]
     input:
-        pod = f"work_folder{pn}/analysis/POD/POD_{{method}}.csv"
+        pod = "work_folder/analysis/POD/POD_{method}.csv"
     output:
-        pp_counts = f"work_folder{pn}/analysis/POD/summary/POD_{{method}}.csv"
+        pp_counts = "work_folder/analysis/POD/summary/POD_{method}.csv"
     log:
-        f"logs{pn}/analysis/POD/summary/POD_{{method}}.log"
+        "logs/analysis/POD/summary/POD_{method}.log"
     run:
         pod_df = pd.read_csv(input.pod, sep="\t")
         tested_counts = pod_df.groupby(
@@ -19,11 +19,11 @@ rule count_tested_pairs:
 
 rule join_counts:
     input:
-        counts = expand(f"work_folder{pn}/analysis/POD/summary/POD_{{data}}.csv", data = datasets)
+        counts = expand("work_folder/analysis/POD/summary/POD_{data}.csv", data = datasets)
     output:
-        all_counts = f"work_folder{pn}/analysis/POD/summary/all.csv"
+        all_counts = "work_folder/analysis/POD/summary/all.csv"
     log:
-        f"logs{pn}/analysis/POD/summary/all.log"
+        "logs/analysis/POD/summary/all.log"
     run:
 
         all_dfs = [pd.read_csv(single_count, sep="\t") for single_count in input.counts]

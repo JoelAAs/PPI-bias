@@ -42,9 +42,9 @@ def format_bioplex(bp_f, gene_name_df, cl):
 
 rule get_pubtator:
     output:
-        f"work_folder{pn}/cell_line_annotation/cellline2pubtator3.txt"
+        "work_folder/cell_line_annotation/cellline2pubtator3.txt"
     log:
-        f"logs{pn}/cell_line_annotation/cellline2pubtator3.log"
+        "logs/cell_line_annotation/cellline2pubtator3.log"
     shell:
         """
         exec > {log} 2>&1
@@ -56,10 +56,10 @@ rule get_pubtator:
 
 rule get_bioplex:
     output:
-        cvcl_0291_bp=f"work_folder{pn}/data/bioplex/CVCL_0291.csv",
-        cvcl_0063_bp=f"work_folder{pn}/data/bioplex/CVCL_0063.csv"
+        cvcl_0291_bp="work_folder/data/bioplex/CVCL_0291.csv",
+        cvcl_0063_bp="work_folder/data/bioplex/CVCL_0063.csv"
     log:
-        f"logs{pn}/data/bioplex/bioplex.log"
+        "logs/data/bioplex/bioplex.log"
     shell:
         """
         exec > {log} 2>&1
@@ -69,9 +69,9 @@ rule get_bioplex:
 
 rule get_cellosaurus:
     output:
-        cellosaurus = f"work_folder{pn}/data/cellosaurus/cellosaurus.txt"
+        cellosaurus = "work_folder/data/cellosaurus/cellosaurus.txt"
     log:
-        f"logs{pn}/data/cellosaurus/cellosaurus.log"
+        "logs/data/cellosaurus/cellosaurus.log"
     shell:
         """
         wget https://ftp.expasy.org/databases/cellosaurus/cellosaurus.txt -O {output.cellosaurus} > {log} 2>&1
@@ -79,12 +79,12 @@ rule get_cellosaurus:
 
 rule get_cellosaurus_human_cl:
     input:
-        cellosaurus = f"work_folder{pn}/data/cellosaurus/cellosaurus.txt"
+        cellosaurus = "work_folder/data/cellosaurus/cellosaurus.txt"
     output:
-        cellosaurus_csv = f"work_folder{pn}/data/cellosaurus/taxon_cellosaurus.csv",
-        cellosaurus_human = f"work_folder{pn}/data/cellosaurus/cellosaurus_human.txt"
+        cellosaurus_csv = "work_folder/data/cellosaurus/taxon_cellosaurus.csv",
+        cellosaurus_human = "work_folder/data/cellosaurus/cellosaurus_human.txt"
     log:
-        f"logs{pn}/data/cellosaurus/cellosaurus_human.log"
+        "logs/data/cellosaurus/cellosaurus_human.log"
     run:
         parse_cellosaurus(input.cellosaurus, output.cellosaurus_csv)
         df_cellosaurus = pd.read_csv(output.cellosaurus_csv, sep="\t")
@@ -98,17 +98,17 @@ rule join_to_pid:
     params:
         pid_to_drop = config["pid_to_remove"]
     input:
-        pubator = f"work_folder{pn}/cell_line_annotation/cellline2pubtator3.txt",
-        human_cell_lines = f"work_folder{pn}/data/cellosaurus/cellosaurus_human.txt",
-        formatted_intact = f"work_folder{pn}/formated/bait_prey_publications.csv",
-        cvcl_0291_bp=f"work_folder{pn}/data/bioplex/CVCL_0291.csv",
-        cvcl_0063_bp=f"work_folder{pn}/data/bioplex/CVCL_0063.csv",
+        pubator = "work_folder/cell_line_annotation/cellline2pubtator3.txt",
+        human_cell_lines = "work_folder/data/cellosaurus/cellosaurus_human.txt",
+        formatted_intact = "work_folder/formated/bait_prey_publications.csv",
+        cvcl_0291_bp="work_folder/data/bioplex/CVCL_0291.csv",
+        cvcl_0063_bp="work_folder/data/bioplex/CVCL_0063.csv",
         manual_curated = "data/checked_studies.csv",
-        gene_names = f"work_folder{pn}/gene_names/gene_names.csv"
+        gene_names = "work_folder/gene_names/gene_names.csv"
     output:
-        cvcl_ppi = f"work_folder{pn}/formated/bait_prey_CVCL.csv"
+        cvcl_ppi = "work_folder/formated/bait_prey_CVCL.csv"
     log:
-        f"logs{pn}/formated/bait_prey_CVCL.log"
+        "logs/formated/bait_prey_CVCL.log"
     run:
         column_order =[
             'uniprot_id_bait', 'uniprot_id_prey', 'pubmed_id', 'detection_method',

@@ -6,7 +6,7 @@ library(tidyverse)
 #  [5] "neg_limit" "pos_limit" "random"
 # >
 auc_data <- read.csv(
-  "work_folder/per_gene/classification/xgboost/permuted/all_metrics_ESM2.csv",
+  "work_folder/per_gene/classification/xgboost/permuted/all_metrics_undirectional_ESM2.csv",
   sep = "\t", header = TRUE
 )
 
@@ -80,50 +80,3 @@ g <- ggplot(
 
 ggsave("manual_figures/ROC_auc.png", g, height = 5, width = 6)
 
-
-
-
-g <- ggplot(
-  auc_data,
-  aes(
-    x = dataset,
-    y = ceiling()
-  )
-) +
-  geom_boxplot(aes(color = random, shape = dataset)) +
-  labs(
-    title = "ROC AUC per datasets and threshold configurations",
-    x = "Detection dataset",
-    y = "ROC AUC",
-    color = "Negative data",
-    shape = "Data type"
-  ) +
-  scale_color_manual(
-    values = c("darkorange", "blue"),
-    labels = c("HCNI", "Non-observed")
-  ) +
-  scale_shape_manual(
-    values = c(15, 16, 17),
-    labels = c("Combined", "MS", "Y2H")
-  ) +
-  theme_bw() +
-  facet_grid(
-    neg_limit ~ pos_limit,
-    labeller = labeller(
-      neg_limit = c(
-        "1" = "Negative tests >= 1",
-        "2" = "Negative tests >= 2"
-      ),
-      pos_limit = c(
-        "all" = "Any interactions",
-        "0.02" = "P- >= 0.02",
-        "0.15" = "P- >= 0.15"
-      )
-    )
-  ) +
-  theme(
-    legend.position = "right",
-    axis.text.x = element_text(angle = -45, hjust = 0, vjust = 0)
-  )
-
-ggsave("manual_figures/ROC_auc.png", g, height = 4, width = 6)

@@ -56,10 +56,10 @@ def write_observed(tested_dict, obs_dict, output_file, id_pattern, detection_met
 
 def get_input_ppi_file(cell_line_wc):
     if cell_line_wc == "_cell_line":
-        return f"work_folder{pn}/formated/bait_prey_CVCL.csv"
+        return "work_folder/formated/bait_prey_CVCL.csv"
 
     else:
-        return f"work_folder{pn}/formated/bait_prey_publications.csv"
+        return "work_folder/formated/bait_prey_publications.csv"
 
 
 checkpoint infer_experimental_search_space:
@@ -72,9 +72,9 @@ checkpoint infer_experimental_search_space:
     input:
         bait_prey_file = lambda wc: get_input_ppi_file(wc.cell_line)
     output:
-        directory(f"work_folder{pn}/inferred_search_space/experimental{{cell_line}}")
+        directory("work_folder/inferred_search_space/experimental{cell_line}")
     log:
-        f"logs{pn}/inferred_search_space/experimental{{cell_line}}.log"
+        "logs/inferred_search_space/experimental{cell_line}.log"
     run:
         os.makedirs(output[0], exist_ok=True)
         bait_prey_df = pd.read_csv(input.bait_prey_file, sep="\t")

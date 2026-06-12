@@ -54,12 +54,12 @@ def get_mean_per_categories(filename, interfaces_df):
 rule get_detection_rate_per_interface_size:
     input:
         interfaces = "data/DCA/benchmarks/pairs_partitioned_by_interface_sizes.tsv",
-        gene_to_uniprot = f"work_folder{pn}/intact/uniprot_to_gene_name.csv",
-        pod = f"work_folder{pn}/analysis/POD/POD_{{data}}.csv"
+        gene_to_uniprot = "work_folder/intact/uniprot_to_gene_name.csv",
+        pod = "work_folder/analysis/POD/POD_{data}.csv"
     output:
-        summary_stats = f"work_folder{pn}/analysis/interfaces/detection_{{data}}.csv"
+        summary_stats = "work_folder/analysis/interfaces/detection_{data}.csv"
     log:
-        f"logs{pn}/analysis/interfaces/detection_{{data}}.log"
+        "logs/analysis/interfaces/detection_{data}.log"
     run:
         gene_name_dict, interfaces_df = get_interface_gene_names_dict(input.interfaces, input.gene_to_uniprot)
         interfaces_df["gene_pair"] = interfaces_df[["uniprot_a", "uniprot_b"]].apply(get_gene_comb,axis=1, args=(gene_name_dict,))

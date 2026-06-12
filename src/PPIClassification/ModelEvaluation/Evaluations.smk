@@ -1,7 +1,7 @@
 rule get_all_balance_metrics:
     input:
         metrics=expand(
-            "work_folder{pn}/subsets/train/equal_edge/balance/{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}{random}_degree.csv",
+            "work_folder/subsets/train/equal_edge/balance/{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}{random}_degree.csv",
             pn=pn,
             dataset=config["datasets"],
             pos_limit=config["positive_limits"],
@@ -9,7 +9,7 @@ rule get_all_balance_metrics:
             random=["", "-random"],
         ),
     output:
-        all_models=f"work_folder{pn}/subsets/train/equal_edge/balance/all_metrics.csv",
+        all_models="work_folder/subsets/train/equal_edge/balance/all_metrics.csv",
     shell:
         """
         echo "dataset\tpos_limit\tneg_limit\trandom\tbait_degree_delta\tprey_degree_delta\tnum_edges" > {output.all_models}
@@ -19,10 +19,10 @@ rule get_all_balance_metrics:
 
 rule get_train_degree_balance:
     input:
-        train_pos=f"work_folder{pn}/subsets/train/equal_edge/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
-        train_neg=f"work_folder{pn}/subsets/train/equal_edge/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_neg.csv",
+        train_pos="work_folder/subsets/train/equal_edge/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
+        train_neg="work_folder/subsets/train/equal_edge/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_neg.csv",
     output:
-        balance=f"work_folder{pn}/subsets/train/equal_edge/balance/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_degree.csv",
+        balance="work_folder/subsets/train/equal_edge/balance/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_degree.csv",
     run:
         pos_df = pd.read_csv(input.train_pos, sep="\t")
         neg_df = pd.read_csv(input.train_neg, sep="\t")
@@ -52,15 +52,15 @@ rule get_train_degree_balance:
 
 rule get_model_metrics:
     input:
-        test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_{{network_type}}_pos.csv",
-        test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_{{network_type}}_neg.csv",
-        saved_model=f"work_folder{pn}/classification/{{classifier}}/model/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_{{esm_model}}_parameters.joblib",
-        protein_embeddings=f"work_folder{pn}/embeddings/canonical_{{esm_model}}_mean_max.csv.gz",
+        test_pos="work_folder/subsets/test/{dataset}_{network_type}_pos.csv",
+        test_neg="work_folder/subsets/test/{dataset}_{network_type}_neg.csv",
+        saved_model="work_folder/classification/{classifier}/model/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_parameters.joblib",
+        protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz",
     output:
-        metrics=f"work_folder{pn}/classification/{{classifier}}/metrics/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_{{esm_model}}_metrics.txt",
-        roc_png=f"work_folder{pn}/classification/{{classifier}}/metrics/plot/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_{{esm_model}}_roc_curve.png",
+        metrics="work_folder/classification/{classifier}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_metrics.txt",
+        roc_png="work_folder/classification/{classifier}/metrics/plot/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_roc_curve.png",
     log:
-        f"logs{pn}/classification/{{classifier}}/metrics/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_{{esm_model}}_metrics.log",
+        "logs/classification/{classifier}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_{esm_model}_metrics.log",
     threads: 10
     resources:
         mem_gb=20,
@@ -82,7 +82,7 @@ rule get_model_metrics:
 rule all_metrics:
     input:
         metrics=expand(
-            "work_folder{pn}/classification/{{classifier}}/metrics/{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{{esm_model}}_metrics.txt",
+            "work_folder/classification/{{classifier}}/metrics/{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{{esm_model}}_metrics.txt",
             pn=pn,
             dataset=config["datasets"],
             pos_limit=config["positive_limits"],
@@ -90,9 +90,9 @@ rule all_metrics:
             random=["", "-random"],
         ),
     output:
-        all_models=f"work_folder{pn}/classification/{{classifier}}/metrics/all_metrics_{{network_type}}_{{esm_model}}.csv",
+        all_models="work_folder/classification/{classifier}/metrics/all_metrics_{network_type}_{esm_model}.csv",
     log:
-        f"logs{pn}/classification/{{classifier}}/metrics/all_metrics_{{network_type}}_{{esm_model}}.log",
+        "logs/classification/{classifier}/metrics/all_metrics_{network_type}_{esm_model}.log",
     run:
         with open(output[0], "a") as w:
             w.write("model\troc_auc\tsamples\n")
@@ -109,15 +109,15 @@ rule all_metrics:
 
 rule get_model_metrics_permuted:
     input:
-        test_pos=f"work_folder{pn}/subsets/test/{{dataset}}_{{network_type}}_pos.csv",
-        test_neg=f"work_folder{pn}/subsets/test/{{dataset}}_{{network_type}}_neg.csv",
-        saved_model=f"work_folder{pn}/classification/{{classifier}}/permuted/{{permutation}}/model/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_{{esm_model}}_parameters.joblib",
-        protein_embeddings=f"work_folder{pn}/embeddings/canonical_{{esm_model}}_mean_max.csv.gz",
+        test_pos="work_folder/subsets/test/{dataset}_{network_type}_pos.csv",
+        test_neg="work_folder/subsets/test/{dataset}_{network_type}_neg.csv",
+        saved_model="work_folder/classification/{classifier}/permuted/{permutation}/model/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_parameters.joblib",
+        protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz",
     output:
-        metrics=f"work_folder{pn}/classification/{{classifier}}/permuted/{{permutation}}/metrics/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_{{esm_model}}_metrics.txt",
-        roc_png=f"work_folder{pn}/classification/{{classifier}}/permuted/{{permutation}}/metrics/plot/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_model_{{esm_model}}_roc_curve.png",
+        metrics="work_folder/classification/{classifier}/permuted/{permutation}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_metrics.txt",
+        roc_png="work_folder/classification/{classifier}/permuted/{permutation}/metrics/plot/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_roc_curve.png",
     log:
-        f"logs{pn}/classification/{{classifier}}/permuted/{{permutation}}/metrics/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}{{random}}_{{esm_model}}_metrics.log",
+        "logs/classification/{classifier}/permuted/{permutation}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_{esm_model}_metrics.log",
     threads: 10
     resources:
         mem_gb=80,
@@ -139,7 +139,7 @@ rule get_model_metrics_permuted:
 rule all_metrics_permuted:
     input:
         metrics=expand(
-            "work_folder{pn}/classification/{{classifier}}/permuted/{permutation}/metrics/{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{{esm_model}}_metrics.txt",
+            "work_folder/classification/{{classifier}}/permuted/{permutation}/metrics/{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{{esm_model}}_metrics.txt",
             pn=pn,
             permutation=range(config.get("n_permutations", 10)),
             dataset=config["datasets"],
@@ -148,9 +148,9 @@ rule all_metrics_permuted:
             random=["", "-random"],
         ),
     output:
-        all_models=f"work_folder{pn}/classification/{{classifier}}/permuted/all_metrics_{{network_type}}_{{esm_model}}.csv",
+        all_models="work_folder/classification/{classifier}/permuted/all_metrics_{network_type}_{esm_model}.csv",
     log:
-        f"logs{pn}/classification/{{classifier}}/permuted/all_metrics_{{network_type}}_{{esm_model}}.log",
+        "logs/classification/{classifier}/permuted/all_metrics_{network_type}_{esm_model}.log",
     run:
         with open(output[0], "w") as w:
             w.write("permutation\tmodel\troc_auc\tsamples\n")
@@ -169,38 +169,38 @@ rule all_metrics_permuted:
 
 rule compute_train_similarity:
     input:
-        similarity_tsv=f"work_folder{pn}/protein_sequences/similarity/sequencesimilarity.tsv",
+        similarity_tsv="work_folder/protein_sequences/similarity/sequencesimilarity.tsv",
         perm_pos=expand(
-            "work_folder{pn}/subsets/train/permuted/{permutation}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
+            "work_folder/subsets/train/permuted/{permutation}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
             pn=pn,
             permutation=range(config.get("n_permutations", 10)),
             ),
         perm_neg=expand(
-            "work_folder{pn}/subsets/train/permuted/{permutation}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv",
+            "work_folder/subsets/train/permuted/{permutation}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv",
             pn=pn,
             permutation=range(config.get("n_permutations", 10))
         ),
         perm_random=expand(
-            "work_folder{pn}/subsets/train/permuted/{permutation}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}-random_neg.csv",
+            "work_folder/subsets/train/permuted/{permutation}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}-random_neg.csv",
             pn=pn,
             permutation=range(config.get("n_permutations", 10))
         )
     output:
-        per_protein_similarity=f"work_folder{pn}/analysis/train_similarity/protein_avg_similarity_{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}.tsv",
-        per_edge_similarity=f"work_folder{pn}/analysis/train_similarity/pair_similarity_{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}.tsv"
+        per_protein_similarity="work_folder/analysis/train_similarity/protein_avg_similarity_{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}.tsv",
+        per_edge_similarity="work_folder/analysis/train_similarity/pair_similarity_{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}.tsv"
     log:
-        f"logs{pn}/analysis/train_similarity/compute_similarity_{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}.log",
+        "logs/analysis/train_similarity/compute_similarity_{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}.log",
     script:
         "compute_train_similarity.py"
         
 
 rule plot_train_similarity:
     input:
-        per_protein_similarity=f"work_folder{pn}/analysis/train_similarity/protein_avg_similarity_{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}.tsv",
-        per_edge_similarity=f"work_folder{pn}/analysis/train_similarity/pair_similarity_{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}.tsv"
+        per_protein_similarity="work_folder/analysis/train_similarity/protein_avg_similarity_{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}.tsv",
+        per_edge_similarity="work_folder/analysis/train_similarity/pair_similarity_{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}.tsv"
     output:
-        avg_protein_similarity=f"work_folder{pn}/analysis/train_similarity/plots/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_avg_protein_similarity.png",
-        edge_similarity_density=f"work_folder{pn}/analysis/train_similarity/plots/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_pair_similarity_density.png",
+        avg_protein_similarity="work_folder/analysis/train_similarity/plots/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_avg_protein_similarity.png",
+        edge_similarity_density="work_folder/analysis/train_similarity/plots/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_pair_similarity_density.png",
     log:
-        f"logs{pn}/analysis/train_similarity/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_plot.log",
+        "logs/analysis/train_similarity/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_plot.log",
     script: "plot_train_similarity.R"
