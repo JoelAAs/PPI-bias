@@ -74,22 +74,10 @@ wildcard_constraints:
 
 rule all:
     input:
-        expand("work_folder/analysis/POD/{network_type}/POD_{data}.pq",
-            network_type= ["undirectional"], data=datasets)
+        "work_folder/embeddings/canonical_ESM2.pt",
+        # expand("work_folder/analysis/POD/{network_type}/POD_{data}.pq",
+        #     network_type= ["undirectional"], data=datasets),
+        # "work_folder/protein_sequences/uniprot_canonical.fasta",
+        #expand("work_folder/classification/{classifier}/permuted/all_metrics_{network_type}_{esm_model}.csv",
+        #    classifier="xgboost", network_type="undirectional",esm_model="ESM2")
 
-        
-        #"work_folder/classification/xgboost/permuted/all_metrics_undirectional_ESM2.csv",
-        #"work_folder/classification/xgboost/permuted/all_metrics_directional_ESM2.csv"
-        # expand(
-        #     "work_folder/subsets/train/equal_edge/flat_undirectional_{neg_limit}_poslim_{pos_limit}_neg.csv",
-        #     pn=pn, pos_limit=config["positive_limits"], neg_limit=config["negative_limits"])
-        # expand(
-        #     "work_folder/classification/xgboost/metrics/all_metrics_{{esm_model}}.csv",
-        #     esm_model=["ESM2"]
-        # ),
-        # expand(
-        #     "work_folder/classification/{{classifier}}/permuted/all_metrics_{{esm_model}}.csv",
-        #     classifier=["xgboost",],
-        #     esm_model=["ESM2"]
-        # ),
-        # expand("work_folder/analysis/train_similarity/plots/{dataset}_directional_limit_1_poslim_all_avg_protein_similarity.png", dataset=datasets)

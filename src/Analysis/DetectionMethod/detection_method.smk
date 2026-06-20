@@ -26,8 +26,9 @@ def get_input_files(method, id_pattern, filename, remove_single=True):
     return expected
 
 def multi_method_aggregation(methods):
+    # hardcoded to play nice with snakemake-fs
     return expand(
-        str(rules.aggregate_pids.output.method_aggregate),
+        "work_folder/inferred_search_space/aggregated/methods/{subset}_experimental_wise.csv",
         subset=methods
     )
 
@@ -37,10 +38,6 @@ def get_subsets(wc):
     :return: either mulit-method (MS/y2h) aggregation or single method (MI-code) aggregation
     """
     if wc.subset in config:
-        # Explicitly trigger checkpoint check here so Snakemake can correctly defer
-        # this rule when the checkpoint hasn't run yet, rather than failing with
-        # MissingInputException when evaluating the indirect MI-method dependencies.
-        checkpoints.infer_experimental_search_space.get(cell_line="_method")
         return multi_method_aggregation(config[wc.subset])
     return get_input_files(wc.subset,config["id_pattern"],config["formated_ppi"])
 

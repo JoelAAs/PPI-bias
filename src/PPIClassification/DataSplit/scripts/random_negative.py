@@ -3,7 +3,7 @@ from sample_balance_multi_network_functions import degree_balace_edges
 
 
 def main():
-    pos_df = pd.read_csv(snakemake.input.balanced_positive_edges, sep="\t")
+    pos_df = pd.read_csv(snakemake.input.balanced_positive_edges, sep="\t", dtype={"bait": "string", "prey": "string"})
     network_type = snakemake.wildcards.network_type
     if network_type == "directional":
         directed = True

@@ -30,38 +30,41 @@ class EmbeddWorker:
         model = model.half().to("cuda")
         return tokenizer, model
 
-def read_fasta(fasta_filename):
-    gene_name_seq_dict = dict()
+def read_fasta(fasta_filename, accenssion=True):
+    id_seq_dict = dict()
     with open(fasta_filename) as f:
-        gene_name = ""
+        seq_id = ""
         for line in f:
             if line[0] == ">":
                 if line == "":
                     continue
-                if gene_name:
-                    gene_name = gene_name.groups()[0]
-                    gene_name_seq_dict[gene_name] = seq
-                gene_name = re.search(" GN=([A-Za-z/0-9-]+) ", line)
+                if seq_id:
+                    seq_id = seq_id.groups()[0]
+                    id_seq_dict[seq_id] = seq
+                if accenssion:
+                    seq_id = line.split("|")[1]
+                else:
+                    seq_id = re.search(" GN=([A-Za-z/0-9-]+) ", line)
                 seq = ""
             else:
                 seq += line.strip()
 
-        if gene_name:
-            gene_name = gene_name.groups()[0]
-            gene_name_seq_dict[gene_name] = seq
-    return gene_name_seq_dict
+        if seq_id:
+            seq_id = seq_id.groups()[0]
+            id_seq_dict[seq_id] = seq
+    return id_name_seid_seq_dictq_dict
 
 
 def get_all_embeddings(fasta_file, chosen_model):
-    gene_name_seq_dict = read_fasta(fasta_file)
-    genes = list(gene_name_seq_dict.keys())
-    sequences = list(gene_name_seq_dict.values())
+    id_name_seq_dict = read_fasta(fasta_file)
+    seq_ids = list(id_seq_dict.keys())
+    sequences = list(id_seq_dict.values())
 
     em = EmbeddWorker(chosen_model)
     n = len(sequences)
     embeddings = {
-        gene: em.get_embeddings(seq, i + 1, n)
-        for i, (gene, seq) in enumerate(zip(genes, sequences))
+        seq_id: em.get_embeddings(seq, i + 1, n)
+        for i, (seq_id, seq) in enumerate(zip(seq_ids, sequences))
     }
     return embeddings
 

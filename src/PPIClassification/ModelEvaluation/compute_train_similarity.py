@@ -2,7 +2,7 @@ import pandas as pd
 
 
 def main():
-    similarity_df = pd.read_csv(snakemake.input.similarity_tsv, sep="\t")
+    similarity_df = pd.read_csv(snakemake.input.similarity_tsv, sep="\t", dtype={"qgene": "string", "sgene": "string"})
     similarity_df["edge_id"] = similarity_df[["qgene", "sgene"]].apply(
         lambda x: "-".join(sorted(x)), axis=1
     )
@@ -16,7 +16,7 @@ def main():
                 [snakemake.input.perm_pos, snakemake.input.perm_neg, snakemake.input.perm_random],
                 ["positive", "negative", "random_negative"]):
                 for i, edge_file in enumerate(input_files):
-                    edge_df = pd.read_csv(edge_file, sep="\t")
+                    edge_df = pd.read_csv(edge_file, sep="\t", dtype={"bait": "string", "prey": "string"})
                     edge_df["edge_id"] = edge_df[["bait", "prey"]].apply(
                         lambda x: "-".join(sorted(x)), axis=1
                     )

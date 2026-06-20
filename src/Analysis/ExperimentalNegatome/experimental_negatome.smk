@@ -17,7 +17,11 @@ rule all_methods_filter_out:
     run:
         inferred_negative_df = pd.read_csv(
             input.method_aggregate,
-            sep="\t"
+            sep="\t",
+            dtype={
+                f"{params.id_pattern}_bait": "string",
+                f"{params.id_pattern}_prey": "string"
+            }
         )
 
         inferred_negative_df = inferred_negative_df[

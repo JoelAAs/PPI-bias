@@ -10,6 +10,11 @@ def _batches(lst, n):
 
 
 rule get_uniprot_sequences:
+    """
+    This will break on gene_name currently. Fix later
+    """
+    params:
+        id_pattern = config["id_pattern"]
     input:
         gene_names = "work_folder/gene_names/uniprot_to_gene_name.csv"
     output:
@@ -18,9 +23,9 @@ rule get_uniprot_sequences:
         "logs/protein_sequences/uniprot_canonical.log"
     run:
         df = pd.read_csv(input.gene_names, sep="\t")
-        # Use base accession as query key; map base_ac -> entrez_id
+        # Use base accession as query key; map base_ac -> id used for embedding lookup
         base_to_entrez = {
-            row.uniprot_id.split("-")[0]: str(row.gene_name)
+            row.uniprot_id.split("-")[0]: row.uniprot_id.split("-")[0] if params.id_pattern == "uniprot_id" else str(row.gene_name)
             for _, row in df.iterrows()
         }
         base_ids = list(base_to_entrez.keys())

@@ -78,7 +78,7 @@ rule xgboost_permuted:
         saved_model="work_folder/classification/xgboost/permuted/{permutation}/model/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_parameters.joblib",
     log:
         "logs/classification/xgboost/permuted/{permutation}/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_{esm_model}_model.log"
-    threads: 15
+    threads: 10
     resources:
         mem_gb=40
     params:
@@ -112,7 +112,7 @@ rule xgboost:
         saved_model="work_folder/classification/xgboost/model/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_parameters.joblib",
     log:
         "logs/classification/xgboost/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_{esm_model}_model.log"
-    threads: 15
+    threads: 10
     resources:
         mem_gb=40
     params:

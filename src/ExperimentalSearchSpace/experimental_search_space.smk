@@ -70,7 +70,7 @@ checkpoint infer_experimental_search_space:
     params:
         id_pattern = config["id_pattern"]
     input:
-        bait_prey_file = lambda wc: get_input_ppi_file(wc.cell_line)
+        bait_prey_file = lambda wc: storage.fs(get_input_ppi_file(wc.cell_line))
     output:
         directory("work_folder/inferred_search_space/experimental{cell_line}")
     log:
