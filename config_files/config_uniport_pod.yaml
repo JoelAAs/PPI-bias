@@ -11,7 +11,7 @@ part_or_difference_cutoff: 50
 pseudo_n: 1
 hci_frac: 0.8
 negatome_tested_threshold: 4
-id_pattern: "gene_name"
+id_pattern: "uniprot_id"
 prey_n_MCMC_batch: 2000
 MCMC_workers: 45
 batch_per_write: 2000
