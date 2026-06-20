@@ -36,10 +36,8 @@ def read_fasta(fasta_filename, accenssion=True):
         seq_id = ""
         for line in f:
             if line[0] == ">":
-                if line == "":
-                    continue
                 if seq_id:
-                    if accenssion:
+                    if not accenssion:
                         seq_id = seq_id.groups()[0]
                     id_seq_dict[seq_id] = seq
                 if accenssion:
@@ -51,13 +49,14 @@ def read_fasta(fasta_filename, accenssion=True):
                 seq += line.strip()
 
         if seq_id:
-            seq_id = seq_id.groups()[0]
+            if not accenssion:
+                seq_id = seq_id.groups()[0]
             id_seq_dict[seq_id] = seq
-    return id_name_seid_seq_dictq_dict
+    return id_seq_dict
 
 
 def get_all_embeddings(fasta_file, chosen_model):
-    id_name_seq_dict = read_fasta(fasta_file)
+    id_seq_dict = read_fasta(fasta_file)
     seq_ids = list(id_seq_dict.keys())
     sequences = list(id_seq_dict.values())
 
