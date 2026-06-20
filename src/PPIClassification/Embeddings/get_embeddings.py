@@ -39,7 +39,8 @@ def read_fasta(fasta_filename, accenssion=True):
                 if line == "":
                     continue
                 if seq_id:
-                    seq_id = seq_id.groups()[0]
+                    if accenssion:
+                        seq_id = seq_id.groups()[0]
                     id_seq_dict[seq_id] = seq
                 if accenssion:
                     seq_id = line.split("|")[1]
