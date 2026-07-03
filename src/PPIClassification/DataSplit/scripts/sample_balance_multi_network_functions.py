@@ -1,9 +1,15 @@
 import itertools
+import multiprocessing
 import pandas as pd
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from graph_tool.all import Graph, openmp_set_num_threads
 from graph_tool.flow import push_relabel_max_flow as max_flow
+
+
+def _log(log_file: str, msg: str) -> None:
+    with open(log_file, "a") as f:
+        f.write(msg + "\n")
 
 def generate_graph(edge_df, node_map, directed):
     """Build a graph-tool Graph from a bait/prey edge DataFrame.
@@ -71,6 +77,7 @@ def drop_exclusive_nodes(pos_edges, neg_edges, directed):
 def sample_balance_multiple_networks(
     edge_list_pos,
     edge_list_neg,
+    log_file,
     edge_deviation_threshold=0.05,
     min_flow=.95,
     n_workers=None,
@@ -97,9 +104,9 @@ def sample_balance_multiple_networks(
         Tuple (pos_list, neg_list) of balanced edge DataFrames in the same order
         as the inputs.
     """
-    with ProcessPoolExecutor(max_workers=n_workers) as executor:
+    with ProcessPoolExecutor(max_workers=n_workers, mp_context=multiprocessing.get_context("spawn")) as executor:
         futures = [
-            executor.submit(degree_balace_edges, pos_edge, neg_edge, min_flow, directed)
+            executor.submit(degree_balace_edges, pos_edge, neg_edge, min_flow, directed, None, None, log_file)
             for pos_edge, neg_edge in zip(edge_list_pos, edge_list_neg)
         ]
         degree_balanced_networks = [f.result()[:2] for f in futures]
@@ -121,6 +128,8 @@ def sample_balance_multiple_networks(
                     min_flow,
                     directed,
                     current_min_edges,
+                    None,
+                    log_file,
                 )
                 for net_i, run in enumerate(run_mask) if run
             }
@@ -137,7 +146,7 @@ def sample_balance_multiple_networks(
             for net_i, dev in enumerate(current_edge_deviations):
                 pos, _ = degree_balanced_networks[net_i]
                 msg += f"Network {net_i}\t{pos.shape[0]}\t{dev > edge_deviation_threshold}\t{dev:.2f}\n"
-            print(msg)
+            _log(log_file, msg)
             i += 1
      
     return (
@@ -173,15 +182,14 @@ def graph_to_edge_df(g, node_map_idx):
     Returns:
         DataFrame with columns ["bait", "prey"].
     """
-    # order doesn't matter for undirected and columns stay as bait prey
-    edge_list = []
-    for e in g.edges():
-        bait_idx = int(e.source())
-        prey_idx = int(e.target())
-        bait = node_map_idx[bait_idx]
-        prey = node_map_idx[prey_idx]
-        edge_list.append((bait, prey))
-    return pd.DataFrame(edge_list, columns=["bait", "prey"])
+    edges = g.get_edges()
+    if len(edges) == 0:
+        return pd.DataFrame(columns=["bait", "prey"])
+    n = g.num_vertices()
+    names = np.empty(n, dtype=object)
+    for idx, name in node_map_idx.items():
+        names[idx] = name
+    return pd.DataFrame({"bait": names[edges[:, 0]], "prey": names[edges[:, 1]]})
 
 
 def build_directed_flow_graph(
@@ -309,17 +317,19 @@ def build_undirected_flow_graph(
 
 
     num_existing = g.num_edges()
-    edges = np.zeros(shape=(edge_df.shape[0]*2, 2), dtype=int)  # *2 for A->B and B->A
     from_nodes = edge_df["bait"].map(node_map).to_numpy(dtype=int)
     to_nodes   = edge_df["prey"].map(node_map).to_numpy(dtype=int)
 
-    for i, (node_a, node_b) in enumerate(zip(from_nodes, to_nodes)):
-        # (0, A) -> (1, B)
-        edges[i*2]     = [flow_node_map[(0, node_a)], flow_node_map[(1, node_b)]]
-        # (0, B) -> (1, A)
-        edges[i*2 + 1] = [flow_node_map[(0, node_b)], flow_node_map[(1, node_a)]]
-        
-    
+    # flow_node_map[(0, i)] = i + num_vertices, [(1, i)] = i + num_vertices + n
+    n = len(target_degree)
+    src_A = from_nodes + num_vertices        # (0, A)
+    tgt_B = to_nodes   + num_vertices + n    # (1, B)
+    src_B = to_nodes   + num_vertices        # (0, B)
+    tgt_A = from_nodes + num_vertices + n    # (1, A)
+    edges = np.empty((edge_df.shape[0] * 2, 2), dtype=int)
+    edges[0::2, 0] = src_A;  edges[0::2, 1] = tgt_B
+    edges[1::2, 0] = src_B;  edges[1::2, 1] = tgt_A
+
     g.add_edge_list(edges)
 
     # Set capacity=1 for all newly added edges in bulk
@@ -408,7 +418,7 @@ def get_degree(g):
     ).astype(np.int64)
     
 
-def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None, seed=None):
+def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None, seed=None, log_file=None):
     """Degree-balance a single positive/negative edge pair using alternating max-flow.
 
     Builds a flow network where the positive graph's per-node degree sequence acts as
@@ -434,6 +444,7 @@ def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None
         Tuple (pos_edges, neg_edges) of degree-balanced DataFrames with exclusive
         proteins removed (via `drop_exclusive_nodes`).
     """
+    openmp_set_num_threads(1)
     all_nodes = (
         set(pos_edges["bait"]) | set(pos_edges["prey"])
         | set(neg_edges["bait"]) | set(neg_edges["prey"])
@@ -505,14 +516,16 @@ def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None
             current_capacity[i % 2],
         )
 
-        capacity_edges = [e for e in current_source[i % 2].out_edges()]
-        total_capacity = sum(current_capacity[i % 2][e] for e in capacity_edges)
+        g_cur = current_g[i % 2]
+        src_out = g_cur.get_out_edges(int(current_source[i % 2]), eprops=[g_cur.edge_index])
+        src_edge_ids = src_out[:, 2].astype(int)
+        cap_arr = current_capacity[i % 2].a
+        res_arr = residual.a
+        total_capacity = cap_arr[src_edge_ids].sum()
         if total_capacity == 0:
             percent_flow_value = 1.0
         else:
-            percent_flow_value = sum(
-                current_capacity[i % 2][e] - residual[e] for e in capacity_edges
-            ) / total_capacity
+            percent_flow_value = (cap_arr[src_edge_ids] - res_arr[src_edge_ids]).sum() / total_capacity
 
         g_selected = extract_selected_edges(
             flow_g=current_g[i % 2],
@@ -526,7 +539,8 @@ def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None
         capacity_next = g_next.new_edge_property("int")
         subset_edges[(i + 1) % 2] = graph_to_edge_df(g_selected, node_map_idx)
         if edge_count_msg_count - subset_edges[0].shape[0] >= 1000:
-            print(f"Flow value {percent_flow_value}: positive edges {subset_edges[0].shape[0]}, negative edges {subset_edges[1].shape[0]}, max edges {max_edges}")
+            if log_file:
+                _log(log_file, f"Flow value {percent_flow_value}: positive edges {subset_edges[0].shape[0]}, negative edges {subset_edges[1].shape[0]}, max edges {max_edges}")
             edge_count_msg_count = subset_edges[0].shape[0]
         if directed:
             new_target_bait, new_target_prey = get_degree(g_selected)
@@ -565,19 +579,25 @@ def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None
         if (
             max_edges is not None
             and any(se.shape[0] > max_edges for se in subset_edges)
-            and percent_flow_value >= 0.999
+            and percent_flow_value >= 0.99
         ):
+            # remove ~10% of edge overshoot before rebalancing
+            min_edges = min(se.shape[0] for se in subset_edges)
+            delta = min_edges - max_edges  
+            n_to_remove = int(delta * 0.1) + 1
             cap = current_capacity[(i + 1) % 2]
             nonzero_indices = np.where(cap.a > 0)[0]
             if len(nonzero_indices) > 0:
-                cap.a[np.random.choice(nonzero_indices)] = 0
+                n = min(n_to_remove, len(nonzero_indices))
+                chosen = np.random.choice(nonzero_indices, size=n, replace=False)
+                cap.a[chosen] -= 1
         i += 1
 
     pos, neg, excluded = drop_exclusive_nodes(subset_edges[0], subset_edges[1], directed)
     return pos, neg, excluded
 
 
-def sanity_check(selected_pos, selected_neg, edge_list_pos, edge_list_neg, directed=True):
+def sanity_check(selected_pos, selected_neg, edge_list_pos, edge_list_neg, directed=True, log_file=None):
     """Assert structural invariants on balanced edge sets against their originals.
 
     Checks per network:
@@ -624,9 +644,9 @@ def sanity_check(selected_pos, selected_neg, edge_list_pos, edge_list_neg, direc
         orig_neg_edges_set = _edge_set(orig_neg_df)
 
         extra_pos = pos_edges_set - orig_pos_edges_set
-        if extra_pos:
-            print(f"DEBUG extra pos edges (first 5): {list(extra_pos)[:5]}")
-            print(f"DEBUG sample orig pos edges (first 5): {list(orig_pos_edges_set)[:5]}")
+        if extra_pos and log_file:
+            _log(log_file, f"DEBUG extra pos edges (first 5): {list(extra_pos)[:5]}")
+            _log(log_file, f"DEBUG sample orig pos edges (first 5): {list(orig_pos_edges_set)[:5]}")
         assert pos_edges_set.issubset(orig_pos_edges_set), \
             f"Selected positive edges for network {i} are not a subset of original positive edges."
         assert neg_edges_set.issubset(orig_neg_edges_set), \

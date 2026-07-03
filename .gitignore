@@ -180,3 +180,4 @@ work_folder
 data/
 manual_figures/
 intermidiate_data
+old_per_gene/*

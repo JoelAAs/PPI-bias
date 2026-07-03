@@ -88,11 +88,16 @@ checkpoint infer_experimental_search_space:
             ]
             if wildcards.cell_line == "_cell_line":
                 id_cols.append("CVCL")
+            if id_pattern == "uniprot_id": # Drop all isoform info
+                bait_prey_df[f"{id_pattern}_bait"] = bait_prey_df[f"{id_pattern}_bait"].str.split("-").str[0]
+                bait_prey_df[f"{id_pattern}_prey"] = bait_prey_df[f"{id_pattern}_prey"].str.split("-").str[0]
+
             bait_prey_df = bait_prey_df[
                 ~bait_prey_df[id_cols].duplicated(keep="first")]  # Isoforms iof gene name gives more observed than tested
 
         for pid in bait_prey_df["pubmed_id"].unique():
             pid_ss = bait_prey_df[bait_prey_df["pubmed_id"] == pid]
+
             for detection_method in pid_ss["detection_method"].unique():
                 tested_bait_prey_dict      = dict()
                 observation_bait_prey_dict = dict()

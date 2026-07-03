@@ -21,9 +21,48 @@ set-resources:
     slurm_partition: short  # or medium/long based on your needs
     slurm_constraint: gpu
     slurm_extra: "'--gpus=nvidia_h200'"
-    mem_mb: 48000 
+    mem_mb: 48000
     cpus_per_task: 8  # Pair with sufficient CPUs (node has 96 total)
     runtime: 60  # Adjust based on partition limits (short=8h max)
+  # DataSplit
+  maxflow_splits:
+    mem_mb: 102400
+    cpus_per_task: 10
+  balance_directional_to_equal_samples:
+    mem_mb: 51200
+    cpus_per_task: 10
+  generate_negative_sample:
+    mem_mb: 46080
+  generate_permuted_random_negative:
+    mem_mb: 30720
+  permute_balanced_samples:
+    mem_mb: 30720
+  cdhit:
+    cpus_per_task: 20
+    mem_mb: 4096
+  cdhit_redudance_between_subsets:
+    cpus_per_task: 20
+    mem_mb: 4096
+  # Classification
+  random_forest:
+    mem_mb: 40960
+    cpus_per_task: 15
+  random_forest_permuted:
+    mem_mb: 40960
+    cpus_per_task: 15
+  xgboost:
+    mem_mb: 40960
+    cpus_per_task: 10
+  xgboost_permuted:
+    mem_mb: 40960
+    cpus_per_task: 10
+  # Model evaluation
+  get_model_metrics:
+    mem_mb: 20480
+    cpus_per_task: 10
+  get_model_metrics_permuted:
+    mem_mb: 81920
+    cpus_per_task: 10
 jobs: 10
 latency-wait: 60
 retries: 0

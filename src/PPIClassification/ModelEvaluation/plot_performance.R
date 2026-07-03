@@ -6,7 +6,7 @@ library(tidyverse)
 #  [5] "neg_limit" "pos_limit" "random"
 # >
 auc_data <- read.csv(
-  "work_folder/per_gene/classification/xgboost/permuted/all_metrics_undirectional_ESM2.csv",
+  "work_folder/classification/xgboost/permuted/all_metrics_undirectional_ESM2.csv",
   sep = "\t", header = TRUE
 )
 

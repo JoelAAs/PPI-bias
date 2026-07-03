@@ -123,6 +123,7 @@ rule get_esmc_embeddings:
         """
 
 
+# will only run with accenssions for now
 rule get_esm2_embeddings:
     params:
         model = config["embedding_model"],

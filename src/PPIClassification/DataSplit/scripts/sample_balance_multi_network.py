@@ -13,11 +13,12 @@ def main():
     elif network_type == "undirectional":
         directed = False
     else:
-        raise CommandError("{network_type} is not a valid network type.")
+        raise ValueError("{network_type} is not a valid network type.")
 
-    full_detection_df = pd.read_parquet(snakemake.input.full_detection).rename(
-        {"gene_name_bait": "bait", "gene_name_prey": "prey"}, axis=1
-    )
+    full_detection_df = pd.read_parquet(snakemake.input.full_detection)
+    bait_col = next(c for c in full_detection_df.columns if c.endswith("_bait"))
+    prey_col = next(c for c in full_detection_df.columns if c.endswith("_prey"))
+    full_detection_df = full_detection_df.rename({bait_col: "bait", prey_col: "prey"}, axis=1)
 
     positive_limits = snakemake.params.positive_limits
     negative_limits = snakemake.params.negative_limits
@@ -40,11 +41,12 @@ def main():
         nodes_to_exclude,
     )
 
+    log_file = snakemake.log[0]
     selected_pos, selected_neg = sample_balance_multiple_networks(
-        edge_list_pos, edge_list_neg, n_workers=workers, directed=directed
+        edge_list_pos, edge_list_neg, log_file, n_workers=workers, directed=directed
     )
 
-    sanity_check(selected_pos, selected_neg, edge_list_pos, edge_list_neg, directed=directed)
+    sanity_check(selected_pos, selected_neg, edge_list_pos, edge_list_neg, directed=directed, log_file=log_file)
     
     balanced_edges_positive = snakemake.output.balanced_edges_positive
     balanced_edges_negative = snakemake.output.balanced_edges_negative

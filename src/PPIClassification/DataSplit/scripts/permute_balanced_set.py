@@ -1,8 +1,12 @@
+import sys
 import pandas as pd
 from sample_balance_multi_network_functions import degree_balace_edges
 
 
 def main():
+    sys.stdout = open(snakemake.log[0], "w")
+    sys.stderr = sys.stdout
+
     permutation = int(snakemake.wildcards.permutation)
     fraction = snakemake.params.fraction
     base_seed = snakemake.params.base_seed

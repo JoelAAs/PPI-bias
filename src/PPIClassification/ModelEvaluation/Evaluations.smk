@@ -2,7 +2,6 @@ rule get_all_balance_metrics:
     input:
         metrics=expand(
             "work_folder/subsets/train/equal_edge/balance/{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}{random}_degree.csv",
-            pn=pn,
             dataset=config["datasets"],
             pos_limit=config["positive_limits"],
             neg_limit=config["negative_limits"],
@@ -83,7 +82,6 @@ rule all_metrics:
     input:
         metrics=expand(
             "work_folder/classification/{{classifier}}/metrics/{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{{esm_model}}_metrics.txt",
-            pn=pn,
             dataset=config["datasets"],
             pos_limit=config["positive_limits"],
             neg_limit=config["negative_limits"],
@@ -140,7 +138,6 @@ rule all_metrics_permuted:
     input:
         metrics=expand(
             "work_folder/classification/{{classifier}}/permuted/{permutation}/metrics/{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{{esm_model}}_metrics.txt",
-            pn=pn,
             permutation=range(config.get("n_permutations", 10)),
             dataset=config["datasets"],
             pos_limit=config["positive_limits"],
@@ -172,17 +169,14 @@ rule compute_train_similarity:
         similarity_tsv="work_folder/protein_sequences/similarity/sequencesimilarity.tsv",
         perm_pos=expand(
             "work_folder/subsets/train/permuted/{permutation}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
-            pn=pn,
             permutation=range(config.get("n_permutations", 10)),
             ),
         perm_neg=expand(
             "work_folder/subsets/train/permuted/{permutation}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv",
-            pn=pn,
             permutation=range(config.get("n_permutations", 10))
         ),
         perm_random=expand(
             "work_folder/subsets/train/permuted/{permutation}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}-random_neg.csv",
-            pn=pn,
             permutation=range(config.get("n_permutations", 10))
         )
     output:

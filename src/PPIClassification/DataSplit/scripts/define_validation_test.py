@@ -101,12 +101,14 @@ def write_edgelist(df, output_file):
 
 
 def main():
-    hci_df = pd.read_csv(snakemake.input.interaction_data, sep="\t")[
-        ["gene_name_bait", "gene_name_prey"]
-    ].rename(columns={"gene_name_bait": "bait", "gene_name_prey": "prey"})
-    hcni_df = pd.read_csv(snakemake.input.max_negative, sep="\t")[
-        ["gene_name_bait", "gene_name_prey"]
-    ].rename(columns={"gene_name_bait": "bait", "gene_name_prey": "prey"})
+    def read_edgelist(path):
+        df = pd.read_csv(path, sep="\t")
+        bait_col = next(c for c in df.columns if c.endswith("_bait"))
+        prey_col = next(c for c in df.columns if c.endswith("_prey"))
+        return df[[bait_col, prey_col]].rename(columns={bait_col: "bait", prey_col: "prey"})
+
+    hci_df = read_edgelist(snakemake.input.interaction_data)
+    hcni_df = read_edgelist(snakemake.input.max_negative)
 
     network_type = snakemake.wildcards.network_type
     if network_type == "directional":

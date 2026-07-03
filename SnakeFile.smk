@@ -6,9 +6,6 @@ from src.Analysis.aggregate_support import aggregate_inferred_experiments
 from src.support_functions import read_fasta
 
 #### Config
-pn = config["project_name"]
-if pn:
-    pn = "/" + pn
 
 datasets = config["datasets"]
 esm_models = ["ESM2", "ESMC"]
@@ -31,7 +28,7 @@ include: "src/Analysis/AbundanceAwareDetection/MCMC_abundance.smk"
 #include: "src/Analysis/Enrichment/GetDegree.smk"
 #include: "src/Analysis/Enrichment/EnrichmentAnalysisGeneSet.smk"
 
-# include: "src/Analysis/Annotation/CoLocalisation.smk"
+include: "src/Analysis/Annotation/AnnotationProbabilities.smk"
 # include: "src/Analysis/Annotation/OverlapGO.smk"
 # include: "src/Analysis/Annotation/OverlapDO.smk"
 # include: "src/Analysis/Annotation/HydrophobicitySimilarity.smk"
@@ -74,10 +71,7 @@ wildcard_constraints:
 
 rule all:
     input:
-        "work_folder/embeddings/canonical_ESM2.pt",
-        # expand("work_folder/analysis/POD/{network_type}/POD_{data}.pq",
-        #     network_type= ["undirectional"], data=datasets),
-        # "work_folder/protein_sequences/uniprot_canonical.fasta",
-        #expand("work_folder/classification/{classifier}/permuted/all_metrics_{network_type}_{esm_model}.csv",
-        #    classifier="xgboost", network_type="undirectional",esm_model="ESM2")
-
+        expand("work_folder/classification/{classifier}/permuted/all_metrics_{network_type}_{esm_model}.csv",
+            classifier="xgboost", network_type="undirectional",esm_model="ESM2"),
+        expand("work_folder/analysis/shared_annotation_proportions/{dataset}_{network_type}.tsv",
+            dataset=datasets, network_type="undirectional")
