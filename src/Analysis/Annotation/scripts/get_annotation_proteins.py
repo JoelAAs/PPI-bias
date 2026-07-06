@@ -79,10 +79,10 @@ if __name__ == "__main__":
     # Get GO biological process annotations for all genes in dataset
     df_go = get_go_genes(entrez_ids).rename(columns={"go_id": "annotation"})
 
-    # Write localisation and go to the same file; keep only annotations with >200 genes
+    # Write localisation and go to the same file; keep only annotations with >400 genes
     df_combined = pd.concat([df_loc_pairs, df_go], ignore_index=True)
     annotation_gene_counts = df_combined.groupby("annotation")["gene_id"].nunique()
-    keep = annotation_gene_counts[annotation_gene_counts > 200].index
+    keep = annotation_gene_counts[annotation_gene_counts > 400].index
     df_combined[df_combined["annotation"].isin(keep)].to_csv(
         annotation_file, sep="\t", index=False, header=False
     )
