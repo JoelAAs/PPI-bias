@@ -71,7 +71,4 @@ wildcard_constraints:
 
 rule all:
     input:
-        expand("work_folder/classification/{classifier}/permuted/all_metrics_{network_type}_{esm_model}.csv",
-            classifier="xgboost", network_type="undirectional",esm_model="ESM2"),
-        expand("work_folder/analysis/shared_annotation_proportions/plots/{dataset}_{network_type}_OR.png",
-            dataset=datasets, network_type="undirectional")
+        "work_folder/analysis/POD/undirectional/POD_flat.pq"

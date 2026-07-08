@@ -180,7 +180,7 @@ def build_entrez_mapping(mitab_file, sec_ac_file, idmapping_gz, gene_info_gz, ou
                 canonical_isoforms.add(uid)
 
     dropped = len(isoform_ids) - len(canonical_isoforms)
-    if dropped:
+    if dropped and not keep_non_canonical:
         warnings.warn(f"{dropped} non-canonical isoforms excluded (interactions dropped).")
 
     all_ids = list(bare_ids | canonical_isoforms)

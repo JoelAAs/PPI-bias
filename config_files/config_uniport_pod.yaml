@@ -87,3 +87,6 @@ negative_limits:
 
 permutation_fraction: 0.95
 n_permutations: 10
+
+drop_isoforms: False
+include_y2h_self_interactions: True

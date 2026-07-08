@@ -74,7 +74,7 @@ checkpoint infer_experimental_search_space:
         y2h_methods = config["y2h"],
         drop_isoforms = config["drop_isoforms"]
     input:
-        bait_prey_file = lambda wc: storage.fs(get_input_ppi_file(wc.cell_line))
+        bait_prey_file = lambda wc: get_input_ppi_file(wc.cell_line)
     output:
         directory("work_folder/inferred_search_space/experimental{cell_line}")
     log:
