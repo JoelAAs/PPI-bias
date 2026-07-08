@@ -1,4 +1,3 @@
-project_name: "per_gene"
 formated_ppi: "work_folder/formated/bait_prey_publications.csv"
 cell_line_ppis: "/home/joel/Projects/Cl-annotated-ppis/work_folder/CL_annotated_bait_prey.csv"
 

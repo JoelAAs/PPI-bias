@@ -10,7 +10,7 @@ def create_or_update(c_dict, key, value):
     else:
         c_dict[key] = value
 
-def get_tested_observed_dicts(ppi_ss, id_pattern):
+def get_tested_observed_dicts(ppi_ss, id_pattern, include_self_interactions=False):
     tested_bait_prey_dict = dict()
     observation_bait_prey_dict = dict()
 
@@ -19,11 +19,12 @@ def get_tested_observed_dicts(ppi_ss, id_pattern):
         create_or_update(tested_bait_prey_dict,bait,dict())
 
         _ = [
-            create_or_update(tested_bait_prey_dict[bait],prey,1) for prey in preys if prey != bait
+            create_or_update(tested_bait_prey_dict[bait],prey,1)
+            for prey in preys if prey != bait or include_self_interactions
         ]
 
     for _, (bait, prey) in ppi_ss[[f"{id_pattern}_bait", f"{id_pattern}_prey"]].iterrows():
-        if bait != prey:
+        if bait != prey or include_self_interactions:
             create_or_update(observation_bait_prey_dict,bait,dict())
             create_or_update(observation_bait_prey_dict[bait],prey,1)
 
@@ -68,7 +69,10 @@ checkpoint infer_experimental_search_space:
     If {cell_line} is "cell_line" it will infere using cell line specific data specified in config "cell_line_ppis"
     """
     params:
-        id_pattern = config["id_pattern"]
+        id_pattern = config["id_pattern"],
+        include_y2h_self_interactions = config["include_y2h_self_interactions"],
+        y2h_methods = config["y2h"],
+        drop_isoforms = config["drop_isoforms"]
     input:
         bait_prey_file = lambda wc: storage.fs(get_input_ppi_file(wc.cell_line))
     output:
@@ -78,9 +82,7 @@ checkpoint infer_experimental_search_space:
     run:
         os.makedirs(output[0], exist_ok=True)
         bait_prey_df = pd.read_csv(input.bait_prey_file, sep="\t")
-        bait_prey_df = bait_prey_df[
-            bait_prey_df[f"{params.id_pattern}_bait"] != bait_prey_df[f"{params.id_pattern}_prey"]
-        ] 
+
         if params.id_pattern == "gene_name":
             id_cols = [
                 f"{params.id_pattern}_bait", f"{params.id_pattern}_prey",
@@ -88,28 +90,31 @@ checkpoint infer_experimental_search_space:
             ]
             if wildcards.cell_line == "_cell_line":
                 id_cols.append("CVCL")
-            if id_pattern == "uniprot_id": # Drop all isoform info
-                bait_prey_df[f"{id_pattern}_bait"] = bait_prey_df[f"{id_pattern}_bait"].str.split("-").str[0]
-                bait_prey_df[f"{id_pattern}_prey"] = bait_prey_df[f"{id_pattern}_prey"].str.split("-").str[0]
+            if params.drop_isoforms:
+                if params.id_pattern == "uniprot_id": # Drop all isoform info
+                    bait_prey_df[f"{params.id_pattern}_bait"] = bait_prey_df[f"{params.id_pattern}_bait"].str.split("-").str[0]
+                    bait_prey_df[f"{params.id_pattern}_prey"] = bait_prey_df[f"{params.id_pattern}_prey"].str.split("-").str[0]
 
             bait_prey_df = bait_prey_df[
-                ~bait_prey_df[id_cols].duplicated(keep="first")]  # Isoforms iof gene name gives more observed than tested
+                ~bait_prey_df[id_cols].duplicated(keep="first")]  # Isoforms of gene name gives more observed than tested
 
         for pid in bait_prey_df["pubmed_id"].unique():
             pid_ss = bait_prey_df[bait_prey_df["pubmed_id"] == pid]
 
             for detection_method in pid_ss["detection_method"].unique():
-                tested_bait_prey_dict      = dict()
-                observation_bait_prey_dict = dict()
                 method_pid_ss = pid_ss[
                     pid_ss["detection_method"] == detection_method
                 ]
+                include_current_self_interactions = (
+                    detection_method in params.y2h_methods and params.include_y2h_self_interactions
+                )
 
                 if wildcards.cell_line == "_cell_line":
                     for cl_id in method_pid_ss["CVCL"].unique():
                         output_file = f"{output[0]}/{pid}_{detection_method}_{cl_id}.csv"
                         cl_method_pid_ss = method_pid_ss[method_pid_ss["CVCL"] == cl_id]
-                        tested_dict, obs_dict = get_tested_observed_dicts(cl_method_pid_ss, params.id_pattern)
+                        tested_dict, obs_dict = get_tested_observed_dicts(
+                            cl_method_pid_ss, params.id_pattern, include_current_self_interactions)
                         write_observed(
                             tested_dict=tested_dict, obs_dict=obs_dict,
                             output_file=output_file, id_pattern=params.id_pattern,
@@ -118,7 +123,8 @@ checkpoint infer_experimental_search_space:
 
                 else:
                     output_file = f"{output[0]}/{pid}_{detection_method}.csv"
-                    tested_dict, obs_dict = get_tested_observed_dicts(method_pid_ss, params.id_pattern)
+                    tested_dict, obs_dict = get_tested_observed_dicts(
+                        method_pid_ss, params.id_pattern, include_current_self_interactions)
                     write_observed(
                         tested_dict=tested_dict,obs_dict=obs_dict,
                         output_file=output_file,id_pattern=params.id_pattern,

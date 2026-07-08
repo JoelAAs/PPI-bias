@@ -138,7 +138,7 @@ def _get_displayed_isoforms(base_acs):
     return displayed
 
 
-def build_entrez_mapping(mitab_file, sec_ac_file, idmapping_gz, gene_info_gz, output_file, unmapped_file=None):
+def build_entrez_mapping(mitab_file, sec_ac_file, idmapping_gz, gene_info_gz, output_file, unmapped_file=None, keep_non_canonical=False):
     """
     Map canonical UniProt IDs in miTab to numeric Entrez Gene IDs.
     Isoform-suffixed IDs are kept only when UniProt marks them as the displayed
@@ -176,7 +176,7 @@ def build_entrez_mapping(mitab_file, sec_ac_file, idmapping_gz, gene_info_gz, ou
         # Keep an isoform ID only when it is the displayed isoform for its base AC
         for uid in isoform_ids:
             base = uid.split("-")[0]
-            if displayed.get(base) == uid:
+            if displayed.get(base) == uid or keep_non_canonical:
                 canonical_isoforms.add(uid)
 
     dropped = len(isoform_ids) - len(canonical_isoforms)
