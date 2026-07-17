@@ -14,7 +14,13 @@ def generate_and_plot_performance(model, X_test, y_test, roc_png):
     print("plotting ROC curve", flush=True)
     get_roc_plot((fpr, tpr), roc_auc, roc_png)
 
-    return roc_auc
+    y_pred_label = (y_pred >= 0.5).astype(np.int8)
+    pos_mask = y_test == 1
+    neg_mask = y_test == 0
+    pos_accuracy = (y_pred_label[pos_mask] == y_test[pos_mask]).mean()
+    neg_accuracy = (y_pred_label[neg_mask] == y_test[neg_mask]).mean()
+
+    return roc_auc, pos_accuracy, neg_accuracy
 
 
 def get_roc_plot(obs_performance, obs_auc, output_png):
@@ -32,11 +38,13 @@ def get_roc_plot(obs_performance, obs_auc, output_png):
     plt.close()
 
 
-def get_dataset(pos_data_file, neg_data_file, embedding_dict, embed_length, flip_and_double):
+def get_dataset(pos_data_file, neg_data_file, embedding_dict, embed_length, flip_and_double, neg_output_file=None):
     df_pos = pd.read_csv(pos_data_file, sep="\t")[["bait", "prey"]]
     df_negative = pd.read_csv(neg_data_file, sep="\t")[["bait", "prey"]]
     if df_negative.shape[0] > df_pos.shape[0]:
         df_negative = df_negative.sample(df_pos.shape[0], random_state = 1234)
+    if neg_output_file:
+        df_negative.to_csv(neg_output_file, sep="\t", index=False)
     df_samples = pd.concat([df_pos, df_negative], ignore_index=True)
 
     if not flip_and_double:
@@ -82,6 +90,8 @@ if __name__ == "__main__":
     parser.add_argument("--output_file", type=str)
     parser.add_argument("--plot_roc_png", type=str)
     parser.add_argument("--network_type", required=True, type=str, help="Network type, how to setup data")
+    parser.add_argument("--neg_output_file", default=None, type=str, help="Path to write the (sub-sampled) negative set used for evaluation")
+    parser.add_argument("--neg_input_file", default=None, type=str, help="Path to write the (sub-sampled) negative set used for evaluation")
 
     args = parser.parse_args()
 
@@ -94,12 +104,15 @@ if __name__ == "__main__":
 
 
     embedding_dict, embed_length = get_embedding_dict(args.protein_embeddings_file)
-    X_test, y_test = get_dataset(args.pos_data_file, args.neg_data_file, embedding_dict, embed_length, flip_and_double)
+    X_test, y_test = get_dataset(args.pos_data_file, args.neg_data_file, embedding_dict,
+                                 embed_length, flip_and_double, args.neg_output_file, args.negative_input_file)
     model = joblib.load(args.model_file)
 
-    roc_auc = generate_and_plot_performance(model, X_test, y_test, args.plot_roc_png)
+    roc_auc, pos_accuracy, neg_accuracy = generate_and_plot_performance(model, X_test, y_test, args.plot_roc_png)
 
     with open(args.output_file, "w") as f:
         f.write(f"ROC: {roc_auc:.4f}\n")
+        f.write(f"Accuracy interaction: {pos_accuracy:.4f}\n")
+        f.write(f"Accuracy non-interaction: {neg_accuracy:.4f}\n")
         y_test = y_test.astype(np.int32)
         f.write(f"Samples (pos/neg): {sum(y_test)} / {len(y_test) - sum(y_test)}")

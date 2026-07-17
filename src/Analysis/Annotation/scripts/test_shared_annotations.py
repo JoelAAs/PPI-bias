@@ -224,7 +224,7 @@ if __name__ == "__main__":
         df["set_id"] = set_id
         return df
 
-    pos_df   = _load_edges(pos_edges_file, "pos")
+    pos_df   = _load_edges(pos_edges_file, "pos") # doesnt't contain any isforms, for main paper.
     neg_df   = _load_edges(neg_edges_file, "neg")
     edges_df = pd.concat([pos_df, neg_df], ignore_index=True)
     print(f"  {len(pos_df)} positive, {len(neg_df)} negative edges", file=log, flush=True)

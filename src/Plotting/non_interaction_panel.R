@@ -9,8 +9,8 @@ dir.create(PLOT_DIR, showWarnings = FALSE, recursive = TRUE)
 # Lazy arrow dataset: only the columns used below are scanned, and
 # filter/group_by/count are pushed down so we never materialize the
 # full 98M-row table in R.
-ds <- open_dataset("work_folder/analysis/POD/undirectional/POD_flat.pq") %>%
   select(uniprot_id_bait, uniprot_id_prey, n_tested, n_observed,
+ds <- open_dataset("work_folder/analysis/POD/undirectional/POD_flat.pq") %>%
          lower_bound_pod, upper_bound_pod)
 
 non_observed <- ds %>% filter(n_observed == 0)

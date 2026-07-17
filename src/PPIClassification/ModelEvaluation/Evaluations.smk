@@ -49,14 +49,15 @@ rule get_train_degree_balance:
             )
 
 
-rule get_model_metrics:
+rule get_model_metrics_hnri:
     input:
         test_pos="work_folder/subsets/test/{dataset}_{network_type}_pos.csv",
         test_neg="work_folder/subsets/test/{dataset}_{network_type}_neg.csv",
         saved_model="work_folder/classification/{classifier}/model/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_parameters.joblib",
         protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz",
     output:
-        metrics="work_folder/classification/{classifier}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_metrics.txt",
+        selected_negative="work_folder/classification/{classifier}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_hrni.tsv",
+        metrics="work_folder/classification/{classifier}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_metrics_hrni.txt",
         roc_png="work_folder/classification/{classifier}/metrics/plot/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_roc_curve.png",
     log:
         "logs/classification/{classifier}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_{esm_model}_metrics.log",
@@ -74,7 +75,47 @@ rule get_model_metrics:
             --model_file {input.saved_model} \
             --output_file {output.metrics} \
             --plot_roc_png {output.roc_png} \
-            --network_type  {wildcards.network_type} > {log} 2>&1
+            --network_type  {wildcards.network_type} \
+            --neg_output_file {output.selected_negatives}> {log} 2>&1
+        """
+
+rule get_eqivalent_negative:
+    input:
+        selected_negative="work_folder/classification/{classifier}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_hrni.tsv",
+        test_pos = "work_folder/subsets/test/{dataset}_{network_type}_pos.csv"
+    output:
+        selected_negative="work_folder/classification/{classifier}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_random.tsv",
+    script:
+        "TODO"
+
+rule get_model_metrics_random:
+    input:
+        test_pos="work_folder/subsets/test/{dataset}_{network_type}_pos.csv",
+        test_neg="work_folder/subsets/test/{dataset}_{network_type}_neg.csv",
+        saved_model="work_folder/classification/{classifier}/model/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_parameters.joblib",
+        protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz",
+    output:
+        selected_negative="work_folder/classification/{classifier}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_random.tsv",
+        metrics="work_folder/classification/{classifier}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_metrics_hrni.txt",
+        roc_png="work_folder/classification/{classifier}/metrics/plot/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_roc_curve.png",
+    log:
+        "logs/classification/{classifier}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_{esm_model}_metrics.log",
+    threads: 10
+    resources:
+        mem_gb=20,
+    params:
+        script_location="src/PPIClassification/ModelEvaluation/evaluate_model.py",
+    shell:
+        """
+        python3 {params.script_location} \
+            --pos_data_file {input.test_pos} \
+            --neg_data_file {input.test_neg} \
+            --protein_embeddings_file {input.protein_embeddings} \
+            --model_file {input.saved_model} \
+            --output_file {output.metrics} \
+            --plot_roc_png {output.roc_png} \
+            --network_type  {wildcards.network_type} \
+            --neg_output_file {output.selected_negatives}> {log} 2>&1
         """
 
 

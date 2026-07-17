@@ -33,10 +33,11 @@ rule test_shared_annotations:
 
 rule plot_shared_annotations:
     input:
-        "work_folder/analysis/shared_annotation_proportions/{dataset}_{network_type}.tsv"
+        expand("work_folder/analysis/shared_annotation_proportions/{dataset}_{{network_type}}.tsv",
+            dataset=config["datasets"])
     output:
-        "work_folder/analysis/shared_annotation_proportions/plots/{dataset}_{network_type}_OR.png"
+        "work_folder/analysis/shared_annotation_proportions/plots/{network_type}_OR.png"
     log:
-        "logs/analysis/shared_annotation_proportions/plots/{dataset}_{network_type}_OR.log"
+        "logs/analysis/shared_annotation_proportions/plots/{network_type}_OR.log"
     script:
         "scripts/plot_shared_annotations.R"
