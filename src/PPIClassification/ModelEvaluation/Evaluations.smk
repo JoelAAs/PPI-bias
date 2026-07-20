@@ -58,7 +58,7 @@ rule get_model_metrics_hnri:
     output:
         selected_negative="work_folder/classification/{classifier}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_hrni.tsv",
         metrics="work_folder/classification/{classifier}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_metrics_hrni.txt",
-        roc_png="work_folder/classification/{classifier}/metrics/plot/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_roc_curve.png",
+        roc_png="work_folder/classification/{classifier}/metrics/plot/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_roc_curve_hrni.png",
     log:
         "logs/classification/{classifier}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_{esm_model}_metrics.log",
     threads: 10
@@ -76,7 +76,7 @@ rule get_model_metrics_hnri:
             --output_file {output.metrics} \
             --plot_roc_png {output.roc_png} \
             --network_type  {wildcards.network_type} \
-            --neg_output_file {output.selected_negatives}> {log} 2>&1
+            --neg_output_file {output.selected_negative}> {log} 2>&1
         """
 
 rule get_eqivalent_negative:
@@ -84,9 +84,9 @@ rule get_eqivalent_negative:
         selected_negative="work_folder/classification/{classifier}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_hrni.tsv",
         test_pos = "work_folder/subsets/test/{dataset}_{network_type}_pos.csv"
     output:
-        selected_negative="work_folder/classification/{classifier}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_random.tsv",
+        non_obs="work_folder/classification/{classifier}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_no.tsv"
     script:
-        "TODO"
+        "scripts/get_equivalent_negative.py"
 
 rule get_model_metrics_random:
     input:
@@ -94,10 +94,10 @@ rule get_model_metrics_random:
         test_neg="work_folder/subsets/test/{dataset}_{network_type}_neg.csv",
         saved_model="work_folder/classification/{classifier}/model/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_parameters.joblib",
         protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz",
+        selected_negative="work_folder/classification/{classifier}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_no.tsv",
     output:
-        selected_negative="work_folder/classification/{classifier}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_random.tsv",
-        metrics="work_folder/classification/{classifier}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_metrics_hrni.txt",
-        roc_png="work_folder/classification/{classifier}/metrics/plot/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_roc_curve.png",
+        metrics="work_folder/classification/{classifier}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_metrics_no.txt",
+        roc_png="work_folder/classification/{classifier}/metrics/plot/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_roc_curve_no.png",
     log:
         "logs/classification/{classifier}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_{esm_model}_metrics.log",
     threads: 10
@@ -115,18 +115,19 @@ rule get_model_metrics_random:
             --output_file {output.metrics} \
             --plot_roc_png {output.roc_png} \
             --network_type  {wildcards.network_type} \
-            --neg_output_file {output.selected_negatives}> {log} 2>&1
+            --neg_input_file {input.selected_negative}> {log} 2>&1
         """
 
 
 rule all_metrics:
     input:
         metrics=expand(
-            "work_folder/classification/{{classifier}}/metrics/{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{{esm_model}}_metrics.txt",
+            "work_folder/classification/{{classifier}}/metrics/{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{{esm_model}}_metrics_{negative}.txt",
             dataset=config["datasets"],
             pos_limit=config["positive_limits"],
             neg_limit=config["negative_limits"],
             random=["", "-random"],
+            negative=["hrni", "no"]
         ),
     output:
         all_models="work_folder/classification/{classifier}/metrics/all_metrics_{network_type}_{esm_model}.csv",
@@ -146,17 +147,18 @@ rule all_metrics:
                     w.write(line_out)
 
 
-rule get_model_metrics_permuted:
+rule get_model_metrics_permuted_hnri:
     input:
         test_pos="work_folder/subsets/test/{dataset}_{network_type}_pos.csv",
         test_neg="work_folder/subsets/test/{dataset}_{network_type}_neg.csv",
         saved_model="work_folder/classification/{classifier}/permuted/{permutation}/model/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_parameters.joblib",
         protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz",
     output:
-        metrics="work_folder/classification/{classifier}/permuted/{permutation}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_metrics.txt",
-        roc_png="work_folder/classification/{classifier}/permuted/{permutation}/metrics/plot/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_roc_curve.png",
+        selected_negative="work_folder/classification/{classifier}/permuted/{permutation}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_hrni.tsv",
+        metrics="work_folder/classification/{classifier}/permuted/{permutation}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_metrics_hrni.txt",
+        roc_png="work_folder/classification/{classifier}/permuted/{permutation}/metrics/plot/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_roc_curve_hrni.png",
     log:
-        "logs/classification/{classifier}/permuted/{permutation}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_{esm_model}_metrics.log",
+        "logs/classification/{classifier}/permuted/{permutation}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_{esm_model}_metrics_hrni.log",
     threads: 10
     resources:
         mem_gb=80,
@@ -171,19 +173,62 @@ rule get_model_metrics_permuted:
             --model_file {input.saved_model} \
             --output_file {output.metrics} \
             --plot_roc_png {output.roc_png} \
-            --network_type  {wildcards.network_type} > {log} 2>&1
+            --network_type  {wildcards.network_type} \
+            --neg_output_file {output.selected_negative}> {log} 2>&1
+        """
+
+
+rule get_permuted_equivalent_negative:
+    input:
+        selected_negative="work_folder/classification/{classifier}/permuted/{permutation}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_hrni.tsv",
+        test_pos="work_folder/subsets/test/{dataset}_{network_type}_pos.csv"
+    output:
+        non_obs="work_folder/classification/{classifier}/permuted/{permutation}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_no.tsv"
+    script:
+        "scripts/get_equivalent_negative.py"
+
+
+rule get_model_metrics_permuted_no:
+    input:
+        test_pos="work_folder/subsets/test/{dataset}_{network_type}_pos.csv",
+        test_neg="work_folder/subsets/test/{dataset}_{network_type}_neg.csv",
+        saved_model="work_folder/classification/{classifier}/permuted/{permutation}/model/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_parameters.joblib",
+        protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz",
+        selected_negative="work_folder/classification/{classifier}/permuted/{permutation}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_no.tsv",
+    output:
+        metrics="work_folder/classification/{classifier}/permuted/{permutation}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_metrics_no.txt",
+        roc_png="work_folder/classification/{classifier}/permuted/{permutation}/metrics/plot/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_roc_curve_no.png",
+    log:
+        "logs/classification/{classifier}/permuted/{permutation}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_{esm_model}_metrics_no.log",
+    threads: 10
+    resources:
+        mem_gb=80,
+    params:
+        script_location="src/PPIClassification/ModelEvaluation/evaluate_model.py",
+    shell:
+        """
+        python3 {params.script_location} \
+            --pos_data_file {input.test_pos} \
+            --neg_data_file {input.test_neg} \
+            --protein_embeddings_file {input.protein_embeddings} \
+            --model_file {input.saved_model} \
+            --output_file {output.metrics} \
+            --plot_roc_png {output.roc_png} \
+            --network_type  {wildcards.network_type} \
+            --neg_input_file {input.selected_negative}> {log} 2>&1
         """
 
 
 rule all_metrics_permuted:
     input:
         metrics=expand(
-            "work_folder/classification/{{classifier}}/permuted/{permutation}/metrics/{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{{esm_model}}_metrics.txt",
+            "work_folder/classification/{{classifier}}/permuted/{permutation}/metrics/{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{{esm_model}}_metrics_{negative}.txt",
             permutation=range(config.get("n_permutations", 10)),
             dataset=config["datasets"],
             pos_limit=config["positive_limits"],
             neg_limit=config["negative_limits"],
             random=["", "-random"],
+            negative=["hrni", "no"]
         ),
     output:
         all_models="work_folder/classification/{classifier}/permuted/all_metrics_{network_type}_{esm_model}.csv",

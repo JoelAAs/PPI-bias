@@ -4,23 +4,6 @@ import random
 import networkx as nx
 
 
-# rule get_directional_balance_report:
-#     input:
-#         set_pos="work_folder/subsets/maxflow/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
-#         set_neg="work_folder/subsets/maxflow/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}_neg.csv",
-#         train_pos="work_folder/subsets/train/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
-#         validation_pos="work_folder/subsets/validation/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
-#         test_pos="work_folder/subsets/test/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
-#         train_neg="work_folder/subsets/train/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}_neg.csv",
-#         validation_neg="work_folder/subsets/validation/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}_neg.csv",
-#         test_neg="work_folder/subsets/test/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}_neg.csv"
-#     output:
-#         edge_statistics = "work_folder/subsets/balance_data/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}_stats.csv"
-#     log:
-#         "logs/subsets/balance_data/{dataset}_directional_limit_{neg_limit}_poslim_{pos_limit}_stats.log"
-#     script:
-#         "scripts/get_degree_metrics.py"
-
 rule generate_test_validation_test:
     input:
         interaction_data = f"work_folder/subsets/{{dataset}}_{{network_type}}_limit_{config['positive_max']}_pos.csv",

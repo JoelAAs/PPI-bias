@@ -38,13 +38,16 @@ def get_roc_plot(obs_performance, obs_auc, output_png):
     plt.close()
 
 
-def get_dataset(pos_data_file, neg_data_file, embedding_dict, embed_length, flip_and_double, neg_output_file=None):
+def get_dataset(pos_data_file, neg_data_file, embedding_dict, embed_length, flip_and_double, neg_output_file=None, neg_input_file=None):
     df_pos = pd.read_csv(pos_data_file, sep="\t")[["bait", "prey"]]
-    df_negative = pd.read_csv(neg_data_file, sep="\t")[["bait", "prey"]]
-    if df_negative.shape[0] > df_pos.shape[0]:
-        df_negative = df_negative.sample(df_pos.shape[0], random_state = 1234)
-    if neg_output_file:
-        df_negative.to_csv(neg_output_file, sep="\t", index=False)
+    if neg_input_file:
+        df_negative = pd.read_csv(neg_input_file, sep="\t")[["bait", "prey"]]
+    else:
+        df_negative = pd.read_csv(neg_data_file, sep="\t")[["bait", "prey"]]
+        if df_negative.shape[0] > df_pos.shape[0]:
+            df_negative = df_negative.sample(df_pos.shape[0], random_state = 1234)
+        if neg_output_file:
+            df_negative.to_csv(neg_output_file, sep="\t", index=False)
     df_samples = pd.concat([df_pos, df_negative], ignore_index=True)
 
     if not flip_and_double:
@@ -105,7 +108,7 @@ if __name__ == "__main__":
 
     embedding_dict, embed_length = get_embedding_dict(args.protein_embeddings_file)
     X_test, y_test = get_dataset(args.pos_data_file, args.neg_data_file, embedding_dict,
-                                 embed_length, flip_and_double, args.neg_output_file, args.negative_input_file)
+                                 embed_length, flip_and_double, args.neg_output_file, args.neg_input_file)
     model = joblib.load(args.model_file)
 
     roc_auc, pos_accuracy, neg_accuracy = generate_and_plot_performance(model, X_test, y_test, args.plot_roc_png)
