@@ -25,9 +25,9 @@ def generate_graph(edge_df, node_map, directed):
     g = Graph(directed=directed)
     g.add_vertex(len(node_map))
 
-    bait_src = edge_df["bait"].map(node_map).to_numpy()
-    tar_prey = edge_df["prey"].map(node_map).to_numpy()
-    edges = np.column_stack((bait_src, tar_prey)).astype(int)
+    bait_src = edge_df["bait"].map(node_map).to_numpy(dtype=np.int32)
+    tar_prey = edge_df["prey"].map(node_map).to_numpy(dtype=np.int32)
+    edges = np.column_stack((bait_src, tar_prey))
     g.add_edge_list(edges)
 
     return g
@@ -246,8 +246,8 @@ def build_directed_flow_graph(
         e = g.add_edge(prey_v, sink)
         capacity[e] = int(cap)
 
-    src_baits = edge_df["bait"].map(node_map).to_numpy(dtype=int)
-    tar_prey = edge_df["prey"].map(node_map).to_numpy(dtype=int)
+    src_baits = edge_df["bait"].map(node_map).to_numpy(dtype=np.int32)
+    tar_prey = edge_df["prey"].map(node_map).to_numpy(dtype=np.int32)
 
     num_existing = g.num_edges()
     bait_ids = src_baits + num_vertices
@@ -317,8 +317,8 @@ def build_undirected_flow_graph(
 
 
     num_existing = g.num_edges()
-    from_nodes = edge_df["bait"].map(node_map).to_numpy(dtype=int)
-    to_nodes   = edge_df["prey"].map(node_map).to_numpy(dtype=int)
+    from_nodes = edge_df["bait"].map(node_map).to_numpy(dtype=np.int32)
+    to_nodes   = edge_df["prey"].map(node_map).to_numpy(dtype=np.int32)
 
     # flow_node_map[(0, i)] = i + num_vertices, [(1, i)] = i + num_vertices + n
     n = len(target_degree)
@@ -326,7 +326,7 @@ def build_undirected_flow_graph(
     tgt_B = to_nodes   + num_vertices + n    # (1, B)
     src_B = to_nodes   + num_vertices        # (0, B)
     tgt_A = from_nodes + num_vertices + n    # (1, A)
-    edges = np.empty((edge_df.shape[0] * 2, 2), dtype=int)
+    edges = np.empty((edge_df.shape[0] * 2, 2), dtype=np.int32)
     edges[0::2, 0] = src_A;  edges[0::2, 1] = tgt_B
     edges[1::2, 0] = src_B;  edges[1::2, 1] = tgt_A
 
@@ -339,16 +339,16 @@ def build_undirected_flow_graph(
 
 
 def extract_selected_edges(
-    flow_g, capacity, residual, flow_node_map_index, node_map, directed
+    flow_g, capacity, residual, flow_node_map_index, node_map, directed, target_selected_size
 ):
     g = Graph(directed=directed)
     g.add_vertex(len(node_map))
 
     n_verts = flow_g.num_vertices()
     valid = np.zeros(n_verts, dtype=bool)
-    orig_idx = np.zeros(n_verts, dtype=int)
-    vids = np.array(list(flow_node_map_index.keys()))
-    idxs = np.array([v[1] for v in flow_node_map_index.values()])
+    orig_idx = np.zeros(n_verts, dtype=np.int32)
+    vids = np.array(list(flow_node_map_index.keys()), dtype=np.int32)
+    idxs = np.array([v[1] for v in flow_node_map_index.values()], dtype=np.int32)
     valid[vids] = True
     orig_idx[vids] = idxs
 
@@ -382,26 +382,37 @@ def extract_selected_edges(
         # recover target_degree from source-side capacities
         # (source vertex was the 2nd-to-last vertex added in build_undirected_flow_graph)
         source_v = flow_g.vertex(flow_g.num_vertices() - 2)
-        target_degree = np.zeros(len(node_map), dtype=int)
+        target_degree = np.zeros(len(node_map), dtype=np.int32)
         for e in source_v.out_edges():
             tgt = int(e.target())
             if valid[tgt]:
                 target_degree[orig_idx[tgt]] = capacity[e]
 
-        remaining = target_degree - g.get_total_degrees(g.get_vertices()).astype(int)
+        picked_degree = g.get_total_degrees(g.get_vertices()).astype(np.int32)
+        remaining = target_degree - picked_degree
 
-        # process half-edges by largest min-slack first
-        slacks = np.minimum(remaining[half_edges[:, 0]], remaining[half_edges[:, 1]])
-        order = np.argsort(-slacks)
+        def _score_delta(u, v):
+            score = 0
+            for e in (u, v):
+                target = target_degree[e]
+                residual = remaining[e]
+                score += residual / target  # target will never be 0
+            return score
+
         added = []
-        for idx in order:
-            u, v = half_edges[idx]
-            if remaining[u] > 0 and remaining[v] > 0:
-                added.append((u, v))
-                remaining[u] -= 1
-                remaining[v] -= 1
+        while len(half_edges):
+            slacks = np.array([_score_delta(u, v) for u, v in half_edges])
+            best = np.argmax(slacks)
+            if slacks[best] <= 0:
+                break
+            u, v = half_edges[best]
+            added.append((u, v))
+            remaining[u] -= 1
+            remaining[v] -= 1
+            half_edges = np.delete(half_edges, best, axis=0)
+
         if added:
-            g.add_edge_list(np.array(added))
+            g.add_edge_list(np.array(added, dtype=np.int32))
 
     return g
 def get_degree(g):
@@ -411,11 +422,11 @@ def get_degree(g):
         g: Directed graph_tool.Graph.
 
     Returns:
-        Tuple (out_degrees, in_degrees) as int64 numpy arrays indexed by vertex id.
+        Tuple (out_degrees, in_degrees) as int32 numpy arrays indexed by vertex id.
     """
-    return g.get_out_degrees(g.get_vertices()).astype(np.int64), g.get_in_degrees(
+    return g.get_out_degrees(g.get_vertices()).astype(np.int32), g.get_in_degrees(
         g.get_vertices()
-    ).astype(np.int64)
+    ).astype(np.int32)
     
 
 def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None, seed=None, log_file=None):
@@ -473,7 +484,7 @@ def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None
             node_map=node_map,
         )
     else:
-        target_degree = g_pos.get_total_degrees(g_pos.get_vertices()).astype(np.int64)
+        target_degree = g_pos.get_total_degrees(g_pos.get_vertices()).astype(np.int32)
         mf_g_pos = Graph(directed=True)
         capacity_pos = mf_g_pos.new_edge_property("int")
         (
@@ -500,6 +511,7 @@ def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None
     current_flow_map_index = [flow_node_map_index_pos, None]
     current_flow_map = [flow_node_map_pos, None]
     subset_edges = [pos_edges, neg_edges]
+    current_target_size = [pos_edges.shape[0], None]
 
     edge_count_msg_count = pos_edges.shape[0]
 
@@ -515,18 +527,8 @@ def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None
             current_sink[i % 2],
             current_capacity[i % 2],
         )
-
-        g_cur = current_g[i % 2]
-        src_out = g_cur.get_out_edges(int(current_source[i % 2]), eprops=[g_cur.edge_index])
-        src_edge_ids = src_out[:, 2].astype(int)
-        cap_arr = current_capacity[i % 2].a
-        res_arr = residual.a
-        total_capacity = cap_arr[src_edge_ids].sum()
-        if total_capacity == 0:
-            percent_flow_value = 1.0
-        else:
-            percent_flow_value = (cap_arr[src_edge_ids] - res_arr[src_edge_ids]).sum() / total_capacity
-
+        
+        target_size = current_target_size[i % 2]
         g_selected = extract_selected_edges(
             flow_g=current_g[i % 2],
             capacity=current_capacity[i % 2],
@@ -534,10 +536,16 @@ def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None
             flow_node_map_index=current_flow_map_index[i % 2],
             node_map=node_map,
             directed=directed,
+            target_selected_size=target_size
         )
+
+        n_selected = g_selected.num_edges()
+        percent_flow_value = 1.0 if target_size == 0 else n_selected / target_size
+
         g_next = Graph(directed=True)
         capacity_next = g_next.new_edge_property("int")
         subset_edges[(i + 1) % 2] = graph_to_edge_df(g_selected, node_map_idx)
+        current_target_size[(i + 1) % 2] = n_selected
         if edge_count_msg_count - subset_edges[0].shape[0] >= 1000:
             if log_file:
                 _log(log_file, f"Flow value {percent_flow_value}: positive edges {subset_edges[0].shape[0]}, negative edges {subset_edges[1].shape[0]}, max edges {max_edges}")
@@ -560,7 +568,7 @@ def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None
                 node_map=node_map,
             )
         else:
-            new_target_degree = g_selected.get_total_degrees(g_selected.get_vertices()).astype(np.int64)
+            new_target_degree = g_selected.get_total_degrees(g_selected.get_vertices()).astype(np.int32)
             (
                 current_g[(i + 1) % 2],
                 current_capacity[(i + 1) % 2],

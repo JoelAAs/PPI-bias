@@ -28,11 +28,14 @@ auc_data$pos_limit <- sapply(
 auc_data$random <- sapply(
   auc_data$model, function(x) grepl("random", x)
 )
+
+auc_data$test_random <- sapply(
+  auc_data$model, function(x) grepl("_no", x)
+)
 auc_data$neg_limit <- factor(
   auc_data$neg_limit,
   levels = c(1, 2) # desired order
 )
-
 auc_data$pos_limit <- factor(
   auc_data$pos_limit,
   levels = c("all", "0.02", "0.15") # desired order
@@ -151,4 +154,74 @@ g_delta <- ggplot(
   )
 
 ggsave("manual_figures/ROC_auc_delta.png", g_delta, height = 4, width = 6)
+
+# Accuracy barplot: acc_I vs. acc_NI split by which negative set was used at
+# test time, dodged by train_random_negative (`random`)
+acc_long <- bind_rows(
+  auc_data %>%
+    filter(!test_random) %>%
+    transmute(
+      permutation, dataset, neg_limit, pos_limit, random,
+      metric = "acc_I", value = acc_I
+    ),
+  auc_data %>%
+    filter(test_random) %>%
+    transmute(
+      permutation, dataset, neg_limit, pos_limit, random,
+      metric = "acc_NI\ntest_random_negative = TRUE", value = acc_NI
+    ),
+  auc_data %>%
+    filter(!test_random) %>%
+    transmute(
+      permutation, dataset, neg_limit, pos_limit, random,
+      metric = "acc_NI\ntest_random_negative = FALSE", value = acc_NI
+    )
+)
+
+acc_long$metric <- factor(
+  acc_long$metric,
+  levels = c(
+    "acc_I",
+    "acc_NI\ntest_random_negative = TRUE",
+    "acc_NI\ntest_random_negative = FALSE"
+  )
+)
+
+acc_summary <- acc_long %>%
+  group_by(metric, random) %>%
+  summarise(
+    n = n(),
+    mean_acc = mean(value),
+    se_acc = sd(value) / sqrt(n),
+    ci_lo = mean_acc - qt(0.975, df = n - 1) * se_acc,
+    ci_hi = mean_acc + qt(0.975, df = n - 1) * se_acc,
+    .groups = "drop"
+  )
+
+g_acc <- ggplot(
+  acc_summary,
+  aes(x = metric, y = mean_acc, fill = random)
+) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6) +
+  geom_errorbar(
+    aes(ymin = ci_lo, ymax = ci_hi),
+    position = position_dodge(width = 0.7), width = 0.15
+  ) +
+  scale_fill_manual(
+    values = c("FALSE" = "darkorange", "TRUE" = "blue"),
+    labels = c("HCNI", "Non-observed")
+  ) +
+  labs(
+    title = "Accuracy on interactions vs. non-interactions",
+    x = NULL,
+    y = "Accuracy",
+    fill = "Train negative data"
+  ) +
+  theme_bw() +
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(angle = -20, hjust = 0, vjust = 1)
+  )
+
+ggsave("manual_figures/accuracy_barplot.png", g_acc, height = 4.5, width = 6)
 

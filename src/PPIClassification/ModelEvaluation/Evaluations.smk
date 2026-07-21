@@ -236,7 +236,7 @@ rule all_metrics_permuted:
         "logs/classification/{classifier}/permuted/all_metrics_{network_type}_{esm_model}.log",
     run:
         with open(output[0], "w") as w:
-            w.write("permutation\tmodel\troc_auc\tsamples\n")
+            w.write("permutation\tmodel\troc_auc\tacc_I\tacc_NI\tsamples\n")
             for metric_file in input.metrics:
                 with open(metric_file, "r") as f:
                     line_out = [line.strip().split(": ")[1] for line in f]

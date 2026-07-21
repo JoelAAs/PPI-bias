@@ -1,2 +1,0 @@
-https://www.ebi.ac.uk/intact/interactomes
-- Version miTab2.7
