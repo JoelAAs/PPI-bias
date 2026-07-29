@@ -74,7 +74,7 @@ rule test_hri_vs_hrni:
         corr_npy="work_folder/analysis/coexpression/coexpr_matrix.npy",
         gene_index="work_folder/analysis/coexpression/coexpr_gene_index.tsv"
     output:
-        hrni_vs_hri="work_folder/analysis/{dataset}_{network_type}_hri_hnri.tsv"
+        hrni_vs_hri="work_folder/analysis/coexpression/{dataset}_{network_type}_hri_hnri.tsv"
     threads: 10
     log:
         "logs/analysis/coexpression/{dataset}_{network_type}.log"
