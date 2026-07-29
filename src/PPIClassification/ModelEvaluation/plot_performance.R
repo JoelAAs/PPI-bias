@@ -108,6 +108,7 @@ g_delta <- ggplot(
     color = dataset, linetype = random, group = interaction(dataset, random)
   )
 ) +
+  geom_hline(yintercept = 0.5, linetype = "dashed", color = "grey40") +
   geom_errorbar(
     aes(ymin = ci_lo, ymax = ci_hi),
     width = 0.15, position = position_dodge(width = 0.3)
@@ -137,48 +138,55 @@ g_delta <- ggplot(
     color = "Dataset",
     linetype = "Negative data"
   ) +
+  guides(
+    color = guide_legend(order = 1),
+    linetype = guide_legend(order = 2)
+  ) +
   theme_bw() +
   theme(
     legend.position = "bottom",
+    legend.box = "vertical",
     axis.text.x = element_text(angle = -45, hjust = 0, vjust = 0)
   )
 
 ggsave("manual_figures/ROC_auc_by_negtype.png", g_delta, height = 4, width = 6)
 
 # Accuracy barplot: acc_I vs. acc_NI split by which negative set was used at
-# test time, dodged by train_random_negative (`random`)
+# test time, dodged by train_random_negative (`random`). acc_I does not
+# depend on the test negative set, so it is sourced once (!test_random) to
+# avoid double-counting it under both the non-observed and HRNI bars.
 acc_long <- bind_rows(
   auc_data %>%
     filter(!test_random) %>%
     transmute(
       permutation, dataset, neg_limit, pos_limit, random,
-      metric = "acc_I", value = acc_I
+      metric = "Interactions", value = acc_I
     ),
   auc_data %>%
     filter(test_random) %>%
     transmute(
       permutation, dataset, neg_limit, pos_limit, random,
-      metric = "acc_NI\ntest_random_negative = TRUE", value = acc_NI
+      metric = "Non-interaction\n(Non-observed)", value = acc_NI
     ),
   auc_data %>%
     filter(!test_random) %>%
     transmute(
       permutation, dataset, neg_limit, pos_limit, random,
-      metric = "acc_NI\ntest_random_negative = FALSE", value = acc_NI
+      metric = "Non-interaction\n(HRNI)", value = acc_NI
     )
 )
 
 acc_long$metric <- factor(
   acc_long$metric,
   levels = c(
-    "acc_I",
-    "acc_NI\ntest_random_negative = TRUE",
-    "acc_NI\ntest_random_negative = FALSE"
+    "Interactions",
+    "Non-interaction\n(Non-observed)",
+    "Non-interaction\n(HRNI)"
   )
 )
 
 acc_summary <- acc_long %>%
-  group_by(metric, random) %>%
+  group_by(dataset, metric, random) %>%
   summarise(
     n = n(),
     mean_acc = mean(value),
@@ -201,6 +209,7 @@ g_acc <- ggplot(
     values = c("FALSE" = "darkorange", "TRUE" = "blue"),
     labels = c("HCNI", "Non-observed")
   ) +
+  facet_wrap(~dataset) +
   labs(
     title = "Accuracy on interactions vs. non-interactions",
     x = NULL,
