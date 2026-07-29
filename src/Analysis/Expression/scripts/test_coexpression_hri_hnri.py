@@ -14,8 +14,6 @@ Decisions (per plan §10, stated rather than silently picked):
 """
 import numpy as np
 import pandas as pd
-import pyarrow.dataset as ds
-import pyarrow.compute as cp
 
 
 #N_QUANTILE_SAMPLE_PAIRS = 200_000
@@ -32,10 +30,6 @@ def attach_coexpression(df, uniprot_to_row, corr):
     return out, n_dropped
 
 
-def bootstrap_mean_coexp(df, n_workers):
-    proteins
-
-
 if __name__ == "__main__":
     log = open(snakemake.log[0], "w")
 
@@ -43,15 +37,13 @@ if __name__ == "__main__":
     uniprot_to_row = dict(zip(gene_index["uniprot_id"], gene_index["row_index"]))
     corr = np.load(snakemake.input.corr_npy)
 
-    hrni = pd.read_csv(snakemake.input.max_negative, sep="\t", dtype={"bait": "string", "prey": "string"})
-    hri = pd.read_csv(snakemake.input.max_positive, sep="\t", dtype={"bait": "string", "prey": "string"})
+    hrni = pd.read_csv(snakemake.input.balanced_negative, sep="\t", dtype={"bait": "string", "prey": "string"})
+    hri = pd.read_csv(snakemake.input.balanced_positive, sep="\t", dtype={"bait": "string", "prey": "string"})
     hri, n_drop_hri = attach_coexpression(hri, uniprot_to_row, corr)
     hrni, n_drop_hrni = attach_coexpression(hrni, uniprot_to_row, corr)
 
-
     hri = hri.reset_index(drop=True)
     hrni = hrni.reset_index(drop=True)
-    combined = pd.concat([hri.assign(_pos=1), hrni.assign(_pos=0)], ignore_index=True)
-
+    combined = pd.concat([hri.assign(pos=1), hrni.assign(pos=0)], ignore_index=True)
     combined.to_csv(snakemake.output.hrni_vs_hri, sep="\t", index=None)
 

@@ -88,41 +88,26 @@ g <- ggplot(
 
 ggsave("manual_figures/ROC_auc.png", g, height = 5, width = 6)
 
-# ΔAUC = AUC_HCNI - AUC_nonobs per replicate, to show the HCNI advantage
-# directly as a function of the positive threshold.
-hcni_df <- auc_data %>%
-  filter(!random) %>%
-  select(permutation, dataset, neg_limit, pos_limit, roc_auc_hcni = roc_auc)
-
-nonobs_df <- auc_data %>%
-  filter(random) %>%
-  select(permutation, dataset, neg_limit, pos_limit, roc_auc_nonobs = roc_auc)
-
-delta_df <- inner_join(
-  hcni_df, nonobs_df,
-  by = c("permutation", "dataset", "neg_limit", "pos_limit")
-) %>%
-  mutate(delta_auc = roc_auc_hcni - roc_auc_nonobs)
-
-delta_summary <- delta_df %>%
-  group_by(dataset, neg_limit, pos_limit) %>%
+# AUC for HCNI and non-observed negative sets, plotted separately as a
+# function of the positive threshold.
+auc_summary <- auc_data %>%
+  group_by(dataset, neg_limit, pos_limit, random) %>%
   summarise(
     n = n(),
-    mean_delta = mean(delta_auc),
-    se_delta = sd(delta_auc) / sqrt(n),
-    ci_lo = mean_delta - qt(0.975, df = n - 1) * se_delta,
-    ci_hi = mean_delta + qt(0.975, df = n - 1) * se_delta,
+    mean_auc = mean(roc_auc),
+    se_auc = sd(roc_auc) / sqrt(n),
+    ci_lo = mean_auc - qt(0.975, df = n - 1) * se_auc,
+    ci_hi = mean_auc + qt(0.975, df = n - 1) * se_auc,
     .groups = "drop"
   )
 
 g_delta <- ggplot(
-  delta_summary,
+  auc_summary,
   aes(
-    x = pos_limit, y = mean_delta,
-    color = dataset, group = dataset
+    x = pos_limit, y = mean_auc,
+    color = dataset, linetype = random, group = interaction(dataset, random)
   )
 ) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey40") +
   geom_errorbar(
     aes(ymin = ci_lo, ymax = ci_hi),
     width = 0.15, position = position_dodge(width = 0.3)
@@ -131,6 +116,10 @@ g_delta <- ggplot(
   geom_point(size = 2, position = position_dodge(width = 0.3)) +
   scale_color_manual(
     values = c("Combined" = "blue", "MS" = "darkgreen", "Y2H" = "darkorange")
+  ) +
+  scale_linetype_manual(
+    values = c("FALSE" = "solid", "TRUE" = "dashed"),
+    labels = c("HCNI", "Non-observed")
   ) +
   scale_x_discrete(
     labels = parse(text = pos_limit_labels)
@@ -142,10 +131,11 @@ g_delta <- ggplot(
     )
   ) +
   labs(
-    title = "HCNI advantage over non-observed negatives",
+    title = "AUC over thresholds, HCNI vs. non-observed negatives",
     x = "Positive threshold",
-    y = expression(Delta * "AUC (HCNI - Non-observed)"),
-    color = "Dataset"
+    y = "AUC",
+    color = "Dataset",
+    linetype = "Negative data"
   ) +
   theme_bw() +
   theme(
@@ -153,7 +143,7 @@ g_delta <- ggplot(
     axis.text.x = element_text(angle = -45, hjust = 0, vjust = 0)
   )
 
-ggsave("manual_figures/ROC_auc_delta.png", g_delta, height = 4, width = 6)
+ggsave("manual_figures/ROC_auc_by_negtype.png", g_delta, height = 4, width = 6)
 
 # Accuracy barplot: acc_I vs. acc_NI split by which negative set was used at
 # test time, dodged by train_random_negative (`random`)
