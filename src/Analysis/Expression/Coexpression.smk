@@ -1,14 +1,4 @@
-# Module 1 - co-expression: do HRNI pairs co-express less than HRI pairs, and less
-# than random pairs? Uses ARCHS4's precomputed gene x gene Pearson correlation
-# download directly - archs4py is not used (its README only exposes counts loading,
-# normalisation and gene filtering, nothing precomputed). See
-# scripts/build_coexpression.py and scripts/test_coexpression.py docstrings for the
-# per-rule methodology and stated decisions.
-#
-# URLs verified live against the ARCHS4 downloads page at implementation time
-# (not guessed from memory / not an S3 path invented from a naming convention).
 ARCHS4_CORRELATION_PKL_URL = "https://s3.amazonaws.com/mssm-data/human_correlation_v2.4.pkl"
-ARCHS4_CORRELATION_FEATHER_URL = "https://s3.amazonaws.com/mssm-data/human_correlation_archs4.f"
 
 
 rule download_archs4_correlation:
@@ -70,7 +60,7 @@ rule get_balanced_set:
 rule test_hri_vs_hrni:
     input:
         balanced_positive = f"work_folder/expression/balanced/{{dataset}}_{{network_type}}_limit_{config['positive_max']}_pos.csv",
-        balanced_negative = f"work_folder/expression/balanced/{{dataset}}_{{network_type}}_limit_{config['negative_max']}_neg.csv"
+        balanced_negative = f"work_folder/expression/balanced/{{dataset}}_{{network_type}}_limit_{config['negative_max']}_neg.csv",
         corr_npy="work_folder/analysis/coexpression/coexpr_matrix.npy",
         gene_index="work_folder/analysis/coexpression/coexpr_gene_index.tsv"
     output:
