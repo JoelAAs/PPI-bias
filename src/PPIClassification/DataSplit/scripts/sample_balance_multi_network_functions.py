@@ -1,5 +1,7 @@
+import heapq
 import itertools
 import multiprocessing
+import time
 import pandas as pd
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -81,7 +83,8 @@ def sample_balance_multiple_networks(
     edge_deviation_threshold=0.05,
     min_flow=.95,
     n_workers=None,
-    directed=True
+    directed=True,
+    network_ids=None,
 ):
     """Degree-balance multiple positive/negative network pairs so edge counts are comparable.
 
@@ -99,15 +102,22 @@ def sample_balance_multiple_networks(
             accepting a balanced network (passed to `degree_balace_edges`).
         n_workers: Number of parallel worker processes (None = CPU count).
         directed: Whether to treat edges as directed bait->prey.
+        network_ids: Optional list of identifiers (one per network, same order as
+            `edge_list_pos`/`edge_list_neg`) used to tag log lines so interleaved
+            output from parallel workers can be told apart. Defaults to the
+            positional index of each network.
 
     Returns:
         Tuple (pos_list, neg_list) of balanced edge DataFrames in the same order
         as the inputs.
     """
+    if network_ids is None:
+        network_ids = list(range(len(edge_list_pos)))
+
     with ProcessPoolExecutor(max_workers=n_workers, mp_context=multiprocessing.get_context("spawn")) as executor:
         futures = [
-            executor.submit(degree_balace_edges, pos_edge, neg_edge, min_flow, directed, None, None, log_file)
-            for pos_edge, neg_edge in zip(edge_list_pos, edge_list_neg)
+            executor.submit(degree_balace_edges, pos_edge, neg_edge, min_flow, directed, None, None, log_file, network_id)
+            for pos_edge, neg_edge, network_id in zip(edge_list_pos, edge_list_neg, network_ids)
         ]
         degree_balanced_networks = [f.result()[:2] for f in futures]
 
@@ -130,6 +140,7 @@ def sample_balance_multiple_networks(
                     current_min_edges,
                     None,
                     log_file,
+                    network_ids[net_i],
                 )
                 for net_i, run in enumerate(run_mask) if run
             }
@@ -145,7 +156,7 @@ def sample_balance_multiple_networks(
             msg = f"Iteration {i}\tEdges\tRebalance\tDeviation\tMax Edges: {current_min_edges}\n"
             for net_i, dev in enumerate(current_edge_deviations):
                 pos, _ = degree_balanced_networks[net_i]
-                msg += f"Network {net_i}\t{pos.shape[0]}\t{dev > edge_deviation_threshold}\t{dev:.2f}\n"
+                msg += f"Network {network_ids[net_i]}\t{pos.shape[0]}\t{dev > edge_deviation_threshold}\t{dev:.2f}\n"
             _log(log_file, msg)
             i += 1
      
@@ -339,7 +350,7 @@ def build_undirected_flow_graph(
 
 
 def extract_selected_edges(
-    flow_g, capacity, residual, flow_node_map_index, node_map, directed, target_selected_size
+    flow_g, capacity, residual, flow_node_map_index, node_map, directed, current_edges
 ):
     g = Graph(directed=directed)
     g.add_vertex(len(node_map))
@@ -395,21 +406,34 @@ def extract_selected_edges(
             score = 0
             for e in (u, v):
                 target = target_degree[e]
+                if target == 0: # can happen when we downsample the to a certain edge target
+                    return -np.inf
                 residual = remaining[e]
-                score += residual / target  # target will never be 0
+                score += residual / target
             return score
 
+
+        heap = [
+            (-_score_delta(int(u), int(v)), i, int(u), int(v))
+            for i, (u, v) in enumerate(half_edges)
+        ]
+        heapq.heapify(heap)
+        edges_remaining = current_edges - g.num_edges()
         added = []
-        while len(half_edges):
-            slacks = np.array([_score_delta(u, v) for u, v in half_edges])
-            best = np.argmax(slacks)
-            if slacks[best] <= 0:
+        while heap:
+            if edges_remaining < 1:
                 break
-            u, v = half_edges[best]
+            neg_score, idx, u, v = heapq.heappop(heap)
+            score = _score_delta(u, v)
+            if score != -neg_score:
+                heapq.heappush(heap, (-score, idx, u, v))
+                continue
+            if score <= 0:
+                break
             added.append((u, v))
             remaining[u] -= 1
             remaining[v] -= 1
-            half_edges = np.delete(half_edges, best, axis=0)
+            edges_remaining -= 1
 
         if added:
             g.add_edge_list(np.array(added, dtype=np.int32))
@@ -429,7 +453,7 @@ def get_degree(g):
     ).astype(np.int32)
     
 
-def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None, seed=None, log_file=None):
+def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None, seed=None, log_file=None, network_id=None):
     """Degree-balance a single positive/negative edge pair using alternating max-flow.
 
     Builds a flow network where the positive graph's per-node degree sequence acts as
@@ -450,11 +474,15 @@ def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None
             threshold and the edge-count cap are satisfied.
         seed: Optional numpy random seed for reproducibility when randomly zeroing
             capacities.
+        network_id: Optional identifier used to tag this network's log lines, so
+            output interleaved from parallel workers in `sample_balance_multiple_networks`
+            can be told apart.
 
     Returns:
         Tuple (pos_edges, neg_edges) of degree-balanced DataFrames with exclusive
         proteins removed (via `drop_exclusive_nodes`).
     """
+    net_tag = f"[Network {network_id}] " if network_id is not None else ""
     openmp_set_num_threads(1)
     all_nodes = (
         set(pos_edges["bait"]) | set(pos_edges["prey"])
@@ -519,15 +547,25 @@ def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None
         np.random.seed(seed)
 
     while percent_flow_value < min_flow or (
-        max_edges is not None and any(se.shape[0] > max_edges for se in subset_edges)
+        max_edges is not None and subset_edges[0].shape[0] > max_edges
     ):
+        flow_graph = current_g[i % 2]
+        if log_file:
+            _log(
+                log_file,
+                f"{net_tag}Iter {i} start: flow graph vertices={flow_graph.num_vertices()} "
+                f"edges={flow_graph.num_edges()} pos={subset_edges[0].shape[0]} "
+                f"neg={subset_edges[1].shape[0]} max_edges={max_edges}",
+            )
+        t0 = time.perf_counter()
         residual = max_flow(
-            current_g[i % 2],
+            flow_graph,
             current_source[i % 2],
             current_sink[i % 2],
             current_capacity[i % 2],
         )
-        
+        max_flow_seconds = time.perf_counter() - t0
+
         target_size = current_target_size[i % 2]
         g_selected = extract_selected_edges(
             flow_g=current_g[i % 2],
@@ -536,11 +574,18 @@ def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None
             flow_node_map_index=current_flow_map_index[i % 2],
             node_map=node_map,
             directed=directed,
-            target_selected_size=target_size
+            current_edges=target_size
+            
         )
 
         n_selected = g_selected.num_edges()
         percent_flow_value = 1.0 if target_size == 0 else n_selected / target_size
+        if log_file:
+            _log(
+                log_file,
+                f"{net_tag}Iter {i} done in {max_flow_seconds:.1f}s: flow value {percent_flow_value}, "
+                f"selected edges {n_selected}",
+            )
 
         g_next = Graph(directed=True)
         capacity_next = g_next.new_edge_property("int")
@@ -548,7 +593,7 @@ def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None
         current_target_size[(i + 1) % 2] = n_selected
         if edge_count_msg_count - subset_edges[0].shape[0] >= 1000:
             if log_file:
-                _log(log_file, f"Flow value {percent_flow_value}: positive edges {subset_edges[0].shape[0]}, negative edges {subset_edges[1].shape[0]}, max edges {max_edges}")
+                _log(log_file, f"{net_tag}Flow value {percent_flow_value}: positive edges {subset_edges[0].shape[0]}, negative edges {subset_edges[1].shape[0]}, max edges {max_edges}")
             edge_count_msg_count = subset_edges[0].shape[0]
         if directed:
             new_target_bait, new_target_prey = get_degree(g_selected)
@@ -586,13 +631,12 @@ def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None
             
         if (
             max_edges is not None
-            and any(se.shape[0] > max_edges for se in subset_edges)
+            and subset_edges[0].shape[0] > max_edges
             and percent_flow_value >= 0.99
         ):
-            # remove ~10% of edge overshoot before rebalancing
-            min_edges = min(se.shape[0] for se in subset_edges)
-            delta = min_edges - max_edges  
-            n_to_remove = int(delta * 0.1) + 1
+            # remove ~30% of edge overshoot before rebalancing
+            delta = subset_edges[0].shape[0] - max_edges
+            n_to_remove = int(delta * 0.3) + 1
             cap = current_capacity[(i + 1) % 2]
             nonzero_indices = np.where(cap.a > 0)[0]
             if len(nonzero_indices) > 0:

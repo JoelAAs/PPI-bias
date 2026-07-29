@@ -25,14 +25,13 @@ include: "src/Analysis/DetectionMethod/detection_method.smk"
 include: "src/Analysis/ExperimentalNegatome/experimental_negatome.smk"
 include: "src/Analysis/AbundanceAwareDetection/MCMC_abundance.smk"
 
-#include: "src/Analysis/Enrichment/GetDegree.smk"
-#include: "src/Analysis/Enrichment/EnrichmentAnalysisGeneSet.smk"
-
 include: "src/Analysis/Annotation/AnnotationProbabilities.smk"
-# include: "src/Analysis/Annotation/OverlapGO.smk"
-# include: "src/Analysis/Annotation/OverlapDO.smk"
-# include: "src/Analysis/Annotation/HydrophobicitySimilarity.smk"
-# include: "src/Analysis/Annotation/InterfaceStatistics.smk"
+
+include: "src/Analysis/BiologicalInsights/Shared.smk"
+include: "src/Analysis/Expression/Coexpression.smk"
+include: "src/Analysis/BiologicalInsights/AssayConcordance.smk"
+include: "src/Analysis/BiologicalInsights/DegreeQuadrants.smk"
+include: "src/Analysis/BiologicalInsights/NoInteractionHubs.smk"
 
 include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
 include: "src/Analysis/NegatomeComparison/CompareSharedBaits.smk"
@@ -42,7 +41,6 @@ include: "src/PPIClassification/Embeddings/Embeddings.smk"
 include: "src/PPIClassification/DataSplit/GetGraphs.smk"
 include: "src/PPIClassification/DataSplit/GenePartitions.smk"
 include: "src/PPIClassification/DataSplit/GenerateSplits.smk"
-#include: "src/PPIClassification/DataSplit/BalanceSplits.smk"
 include: "src/PPIClassification/DataSplit/GetGoldenSplit.smk"
 include: "src/PPIClassification/DataSplit/CheckRedundancy.smk"
 include: "src/PPIClassification/ModelEvaluation/Evaluations.smk"
@@ -73,4 +71,19 @@ rule all:
     input:
         expand("work_folder/classification/{classifier}/permuted/all_metrics_{network_type}_{esm_model}.csv",
             classifier="xgboost", network_type="undirectional",esm_model="ESM2"),
-        "work_folder/analysis/shared_annotation_proportions/plots/undirectional_OR.png"
+        #"work_folder/analysis/shared_annotation_proportions/plots/undirectional_OR.png",
+        # Module 1: co-expression
+        "work_folder/analysis/coexpression/plots/undirectional_coexpression.png",
+        "work_folder/analysis/coexpression/plots/undirectional_or_high_membership.png",
+        "work_folder/analysis/coexpression/plots/undirectional_summed_coexpression_vs_random.png",
+        # Module 4: assay concordance
+        "work_folder/analysis/assay_concordance/plots/concordance.png",
+        "work_folder/analysis/protein_degree/plots/undirectional_degree_distributions.png",
+        "work_folder/analysis/protein_degree/plots/undirectional_degree_bin_heatmap.png",
+        # Module 3: degree quadrants
+        "work_folder/analysis/degree_quadrants/plots/undirectional_quadrants.png",
+        "work_folder/analysis/degree_quadrants/plots/undirectional_degree_diff_vs_references.png",
+        #expand("work_folder/analysis/degree_quadrants/{dataset}_undirectional_go_enrichment.tsv",
+        #    dataset=config["datasets"]),
+        ## Module 2: no-interaction hubs
+        "work_folder/analysis/no_interaction_hubs/plots/undirectional_hub_properties.png"

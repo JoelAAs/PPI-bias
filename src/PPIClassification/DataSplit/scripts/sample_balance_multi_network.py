@@ -34,16 +34,17 @@ def main():
         | set(validation_df["prey"])
     )
 
-    edge_list_pos, edge_list_neg, pair = get_edge_list(
+    edge_list_pos, edge_list_neg, pairs = get_edge_list(
         full_detection_df,
         positive_limits,
         negative_limits,
         nodes_to_exclude,
     )
+    network_ids = [f"poslim_{pos_limit}_neglim_{neg_limit}" for pos_limit, neg_limit in pairs]
 
     log_file = snakemake.log[0]
     selected_pos, selected_neg = sample_balance_multiple_networks(
-        edge_list_pos, edge_list_neg, log_file, n_workers=workers, directed=directed
+        edge_list_pos, edge_list_neg, log_file, n_workers=workers, directed=directed, network_ids=network_ids
     )
 
     sanity_check(selected_pos, selected_neg, edge_list_pos, edge_list_neg, directed=directed, log_file=log_file)

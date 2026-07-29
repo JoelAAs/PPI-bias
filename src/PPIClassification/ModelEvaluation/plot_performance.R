@@ -4,9 +4,9 @@ library(tidyverse)
 # > colnames(auc_data)
 #  [1] "model"     "roc_auc"   "samples"   "dataset"
 #  [5] "neg_limit" "pos_limit" "random"
-# >
+#
 auc_data <- read.csv(
-  "work_folder/classification/xgboost/permuted/all_metrics_undirectional_ESM2.csv",
+  "/mnt/ghost/ieo7513/work_folder/classification/xgboost/permuted/all_metrics_undirectional_ESM2.csv",
   sep = "\t", header = TRUE
 )
 

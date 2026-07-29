@@ -89,3 +89,26 @@ permutation_fraction: 0.95
 n_permutations: 10
 drop_isoforms: True
 include_y2h_self_interactions: False
+
+# --- biological insights ---
+bootstrap_replicates: 5000
+n_matched_draws: 1000
+
+# module 1: co-expression
+coexpr_extreme_quantile: 0.975   # Q for the high/low categorisation
+
+# module 2: no-interaction hubs
+hub_min_neg_tested: 3            # negatives require n_tested >= this
+hub_quantile_cutoff: 0.85         # deg_neg/deg_pos quantile cutoff for "high"/"low" (same rule both sides)
+hub_match_tolerance: 0.10        # +/- 10% on log10 tested degree
+uniprot_annotation: "work_folder/data/uniprot/human_reviewed_annotations.tsv"
+
+# module 3: quadrants
+quadrant_bin_cutoff: 1.0         # robust z units, see BiologicalInsights plan §8.1
+# gprofiler2 is not installed in the do_enrichment env (only clusterProfiler,
+# org.Hs.eg.db, HDO.db, GOfuncR are, per envs/setup_R_do_enrichment.R) — default
+# to the already-available clusterProfiler::enrichGO(universe = ...) path.
+go_enrichment_source: "clusterprofiler"
+
+# module 4: concordance
+concordance_min_tested: 3        # per assay, on the jointly tested space
