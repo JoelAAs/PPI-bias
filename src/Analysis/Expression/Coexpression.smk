@@ -55,26 +55,31 @@ rule build_coexpression:
         "scripts/build_coexpression.py"
 
 
-rule test_coexpression:
-    params:
-        prot_a_col=f"{config['id_pattern']}_bait",
-        prot_b_col=f"{config['id_pattern']}_prey",
-        positive_max=config["positive_max"],
-        negative_max=config["negative_max"],
+rule get_balanced_set:
     input:
-        pod="work_folder/analysis/POD/{network_type}/POD_{dataset}.pq",
+        max_positive = f"work_folder/subsets/{{dataset}}_{{network_type}}_limit_{config['positive_max']}_pos.csv",
+        max_negative = f"work_folder/subsets/{{dataset}}_{{network_type}}_limit_{config['negative_max']}_neg.csv",
+        gene_index="work_folder/analysis/coexpression/coexpr_gene_index.tsv",
+    output:
+        balanced_positive = f"work_folder/expression/balanced/{{dataset}}_{{network_type}}_limit_{config['positive_max']}_pos.csv",
+        balanced_negative = f"work_folder/expression/balanced/{{dataset}}_{{network_type}}_limit_{config['negative_max']}_neg.csv"
+    script:
+        "scripts/balance_coexpression.py"
+        
+
+rule test_hri_vs_hrni:
+    input:
+        balanced_positive = f"work_folder/expression/balanced/{{dataset}}_{{network_type}}_limit_{config['positive_max']}_pos.csv",
+        balanced_negative = f"work_folder/expression/balanced/{{dataset}}_{{network_type}}_limit_{config['negative_max']}_neg.csv"
         corr_npy="work_folder/analysis/coexpression/coexpr_matrix.npy",
         gene_index="work_folder/analysis/coexpression/coexpr_gene_index.tsv"
     output:
-        #summary="work_folder/analysis/coexpression/{dataset}_{network_type}_summary.tsv",
-        #categories="work_folder/analysis/coexpression/{dataset}_{network_type}_categories.tsv",
-        #pairs="work_folder/analysis/coexpression/{dataset}_{network_type}_pairs.tsv",
-        hrni_vs_hri="work_folder/analysis/{dataset}_{network_type}_hri_hnri.tsv"
+        hrni_vs_hri="work_folder/analysis/coexpression/{dataset}_{network_type}_hri_hnri.tsv"
     threads: 10
     log:
         "logs/analysis/coexpression/{dataset}_{network_type}.log"
     script:
-        "scripts/test_coexpression.py"
+        "scripts/test_coexpression_hri_hnri.py"
 
 
 
