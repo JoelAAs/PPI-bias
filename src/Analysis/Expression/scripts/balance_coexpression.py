@@ -7,8 +7,14 @@ from sample_balance_multi_network_functions import degree_balace_edges
 
 
 def main():
-    pos_df = pd.read_csv(snakemake.input.max_positive, sep="\t", dtype={"bait": "string", "prey": "string"})
-    neg_df = pd.read_csv(snakemake.input.max_negative, sep="\t", dtype={"bait": "string", "prey": "string"})
+    pos_df = pd.read_csv(
+        snakemake.input.max_positive, sep="\t", header=0,
+        names=["bait", "prey"], dtype={"bait": "string", "prey": "string"}
+    )
+    neg_df = pd.read_csv(
+        snakemake.input.max_negative, sep="\t", header=0,
+        names=["bait", "prey"], dtype={"bait": "string", "prey": "string"}
+    )
     
     expression_uniprotids = set(pd.read_csv(snakemake.input.gene_index, sep="\t")["uniprot_id"])
     neg_df = neg_df[
