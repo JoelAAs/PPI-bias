@@ -151,10 +151,6 @@ g_delta <- ggplot(
 
 ggsave("manual_figures/ROC_auc_by_negtype.png", g_delta, height = 4, width = 6)
 
-# Accuracy barplot: acc_I vs. acc_NI split by which negative set was used at
-# test time, dodged by train_random_negative (`random`). acc_I does not
-# depend on the test negative set, so it is sourced once (!test_random) to
-# avoid double-counting it under both the non-observed and HRNI bars.
 acc_long <- bind_rows(
   auc_data %>%
     filter(!test_random) %>%

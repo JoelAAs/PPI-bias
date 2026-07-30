@@ -3,10 +3,6 @@ import pandas as pd
 from scipy.stats import fisher_exact
 
 
-#N_QUANTILE_SAMPLE_PAIRS = 200_000
-
-
-
 def attach_coexpression(df, uniprot_to_row, corr):
     row_a = df["bait"].map(uniprot_to_row)
     row_b = df["prey"].map(uniprot_to_row)
