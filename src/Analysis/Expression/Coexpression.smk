@@ -75,13 +75,19 @@ rule test_hri_vs_hrni:
 
 rule plot_expression_bin_stats:
     input:
-        hrni_vs_hri="work_folder/analysis/coexpression/{dataset}_{network_type}_hri_hnri.tsv",
-        expression_OR="work_folder/analysis/coexpression/{dataset}_{network_type}_expression_OR.tsv"
+        hrni_vs_hri=expand(
+            "work_folder/analysis/coexpression/{dataset}_{{network_type}}_hri_hnri.tsv",
+            dataset=config["datasets"]
+        ),
+        expression_OR=expand(
+            "work_folder/analysis/coexpression/{dataset}_{{network_type}}_expression_OR.tsv",
+            dataset=config["datasets"]
+        )
     output:
-        box_plot="work_folder/analysis/coexpression/plots/{dataset}_{network_type}_expression_boxplot.png",
-        or_barplot="work_folder/analysis/coexpression/plots/{dataset}_{network_type}_expression_or_barplot.png"
+        box_plot="work_folder/analysis/coexpression/plots/{network_type}_expression_boxplot.png",
+        or_barplot="work_folder/analysis/coexpression/plots/{network_type}_expression_or_barplot.png"
     log:
-        "logs/analysis/coexpression/plots/{dataset}_{network_type}_expression_bin_stats.log"
+        "logs/analysis/coexpression/plots/{network_type}_expression_bin_stats.log"
     script:
         "scripts/plot_expression_bin_stats.R"
 
