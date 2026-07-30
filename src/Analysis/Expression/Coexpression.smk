@@ -64,7 +64,8 @@ rule test_hri_vs_hrni:
         corr_npy="work_folder/analysis/coexpression/coexpr_matrix.npy",
         gene_index="work_folder/analysis/coexpression/coexpr_gene_index.tsv"
     output:
-        hrni_vs_hri="work_folder/analysis/coexpression/{dataset}_{network_type}_hri_hnri.tsv"
+        hrni_vs_hri="work_folder/analysis/coexpression/{dataset}_{network_type}_hri_hnri.tsv",
+        expression_OR="work_folder/analysis/coexpression/{dataset}_{network_type}_expression_OR.tsv"
     threads: 10
     log:
         "logs/analysis/coexpression/{dataset}_{network_type}.log"
@@ -72,6 +73,17 @@ rule test_hri_vs_hrni:
         "scripts/test_coexpression_hri_hnri.py"
 
 
+rule plot_expression_bin_stats:
+    input:
+        hrni_vs_hri="work_folder/analysis/coexpression/{dataset}_{network_type}_hri_hnri.tsv",
+        expression_OR="work_folder/analysis/coexpression/{dataset}_{network_type}_expression_OR.tsv"
+    output:
+        box_plot="work_folder/analysis/coexpression/plots/{dataset}_{network_type}_expression_boxplot.png",
+        or_barplot="work_folder/analysis/coexpression/plots/{dataset}_{network_type}_expression_or_barplot.png"
+    log:
+        "logs/analysis/coexpression/plots/{dataset}_{network_type}_expression_bin_stats.log"
+    script:
+        "scripts/plot_expression_bin_stats.R"
 
 
 rule protein_mean_coexpression:
