@@ -62,7 +62,6 @@ rule protein_degrees:
     params:
         col_a = f"{config['id_pattern']}_bait",
         col_b = f"{config['id_pattern']}_prey",
-        hub_quantile_cutoff = config["hub_quantile_cutoff"],
         interaction_hubs=config["hub_limits"],
         non_interaction_hub_q = config["non_interaction_hub_quantile_cutoff"]
     input:
@@ -87,10 +86,10 @@ rule define_hub_set:
     run:
         df = pd.read_parquet(input.degree)
         df["hub_status"] = np.where(
-            df["deg_neg_bin"] == "low" and df["deg_pos_bin"] == "high", "interaction",
-            np.where(df["deg_neg_bin"] == "high" and df["deg_pos_bin"] == "low", "non-interaction", "")
+            (df["deg_neg_bin"] == "low") & (df["deg_pos_bin"] == "high"), "interaction",
+            np.where((df["deg_neg_bin"] == "high") & (df["deg_pos_bin"] == "low"), "non-interaction", "")
         )
-        df[df["hub_satatus"] != ""].to_csv(output.int_hub_set, sep="\t", index=None)
+        df[df["hub_status"] != ""].to_csv(output.int_hub_set, sep="\t", index=None)
 
         
 rule fetch_disorder_content:
@@ -132,4 +131,4 @@ rule plot_hub_properties:
     log:
         "logs/analysis/no_interaction_hubs/plots/{network_type}_hub_properties.log"
     script:
-        "scripts/plot_hub_properties.R"
+        "scripts/plots/plot_hub_properties.R"

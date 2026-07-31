@@ -30,11 +30,6 @@ bin_summary_df <- bind_rows(lapply(snakemake@input$bin_summary, function(path) {
 })) %>%
   mutate(dataset_label = factor(dataset_label(dataset), levels = c("Y2H", "MS", "Combined")))
 
-## ---- Plot 1: deg_neg/deg_pos distributions with low/medium/high boundaries ----
-# The max value observed within the "low" bin is the lo/hi bin_by_quantile()
-# boundary between low and medium; the max within "medium" is the boundary between
-# medium and high (see protein_degrees.py). The max within "high" is just the
-# distribution's overall max, not a boundary, so it's excluded here.
 boundaries <- bin_summary_df %>%
   filter(bin %in% c("low", "medium")) %>%
   select(dataset_label, bin, max_deg_neg, max_deg_pos) %>%

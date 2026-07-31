@@ -97,9 +97,11 @@ n_matched_draws: 1000
 # module 1: co-expression
 coexpr_extreme_quantile: 0.975   # Q for the high/low categorisation
 
-# module 2: no-interaction hubs
+hub_limits:
+ - 10
+ - 50
 hub_min_neg_tested: 3            # negatives require n_tested >= this
-non_interaction_hub_quantile_cutoff: 0.85         # deg_neg/deg_pos quantile cutoff for "high"/"low" (same rule both sides)
+non_interaction_hub_quantile_cutoff: 0.75         # deg_neg/deg_pos quantile cutoff for "high"/"low" (same rule both sides)
 hub_match_tolerance: 0.10        # +/- 10% on log10 tested degree
 
 # module 3: quadrants

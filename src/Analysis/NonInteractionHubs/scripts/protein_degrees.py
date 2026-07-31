@@ -32,8 +32,8 @@ if __name__ == "__main__":
     
     col_a = snakemake.params.col_a
     col_b = snakemake.params.col_b
-    int_limits = snakemake.parmas.interaction_hubs
-    non_hub_q = snakemake.parmas.non_interaction_hub_q
+    int_limits = snakemake.params.interaction_hubs
+    non_hub_q = snakemake.params.non_interaction_hub_q
 
     dataset = ds.dataset(snakemake.input.pod)
     table = dataset.to_table(columns=[col_a, col_b, "n_tested", "n_observed"])

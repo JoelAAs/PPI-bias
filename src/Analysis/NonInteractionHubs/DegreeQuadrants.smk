@@ -1,20 +1,3 @@
-# Module 3 - degree vs non-degree: 3x3 binning of deg_pos/deg_neg, GO enrichment per
-# quadrant (tested universe as background), and the "how much of the ratio is study
-# attention rather than biology" confound. Depends on the shared protein_degrees
-# table (Shared.smk) - built once, reused by module 2 too.
-
-rule bin_degree_quadrants:
-    params:
-        cutoff=config["quadrant_bin_cutoff"]
-    input:
-        degree="work_folder/analysis/protein_degree/{dataset}_{network_type}_degree.pq"
-    output:
-        bins="work_folder/analysis/degree_quadrants/{dataset}_{network_type}_bins.tsv"
-    log:
-        "logs/analysis/degree_quadrants/{dataset}_{network_type}_bins.log"
-    script:
-        "scripts/bin_degree_quadrants.py"
-
 
 rule test_attention_confound:
     params:
@@ -46,7 +29,7 @@ rule go_enrichment_quadrants:
 rule plot_quadrants:
     input:
         expand(
-            "work_folder/analysis/degree_quadrants/{dataset}_{{network_type}}_bins.tsv",
+            "work_folder/analysis/protein_degree/{dataset}_{{network_type}}_degree.pq",
             dataset=config["datasets"]
         )
     output:
@@ -54,7 +37,7 @@ rule plot_quadrants:
     log:
         "logs/analysis/degree_quadrants/plots/{network_type}_quadrants.log"
     script:
-        "scripts/plot_quadrants.R"
+        "scripts/plots/plot_quadrants.R"
 
 
 rule plot_degree_diff_vs_references:
@@ -71,4 +54,24 @@ rule plot_degree_diff_vs_references:
     log:
         "logs/analysis/degree_quadrants/plots/{network_type}_degree_diff_vs_references.log"
     script:
-        "scripts/plot_degree_diff_vs_references.R"
+        "scripts/plots/plot_degree_diff_vs_references.R"
+
+
+
+rule plot_degree_distributions:
+    input:
+        degree = expand(
+            "work_folder/analysis/protein_degree/{dataset}_{{network_type}}_degree.pq",
+            dataset=config["datasets"]
+        ),
+        bin_summary = expand(
+            "work_folder/analysis/protein_degree/{dataset}_{{network_type}}_degree_bin_summary.tsv",
+            dataset=config["datasets"]
+        )
+    output:
+        distributions = "work_folder/analysis/protein_degree/plots/{network_type}_degree_distributions.png",
+        heatmap = "work_folder/analysis/protein_degree/plots/{network_type}_degree_bin_heatmap.png"
+    log:
+        "logs/analysis/protein_degree/plots/{network_type}_degree_distributions.log"
+    script:
+        "scripts/plots/plot_degree_distributions.R"

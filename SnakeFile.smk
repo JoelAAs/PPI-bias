@@ -29,9 +29,9 @@ include: "src/Analysis/Annotation/AnnotationProbabilities.smk"
 
 include: "src/Analysis/BiologicalInsights/Shared.smk"
 include: "src/Analysis/Expression/Coexpression.smk"
+include: "src/Analysis/NonInteractionHubs/NoInteractionHubs.smk"
 include: "src/Analysis/BiologicalInsights/AssayConcordance.smk"
-include: "src/Analysis/BiologicalInsights/DegreeQuadrants.smk"
-include: "src/Analysis/BiologicalInsights/NoInteractionHubs.smk"
+include: "src/Analysis/NonInteractionHubs/DegreeQuadrants.smk"
 
 include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
 include: "src/Analysis/NegatomeComparison/CompareSharedBaits.smk"
