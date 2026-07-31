@@ -1,5 +1,6 @@
 library(ggplot2)
 library(dplyr)
+library(arrow)
 
 network_type <- snakemake@wildcards$network_type
 
@@ -14,7 +15,7 @@ dataset_label <- function(dataset) {
 
 read_one <- function(path) {
   dataset <- sub(paste0("_", network_type, "_degree\\.pq$"), "", basename(path))
-  read.table(path, sep = "\t", header = TRUE) %>%
+  read_parquet(path) %>%
     mutate(dataset = dataset)
 }
 
