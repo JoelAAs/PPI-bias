@@ -77,14 +77,14 @@ rule all:
         "work_folder/analysis/coexpression/plots/undirectional_or_high_membership.png",
         "work_folder/analysis/coexpression/plots/undirectional_summed_coexpression_vs_random.png",
         # Module 4: assay concordance
-        "work_folder/analysis/assay_concordance/plots/concordance.png",
+        #"work_folder/analysis/assay_concordance/plots/concordance.png",
         "work_folder/analysis/protein_degree/plots/undirectional_degree_distributions.png",
         "work_folder/analysis/protein_degree/plots/undirectional_degree_bin_heatmap.png",
         # Module 3: degree quadrants
-        "work_folder/analysis/degree_quadrants/plots/undirectional_quadrants.png",
-        "work_folder/analysis/degree_quadrants/plots/undirectional_degree_diff_vs_references.png",
+        "work_folder/analysis/protein_degree/plots/undirectional_degree_dist.png",
         #expand("work_folder/analysis/degree_quadrants/{dataset}_undirectional_go_enrichment.tsv",
         #    dataset=config["datasets"]),
         ## Module 2: no-interaction hubs
         "work_folder/analysis/no_interaction_hubs/plots/undirectional_hub_properties_binary.png",
         "work_folder/analysis/no_interaction_hubs/plots/undirectional_hub_properties_continuous.png"
+        
