@@ -1,20 +1,19 @@
-"""
-Module 2 - hub properties (BiologicalInsights plan §7.4-7.5): derive UniProtKB-based
-features and test each for over/underrepresentation in non-interaction hubs
-(hub_status == "non-interaction") vs actual interactors (hub_status == "interaction").
-Fisher's exact test for binary features, Mann-Whitney U for continuous - both give an
-exact/asymptotic p-value directly, no resampling needed.
-
-"single_domain" (plan §7.4) requires an extra InterPro join that is not implemented
-in this pass - dropped entirely rather than faked, per the plan's explicit instruction.
-"""
+import numpy as np
 import pandas as pd
 from scipy.stats import fisher_exact, mannwhitneyu
 
-from src.Analysis.BiologicalInsights.scripts.bootstrap import benjamini_hochberg
 
 BINARY_FEATURES = ["enzyme", "narrow_substrate_enzyme", "membrane", "secreted"]
 CONTINUOUS_FEATURES = ["length", "disorder_fraction"]
+
+def benjamini_hochberg(p_vals):
+    p_vals = np.asarray(p_vals)
+    n = len(p_vals)
+    order = np.argsort(p_vals)
+    ranks_order = np.arange(1, n + 1)
+    q_vals = np.minimum.accumulate((p_vals[order] * n / ranks_order)[::-1])[::-1][np.argsort(order)]
+    return np.clip(q_vals, 0, 1)
+
 
 
 def build_features(accessions, uniprot_df, disorder_df):

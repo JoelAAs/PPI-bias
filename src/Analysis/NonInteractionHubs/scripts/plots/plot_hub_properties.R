@@ -1,6 +1,5 @@
 library(ggplot2)
 library(dplyr)
-library(gridExtra)
 
 network_type <- snakemake@wildcards$network_type
 
@@ -27,6 +26,7 @@ if (nrow(df) == 0 || all(is.na(df$effect))) {
              label = "No hub-property results (hub set was empty upstream)", size = 4) +
     theme_void()
   ggsave(snakemake@output[[1]], g, dpi = 300, height = 3, width = 6)
+  ggsave(snakemake@output[[2]], g, dpi = 300, height = 3, width = 6)
   quit(save = "no")
 }
 
@@ -36,15 +36,19 @@ df <- df %>%
     sig_label = ifelse(!is.na(q_val) & q_val < 0.05, "*", "")
   )
 
+dataset_colors <- c("Y2H" = "#2a78d6", "MS" = "#eb6834", "Combined" = "#1baf7a")
+
 effect_plot <- function(sub_df, x_var, x_label, title) {
-  ggplot(sub_df, aes(x = .data[[x_var]], y = feature)) +
+  dodge <- position_dodge(width = 0.6)
+  ggplot(sub_df, aes(x = .data[[x_var]], y = feature, color = dataset_label)) +
     geom_vline(xintercept = 0, linetype = "dashed", color = "grey40") +
-    geom_point(size = 2, color = "steelblue") +
+    geom_point(size = 2, position = dodge) +
     geom_text(
       aes(label = sig_label),
-      hjust = -0.6, vjust = 0.35, size = 5, fontface = "bold"
+      position = dodge, hjust = -0.6, vjust = 0.35, size = 5, fontface = "bold",
+      show.legend = FALSE
     ) +
-    facet_wrap(~ dataset_label, nrow = 1) +
+    scale_color_manual(values = dataset_colors, name = "Dataset") +
     scale_x_continuous(expand = expansion(mult = c(0.1, 0.15))) +
     labs(title = title, subtitle = "* q < 0.05 (BH-corrected)", x = x_label, y = "") +
     theme_bw() +
@@ -62,6 +66,5 @@ g_binary <- effect_plot(binary_df, "log_or", "log10(Odds ratio)",
 g_continuous <- effect_plot(continuous_df, "effect", "% difference in mean",
                              "Non-interaction hub vs actual-interactor reference: continuous features")
 
-g <- grid.arrange(g_binary, g_continuous, ncol = 1)
-
-ggsave(snakemake@output[[1]], g, dpi = 300, height = 7, width = 8)
+ggsave(snakemake@output[[1]], g_binary, dpi = 300, height = 5, width = 7)
+ggsave(snakemake@output[[2]], g_continuous, dpi = 300, height = 5, width = 7)

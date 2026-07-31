@@ -127,7 +127,8 @@ rule plot_hub_properties:
             dataset=config["datasets"]
         )
     output:
-        "work_folder/analysis/no_interaction_hubs/plots/{network_type}_hub_properties.png"
+        binary="work_folder/analysis/no_interaction_hubs/plots/{network_type}_hub_properties_binary.png",
+        continuous="work_folder/analysis/no_interaction_hubs/plots/{network_type}_hub_properties_continuous.png"
     log:
         "logs/analysis/no_interaction_hubs/plots/{network_type}_hub_properties.log"
     script:

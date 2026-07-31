@@ -86,4 +86,5 @@ rule all:
         #expand("work_folder/analysis/degree_quadrants/{dataset}_undirectional_go_enrichment.tsv",
         #    dataset=config["datasets"]),
         ## Module 2: no-interaction hubs
-        "work_folder/analysis/no_interaction_hubs/plots/undirectional_hub_properties.png"
+        "work_folder/analysis/no_interaction_hubs/plots/undirectional_hub_properties_binary.png",
+        "work_folder/analysis/no_interaction_hubs/plots/undirectional_hub_properties_continuous.png"
