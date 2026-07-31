@@ -8,6 +8,7 @@ import pandas as pd
 def endpoint_counts(table, filtered_table, id_col):
     is_pos = pc.greater_equal(table["n_observed"], 1).cast(pa.int64())
     pos_sub = table.select([id_col, "n_tested"]).append_column("is_pos", is_pos)
+
     pos_grouped = pos_sub.group_by(id_col).aggregate([
         ("n_tested", "sum"), ("is_pos", "sum"), (id_col, "count"),
     ]).rename_columns(["uniprot_id", "sum_tests", "deg_pos", "deg_tested"])
@@ -28,22 +29,17 @@ def bin_by_quantile(series, cutoff):
 
 if __name__ == "__main__":
     log = open(snakemake.log[0], "w")
-    min_tested = snakemake.params.hub_min_neg_tested
-    hub_quantile_cutoff = snakemake.params.hub_quantile_cutoff
+    
     col_a = snakemake.params.col_a
     col_b = snakemake.params.col_b
+    int_limits = snakemake.parmas.interaction_hubs
+    non_hub_q = snakemake.parmas.non_interaction_hub_q
 
     dataset = ds.dataset(snakemake.input.pod)
     table = dataset.to_table(columns=[col_a, col_b, "n_tested", "n_observed"])
-    print(f"Loaded {table.num_rows} pairs (undirected edge list) from {snakemake.input.pod}",
-          file=log, flush=True)
-
-    filtered_table = table.filter(pc.greater_equal(table["n_tested"], min_tested))
-    print(f"{filtered_table.num_rows}/{table.num_rows} pairs have n_tested >= {min_tested} - "
-          f"only these are eligible to count towards deg_neg", file=log, flush=True)
-
-    a_pos, a_neg = endpoint_counts(table, filtered_table, col_a)
-    b_pos, b_neg = endpoint_counts(table, filtered_table, col_b)
+    
+    a_pos, a_neg = endpoint_counts(table, table, col_a)
+    b_pos, b_neg = endpoint_counts(table, table, col_b)
 
     pos_combined = pa.concat_tables([a_pos, b_pos]).group_by("uniprot_id").aggregate([
         ("sum_tests", "sum"), ("deg_pos", "sum"), ("deg_tested", "sum"),
@@ -53,24 +49,18 @@ if __name__ == "__main__":
         ("deg_neg", "sum"),
     ]).rename_columns(["uniprot_id", "deg_neg"])
 
-    degree_df = pos_combined.to_pandas().merge(neg_combined.to_pandas(), on="uniprot_id", how="left")
-    degree_df["deg_neg"] = degree_df["deg_neg"].fillna(0).astype(int)
-    print(f"{len(degree_df)} distinct proteins", file=log, flush=True)
-
+    degree_df = pos_combined.to_pandas().merge(neg_combined.to_pandas(), on="uniprot_id", how="inner") # there must be tests and obs 
+    
     reference_counts = pd.read_csv(snakemake.input.reference_counts, sep="\t")
     degree_df = degree_df.merge(reference_counts, on="uniprot_id", how="left")
-    n_unmatched = int(degree_df["n_pubmed"].isna().sum())
     degree_df["n_pubmed"] = degree_df["n_pubmed"].fillna(0).astype(int)
-    print(f"Merged n_pubmed from {snakemake.input.reference_counts} "
-          f"({n_unmatched} proteins with no UniProt reference_counts entry, set to 0)",
-          file=log, flush=True)
 
-    degree_df["deg_neg_bin"] = bin_by_quantile(degree_df["deg_neg"], hub_quantile_cutoff)
-    degree_df["deg_pos_bin"] = bin_by_quantile(degree_df["deg_pos"], hub_quantile_cutoff)
-    print(f"deg_neg_bin (cutoff={hub_quantile_cutoff}): "
-          f"{degree_df['deg_neg_bin'].value_counts().to_dict()}", file=log, flush=True)
-    print(f"deg_pos_bin (cutoff={hub_quantile_cutoff}): "
-          f"{degree_df['deg_pos_bin'].value_counts().to_dict()}", file=log, flush=True)
+    degree_df["deg_pos_bin"] = np.where(
+        degree_df["deg_pos"] <= int_limits[0], "low",
+        np.where(degree_df["deg_pos"] > int_limits[1], "high", "medium")
+    ) # pos degree on biology
+
+    degree_df["deg_neg_bin"] = bin_by_quantile(degree_df["deg_neg"], non_hub_q) # degree based
 
     degree_df.to_parquet(snakemake.output.degree, index=False)
 

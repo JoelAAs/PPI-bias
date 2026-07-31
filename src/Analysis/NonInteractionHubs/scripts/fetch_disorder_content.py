@@ -22,9 +22,7 @@ REGION_RE = re.compile(r'REGION (\d+)\.\.(\d+); /note="Disordered"')
 
 
 def _get_with_retries(url, params, log=None):
-    """MobiDB resets the connection under rapid back-to-back batch requests
-    (observed live) - retry with exponential backoff rather than failing the whole
-    rule on one transient batch."""
+
     for attempt in range(MAX_RETRIES):
         try:
             resp = requests.get(url, params=params, timeout=30)
@@ -39,8 +37,6 @@ def _get_with_retries(url, params, log=None):
 
 
 def fetch_mobidb_batch(accessions, log=None):
-    """MobiDB's batch endpoint returns newline-delimited JSON (one record per
-    accession), not a JSON array - verified against a live query."""
     out = {}
     for i in range(0, len(accessions), BATCH_SIZE):
         batch = accessions[i:i + BATCH_SIZE]
@@ -86,10 +82,9 @@ if __name__ == "__main__":
     log = open(snakemake.log[0], "w")
 
     hub_df = pd.read_csv(snakemake.input.hub_set, sep="\t")
-    reference_df = pd.read_csv(snakemake.input.reference_set, sep="\t")
     uniprot_df = pd.read_csv(snakemake.input.uniprot_annotation, sep="\t")
 
-    accessions = sorted(set(hub_df["uniprot_id"]) | set(reference_df["uniprot_id"]))
+    accessions = sorted(set(hub_df["uniprot_id"]))
     print(f"Fetching disorder content for {len(accessions)} hub+reference proteins",
           file=log, flush=True)
 
@@ -119,10 +114,6 @@ if __name__ == "__main__":
             rows.append({"uniprot_id": acc, "disorder_fraction": None,
                           "disorder_source": "none"})
 
-    # Explicit columns so an empty `rows` (hub set was empty upstream) still writes a
-    # header - pd.DataFrame([]) has zero columns, which makes the downstream
-    # pd.read_csv() fail with EmptyDataError instead of hitting that script's own
-    # empty-hub-set handling.
     columns = ["uniprot_id", "disorder_fraction", "disorder_source"]
     pd.DataFrame(rows, columns=columns).to_csv(snakemake.output.disorder, sep="\t", index=False)
     print("Done.", file=log, flush=True)

@@ -4,7 +4,7 @@ if __name__ == "__main__":
     log = open(snakemake.log[0], "w")
 
     df = pd.read_csv(snakemake.input.uniprot_annotation, sep="\t", dtype={"lit_pubmed_id": str})
-    print(f"Loaded {len(df)} reviewed human proteins from {snakemake.input.uniprot_annotation}",
+    print(f"Loaded {len(df)} human proteins from {snakemake.input.uniprot_annotation}",
           file=log, flush=True)
 
     def count_pubmeds(cell):
