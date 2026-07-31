@@ -80,7 +80,6 @@ rule all:
         #"work_folder/analysis/assay_concordance/plots/concordance.png",
         "work_folder/analysis/protein_degree/plots/undirectional_degree_distributions.png",
         "work_folder/analysis/protein_degree/plots/undirectional_degree_bin_heatmap.png",
-        # Module 3: degree quadrants
         "work_folder/analysis/protein_degree/plots/undirectional_degree_dist.png",
         #expand("work_folder/analysis/degree_quadrants/{dataset}_undirectional_go_enrichment.tsv",
         #    dataset=config["datasets"]),
