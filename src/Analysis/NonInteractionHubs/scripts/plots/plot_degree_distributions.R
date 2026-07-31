@@ -22,13 +22,13 @@ degree_df <- bind_rows(lapply(snakemake@input$degree, function(path) {
   read_parquet(path) %>%
     mutate(dataset = extract_dataset(path, "_degree\\.pq"))
 })) %>%
-  mutate(dataset_label = factor(dataset_label(dataset), levels = c("Y2H", "MS", "Combined")))
+  mutate(dataset_label = factor(dataset_label(dataset), levels = c("Combined", "MS", "Y2H")))
 
 bin_summary_df <- bind_rows(lapply(snakemake@input$bin_summary, function(path) {
   read.table(path, sep = "\t", header = TRUE) %>%
     mutate(dataset = extract_dataset(path, "_degree_bin_summary\\.tsv"))
 })) %>%
-  mutate(dataset_label = factor(dataset_label(dataset), levels = c("Y2H", "MS", "Combined")))
+  mutate(dataset_label = factor(dataset_label(dataset), levels = c("Combined", "MS", "Y2H")))
 
 boundaries <- bin_summary_df %>%
   filter(bin %in% c("low", "medium")) %>%

@@ -22,7 +22,7 @@ df <- bind_rows(lapply(snakemake@input, read_one)) %>%
   mutate(
     dataset_label = factor(
       dataset_label(dataset),
-      levels = c("Y2H", "MS", "Combined")
+      levels = c("Combined", "MS", "Y2H")
     ),
     log10_or = log10(odds_ratio),
     log10_ci_lo = log10(ci_lo),

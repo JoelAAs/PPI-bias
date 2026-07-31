@@ -32,11 +32,11 @@ if (nrow(df) == 0 || all(is.na(df$effect))) {
 
 df <- df %>%
   mutate(
-    dataset_label = factor(dataset_label(dataset), levels = c("Y2H", "MS", "Combined")),
+    dataset_label = factor(dataset_label(dataset), levels = c("Combined", "MS", "Y2H")),
     sig_label = ifelse(!is.na(q_val) & q_val < 0.05, "*", "")
   )
 
-dataset_colors <- c("Y2H" = "#2a78d6", "MS" = "#eb6834", "Combined" = "#1baf7a")
+dataset_colors <- c("Combined" = "blue", "MS" = "darkgreen", "Y2H" = "darkorange")
 
 effect_plot <- function(sub_df, x_var, x_label, title) {
   dodge <- position_dodge(width = 0.6)

@@ -21,7 +21,7 @@ read_one <- function(path) {
 
 df <- bind_rows(lapply(snakemake@input, read_one)) %>%
   mutate(
-    dataset_label = factor(dataset_label(dataset), levels = c("Y2H", "MS", "Combined")),
+    dataset_label = factor(dataset_label(dataset), levels = c("Combined", "MS", "Y2H")),
     log_deg_pos = log10(deg_pos),
     log_deg_neg = log10(deg_neg)
   )
