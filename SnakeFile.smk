@@ -32,6 +32,7 @@ include: "src/Analysis/Expression/Coexpression.smk"
 include: "src/Analysis/NonInteractionHubs/NoInteractionHubs.smk"
 include: "src/Analysis/BiologicalInsights/AssayConcordance.smk"
 include: "src/Analysis/NonInteractionHubs/DegreeQuadrants.smk"
+include: "src/Analysis/MethodConcordance/MethodConcordance.smk"
 
 include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
 include: "src/Analysis/NegatomeComparison/CompareSharedBaits.smk"
@@ -85,5 +86,7 @@ rule all:
         #    dataset=config["datasets"]),
         ## Module 2: no-interaction hubs
         "work_folder/analysis/no_interaction_hubs/plots/undirectional_hub_properties_binary.png",
-        "work_folder/analysis/no_interaction_hubs/plots/undirectional_hub_properties_continuous.png"
-        
+        "work_folder/analysis/no_interaction_hubs/plots/undirectional_hub_properties_continuous.png",
+        # Method concordance: shared negatives test
+        "work_folder/analysis/method_concordance/undirectional/shared_negatives_fit.rds",
+        "work_folder/analysis/method_concordance/undirectional/shared_negatives_summary.txt"
