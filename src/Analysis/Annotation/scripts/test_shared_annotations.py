@@ -1,8 +1,183 @@
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import pandas as pd
 
-from src.Analysis.BiologicalInsights.scripts.bootstrap import cluster_bootstrap_all
+
+def benjamini_hochberg(p_vals):
+    """Benjamini-Hochberg FDR. Returns q_vals in the same order as p_vals."""
+    p_vals = np.asarray(p_vals)
+    n = len(p_vals)
+    order = np.argsort(p_vals)
+    ranks_order = np.arange(1, n + 1)
+    q_vals = np.minimum.accumulate((p_vals[order] * n / ranks_order)[::-1])[::-1][np.argsort(order)]
+    return np.clip(q_vals, 0, 1)
+
+
+def _log_or(r_pos, r_neg, eps=1e-10):
+    """log odds ratio, clipped to avoid log(0)."""
+    odds_pos = r_pos / np.maximum(1.0 - r_pos, eps)
+    odds_neg = r_neg / np.maximum(1.0 - r_neg, eps)
+    return np.log(np.maximum(odds_pos, eps)) - np.log(np.maximum(odds_neg, eps))
+
+
+def log_or_combine(pos_sum, pos_cnt, neg_sum, neg_cnt):
+    """log(OR) of rate_pos vs rate_neg, for a single bootstrap replicate's sums."""
+    r_pos = pos_sum / pos_cnt if pos_cnt > 0 else np.zeros_like(pos_sum)
+    r_neg = neg_sum / neg_cnt if neg_cnt > 0 else np.zeros_like(neg_sum)
+    return _log_or(r_pos, r_neg)
+
+
+def precompute_protein_sums(prot_a_idx, prot_b_idx, pos_mask, value_matrix, n_prot):
+    """
+    Reduce edge-level data to per-protein sufficient statistics (computed once).
+
+    Edges (bait-prey pairs) sharing a protein are statistically dependent, so the
+    bootstrap below resamples PROTEINS with replacement (not edges); each replicate's
+    statistic is derived from these per-protein sums rather than looping over edges.
+
+    For each protein p and variable j, accumulate the summed value_matrix[:, j] over
+    edges where p appears (as bait or prey), split by pos/neg edge set.
+
+    value_matrix: (n_edges, n_vars) boolean shared-annotation indicator matrix.
+    """
+    n_vars = value_matrix.shape[1]
+    neg_mask = ~pos_mask
+
+    sm_pos = value_matrix[pos_mask].astype(np.float64)
+    pos_sum = np.zeros((n_prot, n_vars), dtype=np.float64)
+    pos_cnt = np.zeros(n_prot, dtype=np.float64)
+    for role in [prot_a_idx[pos_mask], prot_b_idx[pos_mask]]:
+        np.add.at(pos_sum, role, sm_pos)
+        np.add.at(pos_cnt, role, 1)
+
+    neg_bait = prot_a_idx[neg_mask]
+    neg_prey = prot_b_idx[neg_mask]
+    neg_sum = np.zeros((n_prot, n_vars), dtype=np.float64)
+    for j in range(n_vars):
+        w = value_matrix[neg_mask, j].astype(np.float64)
+        neg_sum[:, j] = (np.bincount(neg_bait, weights=w, minlength=n_prot) +
+                         np.bincount(neg_prey, weights=w, minlength=n_prot))
+    neg_cnt = (np.bincount(neg_bait, minlength=n_prot) +
+               np.bincount(neg_prey, minlength=n_prot)).astype(np.float64)
+
+    return pos_sum, pos_cnt, neg_sum, neg_cnt
+
+
+def bootstrap_chunk(b_count, seed, n_prot, pos_sum, pos_cnt, neg_sum, neg_cnt):
+    """
+    Run b_count bootstrap iterations using per-protein sufficient statistics.
+    Called in a thread - arrays are shared by reference (no copying).
+    """
+    rng = np.random.default_rng(seed)
+    n_vars = pos_sum.shape[1]
+    diffs = np.empty((b_count, n_vars))
+    for b in range(b_count):
+        c = rng.choice(n_prot, size=n_prot, replace=True)
+        bp_sum = pos_sum[c].sum(axis=0)
+        bp_cnt = pos_cnt[c].sum()
+        bn_sum = neg_sum[c].sum(axis=0)
+        bn_cnt = neg_cnt[c].sum()
+        diffs[b] = log_or_combine(bp_sum, bp_cnt, bn_sum, bn_cnt)
+    return diffs
+
+
+def cluster_bootstrap_stats(df, prot_a_col, prot_b_col, pos_col, value_matrix, labels,
+                             B=5000, n_workers=1, seed=0):
+    """
+    Protein-level cluster bootstrap over one or more binary/rate variables
+    simultaneously (effect = odds ratio of rate_pos vs rate_neg).
+
+    df            : DataFrame with prot_a_col, prot_b_col, pos_col (boolean, "is this
+                    a positive-set edge").
+    value_matrix  : (n_edges, n_vars) boolean array, one column per variable in `labels`.
+    labels        : sequence of variable names matching value_matrix columns.
+
+    Returns DataFrame: label, obs_pos, obs_neg, effect, ci_lo, ci_hi, within_ci,
+    p_val, q_val (BH across all variables in this call).
+    """
+    prot_a = df[prot_a_col].to_numpy()
+    prot_b = df[prot_b_col].to_numpy()
+    proteins = pd.unique(np.concatenate([prot_a, prot_b]))
+    prot_to_i = {p: i for i, p in enumerate(proteins)}
+    n_prot = len(proteins)
+
+    prot_a_idx = np.fromiter((prot_to_i[p] for p in prot_a), dtype=np.intp, count=len(prot_a))
+    prot_b_idx = np.fromiter((prot_to_i[p] for p in prot_b), dtype=np.intp, count=len(prot_b))
+    pos_mask = df[pos_col].to_numpy().astype(bool)
+
+    obs_pos = value_matrix[pos_mask].mean(axis=0)
+    obs_neg = value_matrix[~pos_mask].mean(axis=0)
+    odds_pos = obs_pos / np.maximum(1.0 - obs_pos, 1e-10)
+    odds_neg = obs_neg / np.maximum(1.0 - obs_neg, 1e-10)
+    obs_effect = odds_pos / np.maximum(odds_neg, 1e-10)
+
+    pos_sum, pos_cnt, neg_sum, neg_cnt = precompute_protein_sums(
+        prot_a_idx, prot_b_idx, pos_mask, value_matrix, n_prot
+    )
+
+    q, r = divmod(B, n_workers)
+    chunk_sizes = [q + (1 if i < r else 0) for i in range(n_workers)]
+    chunk_seeds = [seed + i * (B + 1) for i in range(n_workers)]
+
+    with ThreadPoolExecutor(max_workers=n_workers) as pool:
+        futures = [
+            pool.submit(bootstrap_chunk, b_count, s, n_prot,
+                        pos_sum, pos_cnt, neg_sum, neg_cnt)
+            for b_count, s in zip(chunk_sizes, chunk_seeds)
+        ]
+        diffs = np.vstack([f.result() for f in futures])
+
+    ci_lo, ci_hi = np.exp(np.percentile(diffs, [2.5, 97.5], axis=0))
+
+    p_vals = (2 * np.minimum(
+        (diffs < 0).mean(axis=0),
+        (diffs > 0).mean(axis=0),
+    )).clip(1 / B, 1)
+    q_vals = benjamini_hochberg(p_vals)
+
+    return pd.DataFrame({
+        "label": np.asarray(labels),
+        "obs_pos": obs_pos,
+        "obs_neg": obs_neg,
+        "effect": obs_effect,
+        "ci_lo": ci_lo,
+        "ci_hi": ci_hi,
+        "within_ci": (obs_effect >= ci_lo) & (obs_effect <= ci_hi),
+        "p_val": p_vals,
+        "q_val": q_vals,
+    })
+
+
+def cluster_bootstrap_all(df, shared_matrix, annotations, B=5000, n_workers=1, seed=0):
+    """
+    Reproduces the original output schema: annotation, annotation_type, rate_pos,
+    rate_neg, odds_pos, odds_neg, odds_ratio, ci_lo, ci_hi, within_ci, p_val, q_val.
+
+    df: DataFrame with columns prot_a, prot_b, set_id ("pos"/"neg").
+    """
+    pos_mask = (df["set_id"] == "pos")
+    stats = cluster_bootstrap_stats(
+        df.assign(_pos=pos_mask), "prot_a", "prot_b", "_pos", shared_matrix, annotations,
+        B=B, n_workers=n_workers, seed=seed,
+    )
+    odds_pos = stats["obs_pos"] / np.maximum(1.0 - stats["obs_pos"], 1e-10)
+    odds_neg = stats["obs_neg"] / np.maximum(1.0 - stats["obs_neg"], 1e-10)
+    ann_arr = stats["label"].to_numpy()
+    return pd.DataFrame({
+        "annotation": ann_arr,
+        "annotation_type": np.where(pd.Series(ann_arr).str.startswith("GO:"), "GO", "localisation"),
+        "rate_pos": stats["obs_pos"].to_numpy(),
+        "rate_neg": stats["obs_neg"].to_numpy(),
+        "odds_pos": odds_pos.to_numpy(),
+        "odds_neg": odds_neg.to_numpy(),
+        "odds_ratio": stats["effect"].to_numpy(),
+        "ci_lo": stats["ci_lo"].to_numpy(),
+        "ci_hi": stats["ci_hi"].to_numpy(),
+        "within_ci": stats["within_ci"].to_numpy(),
+        "p_val": stats["p_val"].to_numpy(),
+        "q_val": stats["q_val"].to_numpy(),
+    })
 
 
 def map_uniprot_to_gene_id(uniprot_file):

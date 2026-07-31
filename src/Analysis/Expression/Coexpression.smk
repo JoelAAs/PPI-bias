@@ -112,29 +112,6 @@ rule protein_mean_coexpression:
         "scripts/protein_coexpression.py"
 
 
-rule plot_coexpression:
-    input:
-        pairs=expand(
-            "work_folder/analysis/coexpression/{dataset}_{{network_type}}_pairs.tsv",
-            dataset=config["datasets"]
-        ),
-        degree=expand(
-            "work_folder/analysis/protein_degree/{dataset}_{{network_type}}_degree.pq",
-            dataset=config["datasets"]
-        ),
-        protein_coexpr=expand(
-            "work_folder/analysis/coexpression/{dataset}_{{network_type}}_protein_mean_coexpr.tsv",
-            dataset=config["datasets"]
-        )
-    output:
-        density="work_folder/analysis/coexpression/plots/{network_type}_coexpression.png",
-        sum_tests_vs_coexpression="work_folder/analysis/coexpression/plots/{network_type}_sum_tests_vs_coexpression.png"
-    log:
-        "logs/analysis/coexpression/plots/{network_type}_coexpression.log"
-    script:
-        "scripts/plot_coexpression.R"
-
-
 rule plot_coexpression_stats:
     """
     Summary-level plots (one point per dataset, not per-pair densities):

@@ -27,10 +27,8 @@ include: "src/Analysis/AbundanceAwareDetection/MCMC_abundance.smk"
 
 include: "src/Analysis/Annotation/AnnotationProbabilities.smk"
 
-include: "src/Analysis/BiologicalInsights/Shared.smk"
 include: "src/Analysis/Expression/Coexpression.smk"
 include: "src/Analysis/NonInteractionHubs/NoInteractionHubs.smk"
-include: "src/Analysis/BiologicalInsights/AssayConcordance.smk"
 include: "src/Analysis/NonInteractionHubs/DegreeQuadrants.smk"
 include: "src/Analysis/MethodConcordance/MethodConcordance.smk"
 

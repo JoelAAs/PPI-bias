@@ -103,13 +103,3 @@ hub_limits:
 hub_min_neg_tested: 3            # negatives require n_tested >= this
 non_interaction_hub_quantile_cutoff: 0.75         # deg_neg/deg_pos quantile cutoff for "high"/"low" (same rule both sides)
 hub_match_tolerance: 0.10        # +/- 10% on log10 tested degree
-
-# module 3: quadrants
-quadrant_bin_cutoff: 1.0         # robust z units, see BiologicalInsights plan §8.1
-# gprofiler2 is not installed in the do_enrichment env (only clusterProfiler,
-# org.Hs.eg.db, HDO.db, GOfuncR are, per envs/setup_R_do_enrichment.R) — default
-# to the already-available clusterProfiler::enrichGO(universe = ...) path.
-go_enrichment_source: "clusterprofiler"
-
-# module 4: concordance
-concordance_min_tested: 3        # per assay, on the jointly tested space

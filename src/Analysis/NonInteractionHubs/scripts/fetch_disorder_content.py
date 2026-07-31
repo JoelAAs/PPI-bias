@@ -1,13 +1,3 @@
-"""
-Module 2 - disorder content (BiologicalInsights plan §7.4): fraction of residues in
-disordered regions, restricted to hub + reference proteins only (not the whole
-proteome - this is a per-accession API call, kept small deliberately).
-
-Prefer MobiDB-lite consensus (content_fraction from the precomputed MobiDB API
-record); proteins absent from MobiDB fall back to UniProt's own ft_region entries
-whose description contains "Disordered" (fraction of residues covered by such
-regions). Source is recorded per protein - never mixed silently.
-"""
 import json
 import re
 import time
