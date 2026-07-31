@@ -63,7 +63,6 @@ g_dist <- ggplot(long_degree, aes(x = degree + 1)) +
 
 ggsave(snakemake@output$distributions, g_dist, dpi = 300, height = 6, width = 9)
 
-## ---- Plot 2: heatmap of deg_neg_bin x deg_pos_bin overlap ----
 bin_levels <- c("low", "medium", "high")
 crosstab <- degree_df %>%
   mutate(
@@ -78,9 +77,9 @@ g_heat <- ggplot(crosstab, aes(x = deg_neg_bin, y = deg_pos_bin, fill = n)) +
   scale_fill_viridis_c() +
   facet_wrap(~ dataset_label, nrow = 1) +
   labs(
-    title = "Shared proteins between degree categories (deg_neg_bin x deg_pos_bin)",
-    x = "deg_neg bin",
-    y = "deg_pos bin",
+    title = "Proteins distribution between degree categories",
+    x = "Non-interaction degree bin",
+    y = "Interaction degree bin",
     fill = "N proteins"
   ) +
   theme_bw() +

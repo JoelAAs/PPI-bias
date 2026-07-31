@@ -6,8 +6,8 @@ rule plot_degree_vs_test:
             dataset=config["datasets"]
         )
     output:
-        dist = "work_folder/analysis/protein_degree/plots/{network_type}_degree_vs_pubs.png",
-        ref  = "work_folder/analysis/protein_degree/plots/{network_type}_degree_dist.png"
+        ref  = "work_folder/analysis/protein_degree/plots/{network_type}_degree_dist.png",
+        dist = "work_folder/analysis/protein_degree/plots/{network_type}_degree_vs_pubs.png"
     log:
         "logs/analysis/protein_degree/plots/{network_type}_degree.log"
     script:
