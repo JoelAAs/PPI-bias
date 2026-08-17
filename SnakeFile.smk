@@ -72,9 +72,8 @@ rule all:
             classifier="xgboost", network_type="undirectional",esm_model="ESM2"),
         #"work_folder/analysis/shared_annotation_proportions/plots/undirectional_OR.png",
         # Module 1: co-expression
-        "work_folder/analysis/coexpression/plots/undirectional_coexpression.png",
-        "work_folder/analysis/coexpression/plots/undirectional_or_high_membership.png",
-        "work_folder/analysis/coexpression/plots/undirectional_summed_coexpression_vs_random.png",
+        "work_folder/analysis/coexpression/plots/undirectional_expression_boxplot.png",
+        "work_folder/analysis/coexpression/plots/undirectional_expression_or_barplot.png",
         # Module 4: assay concordance
         #"work_folder/analysis/assay_concordance/plots/concordance.png",
         "work_folder/analysis/protein_degree/plots/undirectional_degree_distributions.png",
@@ -87,4 +86,5 @@ rule all:
         "work_folder/analysis/no_interaction_hubs/plots/undirectional_hub_properties_continuous.png",
         # Method concordance: shared negatives test
         "work_folder/analysis/method_concordance/undirectional/shared_negatives_fit.rds",
-        "work_folder/analysis/method_concordance/undirectional/shared_negatives_summary.txt"
+        "work_folder/analysis/method_concordance/undirectional/shared_negatives_summary.txt",
+        "work_folder/analysis/method_concordance/undirectional/mixed_effects_dist.png"

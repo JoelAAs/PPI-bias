@@ -110,23 +110,3 @@ rule protein_mean_coexpression:
         "logs/analysis/coexpression/{dataset}_{network_type}_protein_mean_coexpr.log"
     script:
         "scripts/protein_coexpression.py"
-
-
-rule plot_coexpression_stats:
-    """
-    Summary-level plots (one point per dataset, not per-pair densities):
-      - odds ratio of "high" co-expression membership, HRI vs HRNI
-      - HRNI summed co-expression vs its uniform-random-pair null
-    """
-    input:
-        summary=expand(
-            "work_folder/analysis/coexpression/{dataset}_{{network_type}}_summary.tsv",
-            dataset=config["datasets"]
-        )
-    output:
-        or_high="work_folder/analysis/coexpression/plots/{network_type}_or_high_membership.png",
-        summed="work_folder/analysis/coexpression/plots/{network_type}_summed_coexpression_vs_random.png"
-    log:
-        "logs/analysis/coexpression/plots/{network_type}_coexpression_stats.log"
-    script:
-        "scripts/plot_coexpression_stats.R"

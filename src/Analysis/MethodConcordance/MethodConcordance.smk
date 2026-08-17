@@ -23,3 +23,16 @@ rule test_shared_negatives:
         "logs/analysis/method_concordance/{network_type}/shared_negatives.log"
     script:
         "scripts/test_shared_negatives.R"
+
+
+rule plot_detection_percentage:
+    input:
+        detection="work_folder/analysis/method_concordance/{network_type}/ms_y2h_detection.pq",
+        fit="work_folder/analysis/method_concordance/{network_type}/shared_negatives_fit.rds"
+    output:
+        mixed_effects_dist="work_folder/analysis/method_concordance/{network_type}/mixed_effects_dist.png",
+        hub_adjusted_concordance="work_folder/analysis/method_concordance/{network_type}/hub_adjusted_concordance.png"
+    log:
+        "logs/analysis/method_concordance/{network_type}/plot_detection_percentage.log"
+    script:
+        "scripts/plot_detection_percetage.R"

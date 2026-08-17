@@ -8,13 +8,10 @@ df <- read_parquet(snakemake@input$detection) %>%
     B_success = as.integer(y2h_detection)
   )
 
-# --- 1. Priors: regularize the very rare successes -------------------------
-# Intercept centered near logit(base rate of B). If B's rate is ~0.001,
-# logit(0.001) ~= -6.9; if ~0.005, ~= -5.3. Adjust to whichever is the response.
 priors <- c(
-  prior(normal(0, 5),  class = "b"),          # fixed effects (log-odds)
-  prior(normal(-6, 3), class = "Intercept"),  # rare-event baseline
-  prior(exponential(1), class = "sd")         # node-effect SD
+  prior(normal(0, 5),  class = "b"),
+  prior(normal(-6, 3), class = "Intercept"),
+  prior(exponential(1), class = "sd")
 )
 
 fit <- brm(
@@ -28,13 +25,10 @@ fit <- brm(
   seed    = 1
 )
 
-# --- 3. Read off the association -------------------------------------------
-summary(fit)                                   # check Rhat ~1, no divergences
-odds_ratio <- exp(fixef(fit)["A_success", c("Estimate", "Q2.5", "Q97.5")])  # odds ratio + 95% CrI
-#odds_ratio
+summary(fit)
+odds_ratio <- exp(fixef(fit)["A_success", c("Estimate", "Q2.5", "Q97.5")])
 
 post <- as_draws_df(fit)
-#mean(post$b_A_success > 0)
 
 saveRDS(fit, snakemake@output$fit)
 writeLines(
