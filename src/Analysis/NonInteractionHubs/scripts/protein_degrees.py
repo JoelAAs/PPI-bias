@@ -5,20 +5,16 @@ import pyarrow.dataset as ds
 import pandas as pd
 
 
-def endpoint_counts(table, filtered_table, id_col):
+def endpoint_counts(table, id_col):
     is_pos = pc.greater_equal(table["n_observed"], 1).cast(pa.int64())
-    pos_sub = table.select([id_col, "n_tested"]).append_column("is_pos", is_pos)
+    sub = table.select([id_col, "n_tested"]).append_column("is_pos", is_pos)
 
-    pos_grouped = pos_sub.group_by(id_col).aggregate([
+    degrees = sub.group_by(id_col).aggregate([
         ("n_tested", "sum"), ("is_pos", "sum"), (id_col, "count"),
     ]).rename_columns(["uniprot_id", "sum_tests", "deg_pos", "deg_tested"])
-
-    is_neg = pc.equal(filtered_table["n_observed"], 0).cast(pa.int64())
-    neg_sub = filtered_table.select([id_col]).append_column("is_neg", is_neg)
-    neg_grouped = neg_sub.group_by(id_col).aggregate([("is_neg", "sum")]) \
-        .rename_columns(["uniprot_id", "deg_neg"])
-
-    return pos_grouped, neg_grouped
+    degrees = degrees.append_column("deg_neg", pc.subtract(degrees["deg_tested"], degrees["deg_pos"]))
+    
+    return degrees
 
 
 def bin_by_quantile(series, cutoff):
@@ -38,18 +34,14 @@ if __name__ == "__main__":
     dataset = ds.dataset(snakemake.input.pod)
     table = dataset.to_table(columns=[col_a, col_b, "n_tested", "n_observed"])
     
-    a_pos, a_neg = endpoint_counts(table, table, col_a)
-    b_pos, b_neg = endpoint_counts(table, table, col_b)
+    degree_a = endpoint_counts(table, col_a)
+    degree_b = endpoint_counts(table, col_b)
 
-    pos_combined = pa.concat_tables([a_pos, b_pos]).group_by("uniprot_id").aggregate([
-        ("sum_tests", "sum"), ("deg_pos", "sum"), ("deg_tested", "sum"),
-    ]).rename_columns(["uniprot_id", "sum_tests", "deg_pos", "deg_tested"])
+    combined = pa.concat_tables([degree_a, degree_b]).group_by("uniprot_id").aggregate([
+        ("sum_tests", "sum"), ("deg_pos", "sum"), ("deg_neg", "sum"), ("deg_tested", "sum")
+    ]).rename_columns(["uniprot_id", "sum_tests", "deg_pos", "deg_neg", "deg_tested"])
 
-    neg_combined = pa.concat_tables([a_neg, b_neg]).group_by("uniprot_id").aggregate([
-        ("deg_neg", "sum"),
-    ]).rename_columns(["uniprot_id", "deg_neg"])
-
-    degree_df = pos_combined.to_pandas().merge(neg_combined.to_pandas(), on="uniprot_id", how="inner") # there must be tests and obs 
+    degree_df = combined.to_pandas()
     
     reference_counts = pd.read_csv(snakemake.input.reference_counts, sep="\t")
     degree_df = degree_df.merge(reference_counts, on="uniprot_id", how="left")

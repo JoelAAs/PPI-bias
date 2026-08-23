@@ -48,7 +48,7 @@ def get_pair_jaccard_do(gene1, gene2, gene_idx_dicts):
 
 rule get_gene_do_terms:
     params:
-        script="src/Analysis/Annotation/get_DO.R"
+        script="src/Analysis/Annotation/scripts/get_DO.R"
     input:
         pod_df="work_folder/analysis/POD/POD_{data}.csv"
     output:

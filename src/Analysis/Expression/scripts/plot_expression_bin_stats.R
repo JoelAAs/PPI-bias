@@ -59,7 +59,7 @@ read_expression_or <- function(path) {
 or_df <- bind_rows(lapply(snakemake@input$expression_OR, read_expression_or)) %>%
   mutate(
     dataset_label = factor(dataset_label(dataset), levels = c("Combined", "MS", "Y2H")),
-    log_or = log(OR),
+    log_or = log10(OR),
     sig = case_when(
       p.value < 0.001 ~ "***",
       p.value < 0.01 ~ "**",
@@ -79,10 +79,10 @@ g_bar <- ggplot(or_df, aes(x = class_label, y = log_or, fill = dataset_label)) +
   ) +
   scale_fill_manual(values = dataset_colors) +
   labs(
-    title = "Odds ratio of expression-bin: HRI vs HRNI",
-    x = "Expression bin", y = expression(log("Odds ratio")), fill = "Dataset"
+    title = "Expression-bin: HRI vs HRNI",
+    x = "Expression bin", y = expression(log[10]("Odds ratio")), fill = "Dataset"
   ) +
   theme_bw() +
   theme(plot.title = element_text(size = 10), legend.position = "bottom")
 
-ggsave(snakemake@output$or_barplot, g_bar, dpi = 300, height = 4, width = 6)
+ggsave(snakemake@output$or_barplot, g_bar, dpi = 300, height = 4, width = 4)

@@ -74,7 +74,7 @@ crosstab <- degree_df %>%
 g_heat <- ggplot(crosstab, aes(x = deg_neg_bin, y = deg_pos_bin, fill = n)) +
   geom_tile() +
   geom_text(aes(label = n), color = "white", size = 3) +
-  scale_fill_viridis_c() +
+  scale_fill_gradient(low = "darkgreen", high = "darkorange") +
   facet_wrap(~ dataset_label, nrow = 1) +
   labs(
     title = "Proteins distribution between degree categories",
@@ -83,6 +83,6 @@ g_heat <- ggplot(crosstab, aes(x = deg_neg_bin, y = deg_pos_bin, fill = n)) +
     fill = "N proteins"
   ) +
   theme_bw() +
-  theme(plot.title = element_text(size = 9))
+  theme(legend.position = "none")
 
-ggsave(snakemake@output$heatmap, g_heat, dpi = 300, height = 4, width = 9)
+ggsave(snakemake@output$heatmap, g_heat, dpi = 300, height = 4, width = 7)

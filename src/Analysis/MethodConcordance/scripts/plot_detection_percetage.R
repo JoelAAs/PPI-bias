@@ -1,6 +1,7 @@
 library(dplyr)
 library(ggplot2)
-library(brms) # for posterior draws
+library(brms)
+library(arrow)
 df <- read_parquet(snakemake@input$detection) %>%
     mutate(
         A_success = as.integer(ms_detection),
@@ -18,7 +19,7 @@ raw <- df %>%
         p = k / n,
         lo = binom.test(k, n)$conf.int[1],
         hi = binom.test(k, n)$conf.int[2],
-        source = "Raw data"
+        source = "Naive"
     ) %>%
     ungroup()
 
@@ -32,7 +33,7 @@ adj <- tibble(
     p      = c(median(adj_ms0), median(adj_ms1)),
     lo     = c(quantile(adj_ms0, .025), quantile(adj_ms1, .025)),
     hi     = c(quantile(adj_ms0, .975), quantile(adj_ms1, .975)),
-    source = "Hub-adjusted (model)"
+    source = "Hub-adjusted"
 )
 
 plot_df <- bind_rows(raw, adj) %>%
@@ -48,8 +49,8 @@ hub_adjusted_concordance_plot <- ggplot(plot_df, aes(ms, p, colour = source, gro
     ) +
     scale_y_continuous(labels = scales::percent_format(accuracy = 0.01)) +
     scale_colour_manual(values = c(
-        "Raw data" = "#706868",
-        "Hub-adjusted (model)" = "#b1560c"
+        "Naive" = "blue",
+        "Hub-adjusted" = "darkorange"
     )) +
     labs(
         x = "MS Detection",
@@ -57,12 +58,8 @@ hub_adjusted_concordance_plot <- ggplot(plot_df, aes(ms, p, colour = source, gro
         colour = NULL,
         title = "Y2H detection among MS pairs",
     ) +
-    annotate("segment",
-        x = 1, xend = 2, y = min(plot_df$p) * 0.6,
-        yend = min(plot_df$p) * 0.6, linetype = 3, colour = "grey40"
-    ) +
-    theme_bw(base_size = 13) +
-    theme(legend.position = "top", panel.grid.minor = element_blank())
+    theme_bw() +
+    theme(legend.position = "bottom")
 
 
 re <- ranef(fit)$mmprotein_aprotein_b[, , "Intercept"] |> as.data.frame()
@@ -78,10 +75,10 @@ mixed_effect_dist_plot <- ggplot(re, aes(Estimate)) +
 
 ggsave(snakemake@output$mixed_effects_dist,
     mixed_effect_dist_plot,
-    dpi = 300, height = 4, width = 8
+    dpi = 300, height = 4, width = 4
 )
 ggsave(snakemake@output$hub_adjusted_concordance,
     hub_adjusted_concordance_plot,
-    dpi = 300, height = 4, width = 8
+    dpi = 300, height = 4, width = 4
 )
 

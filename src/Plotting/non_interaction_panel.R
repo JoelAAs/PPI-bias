@@ -3,14 +3,11 @@ library(magrittr)
 library(tidyverse)
 library(arrow)
 
-PLOT_DIR <- "work_folder/plots/POD/plots"
-dir.create(PLOT_DIR, showWarnings = FALSE, recursive = TRUE)
-
 # Lazy arrow dataset: only the columns used below are scanned, and
 # filter/group_by/count are pushed down so we never materialize the
 # full 98M-row table in R.
+ds <- open_dataset(snakemake@input$pod) %>%
   select(uniprot_id_bait, uniprot_id_prey, n_tested, n_observed,
-ds <- open_dataset("work_folder/analysis/POD/undirectional/POD_flat.pq") %>%
          lower_bound_pod, upper_bound_pod)
 
 non_observed <- ds %>% filter(n_observed == 0)
@@ -37,28 +34,27 @@ p_degree <- ggplot(
   theme_bw() +
   theme(plot.title = element_text(size = 10))
 
-ggsave(file.path(PLOT_DIR, "non_interaction_degree_distribution.png"),
+ggsave(snakemake@output$degree_distribution,
        p_degree, width = 5, height = 3, dpi = 300)
 
-## ---- Plot 2: n_tested density for non-interactions ---------------------
+## ---- Plot 2: n_tested histogram for non-interactions --------------------
 n_tested_counts <- non_observed %>% count(n_tested) %>% collect()
-n_tested_total  <- sum(n_tested_counts$n)
-n_tested_df <- n_tested_counts %>% mutate(weight = n / n_tested_total)
 
 p_ntested <- ggplot(
-  n_tested_df,
-  aes(x = n_tested, weight = weight)
+  n_tested_counts,
+  aes(x = n_tested, weight = n)
 ) +
-  geom_density(fill = "darkorange", alpha = 0.6) +
+  geom_histogram(fill = "darkorange", bins = 50) +
+  scale_y_log10() +
   labs(
-    x = "Number of test",
-    y = "Percentage of edges",
-    title = "Density of non-interactions vs times tested"
+    x = "Number of tests",
+    y = expression(log[10]("N non-interacting protein pairs")),
+    title = "Number of tests for non-interacting proteins"
   ) +
   theme_bw() +
   theme(plot.title = element_text(size = 10))
 
-ggsave(file.path(PLOT_DIR, "n_tested_density_non_interaction.png"),
+ggsave(snakemake@output$ntested_histogram,
        p_ntested, width = 5, height = 3, dpi = 300)
 
 ## ---- Plot 3: lower/upper bound POD scatter + contour, all pairs --------
@@ -96,10 +92,30 @@ p_pod_bounds <- ggplot(
   theme_bw() +
   theme(plot.title = element_text(size = 10))
 
-ggsave(file.path(PLOT_DIR, "pod_bounds_scatter.png"),
+ggsave(snakemake@output$pod_bounds_scatter,
        p_pod_bounds, width = 5, height = 3, dpi = 300)
 
-## ---- Plot 4: median non-interaction degree by n_tested -----------------
+## ---- Plot 4: lower_bound_pod distribution, observed interactions -------
+observed_pod_df <- pod_bounds_df %>% filter(n_observed > 0)
+
+p_lower_pod_observed <- ggplot(
+  observed_pod_df,
+  aes(x = lower_bound_pod, weight = count)
+) +
+  geom_histogram(fill = "steelblue", bins = 50) +
+  scale_y_log10() +
+  labs(
+    x = expression(Q[2.5]),
+    y = expression(log[10]("Number of protein pairs")),
+    title = "Lower bound POD of observed interactions"
+  ) +
+  theme_bw() +
+  theme(plot.title = element_text(size = 10))
+
+ggsave(snakemake@output$lower_pod_histogram,
+       p_lower_pod_observed, width = 5, height = 3, dpi = 300)
+
+## ---- Plot 5: median non-interaction degree by n_tested -----------------
 gene_n_tested_counts <- bind_rows(
   non_observed %>% count(gene = uniprot_id_bait, n_tested) %>% collect(),
   non_observed %>% count(gene = uniprot_id_prey, n_tested) %>% collect()
@@ -134,5 +150,5 @@ p_median_degree <- ggplot(
   theme_bw() +
   theme(plot.title = element_text(size = 10))
 
-ggsave(file.path(PLOT_DIR, "median_degree_by_n_tested.png"),
+ggsave(snakemake@output$median_degree,
        p_median_degree, width = 5, height = 3, dpi = 300)

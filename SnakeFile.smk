@@ -26,8 +26,10 @@ include: "src/Analysis/ExperimentalNegatome/experimental_negatome.smk"
 include: "src/Analysis/AbundanceAwareDetection/MCMC_abundance.smk"
 
 include: "src/Analysis/Annotation/AnnotationProbabilities.smk"
+include: "src/Analysis/Annotation/InterfaceStatistics.smk"
 
 include: "src/Analysis/Expression/Coexpression.smk"
+include: "src/Analysis/Co-essentiality/CoEssensiality.smk"
 include: "src/Analysis/NonInteractionHubs/NoInteractionHubs.smk"
 include: "src/Analysis/NonInteractionHubs/DegreeQuadrants.smk"
 include: "src/Analysis/MethodConcordance/MethodConcordance.smk"
@@ -70,21 +72,28 @@ rule all:
     input:
         expand("work_folder/classification/{classifier}/permuted/all_metrics_{network_type}_{esm_model}.csv",
             classifier="xgboost", network_type="undirectional",esm_model="ESM2"),
-        #"work_folder/analysis/shared_annotation_proportions/plots/undirectional_OR.png",
+        "work_folder/analysis/shared_annotation_proportions/plots/undirectional_OR.png",
+        
         # Module 1: co-expression
         "work_folder/analysis/coexpression/plots/undirectional_expression_boxplot.png",
         "work_folder/analysis/coexpression/plots/undirectional_expression_or_barplot.png",
+        
+        # Module 5: co-essentiality
+        "work_folder/analysis/coessentiality/plots/undirectional_coessentiality_OR.png",
+        
         # Module 4: assay concordance
-        #"work_folder/analysis/assay_concordance/plots/concordance.png",
         "work_folder/analysis/protein_degree/plots/undirectional_degree_distributions.png",
         "work_folder/analysis/protein_degree/plots/undirectional_degree_bin_heatmap.png",
         "work_folder/analysis/protein_degree/plots/undirectional_degree_dist.png",
-        #expand("work_folder/analysis/degree_quadrants/{dataset}_undirectional_go_enrichment.tsv",
-        #    dataset=config["datasets"]),
+
         ## Module 2: no-interaction hubs
         "work_folder/analysis/no_interaction_hubs/plots/undirectional_hub_properties_binary.png",
         "work_folder/analysis/no_interaction_hubs/plots/undirectional_hub_properties_continuous.png",
+        
         # Method concordance: shared negatives test
         "work_folder/analysis/method_concordance/undirectional/shared_negatives_fit.rds",
         "work_folder/analysis/method_concordance/undirectional/shared_negatives_summary.txt",
-        "work_folder/analysis/method_concordance/undirectional/mixed_effects_dist.png"
+        "work_folder/analysis/method_concordance/undirectional/mixed_effects_dist.png",
+        
+        # Interface size vs detection ratio
+        "work_folder/analysis/interfaces/plots/undirectional_interface_detection.png"

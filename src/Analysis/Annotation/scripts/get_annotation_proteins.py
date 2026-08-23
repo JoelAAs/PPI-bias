@@ -35,13 +35,13 @@ def get_go_genes(entrez_ids):
         go_terms = go_q.get('go', {})
         go_match = go_terms.get("BP", {})
         if isinstance(go_match, list):
-            gos = {go["id"] for go in go_match}
+            gos = {(go["id"], go.get("term", go["id"])) for go in go_match}
         elif "id" in go_match:
-            gos = {go_match["id"]}
+            gos = {(go_match["id"], go_match.get("term", go_match["id"]))}
         else:
             gos = set()
-        for go in gos:
-            rows.append((gene, go))
+        for go_id, go_term in gos:
+            rows.append((gene, f"{go_id} ({go_term})"))
 
     return pd.DataFrame(rows, columns=["gene_id", "go_id"])
 

@@ -196,6 +196,7 @@ g_acc <- ggplot(
   acc_summary,
   aes(x = metric, y = mean_acc, fill = random)
 ) +
+  geom_hline(yintercept = 0.5, linetype = "dashed", color = "grey40") +
   geom_col(position = position_dodge(width = 0.7), width = 0.6) +
   geom_errorbar(
     aes(ymin = ci_lo, ymax = ci_hi),
@@ -215,7 +216,7 @@ g_acc <- ggplot(
   theme_bw() +
   theme(
     legend.position = "bottom",
-    axis.text.x = element_text(angle = -20, hjust = 0, vjust = 1)
+    axis.text.x = element_text(angle = -30, hjust = 0, vjust = 1)
   )
 
 ggsave("manual_figures/accuracy_barplot.png", g_acc, height = 4.5, width = 6)

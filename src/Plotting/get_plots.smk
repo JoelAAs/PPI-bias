@@ -1,3 +1,18 @@
+rule plot_non_interaction_panel:
+    input:
+        pod = "work_folder/analysis/POD/{network_type}/POD_{dataset}.pq"
+    output:
+        degree_distribution = "work_folder/plots/POD/{network_type}/{dataset}/non_interaction_degree_distribution.png",
+        ntested_histogram = "work_folder/plots/POD/{network_type}/{dataset}/n_tested_density_non_interaction.png",
+        pod_bounds_scatter = "work_folder/plots/POD/{network_type}/{dataset}/pod_bounds_scatter.png",
+        lower_pod_histogram = "work_folder/plots/POD/{network_type}/{dataset}/lower_bound_pod_histogram_observed.png",
+        median_degree = "work_folder/plots/POD/{network_type}/{dataset}/median_degree_by_n_tested.png"
+    log:
+        "logs/plots/POD/{network_type}/{dataset}/non_interaction_panel.log"
+    script:
+        "non_interaction_panel.R"
+
+
 rule get_cell_line_prey_plot:
     params:
         part_or_difference_cutoff = config["part_or_difference_cutoff"],

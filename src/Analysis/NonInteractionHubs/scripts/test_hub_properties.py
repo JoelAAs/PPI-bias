@@ -49,16 +49,16 @@ def build_features(accessions, uniprot_df, disorder_df):
     return df
 
 
-def fisher_or(hub_vals, ref_vals):
-    table = [[hub_vals.sum(), (~hub_vals).sum()], [ref_vals.sum(), (~ref_vals).sum()]]
+def fisher_or(ni_hub_vals, i_hub_vals):
+    table = [[ni_hub_vals.sum(), (~ni_hub_vals).sum()], [i_hub_vals.sum(), (~i_hub_vals).sum()]]
     obs_or, p_val = fisher_exact(table)
     return float(obs_or), float(p_val)
 
 
-def mannwhitney_pct_diff(hub_vals, ref_vals):
-    """% difference in the mean (hub vs reference), relative to the reference mean."""
-    obs_pct = float((hub_vals.mean() - ref_vals.mean()) / abs(ref_vals.mean()) * 100)
-    _, p_val = mannwhitneyu(hub_vals, ref_vals, alternative="two-sided")
+def mannwhitney_pct_diff(ni_hub_vals, i_hub_vals):
+    """% difference in the mean (ni_hub vs i_hub), relative to the i_hub mean."""
+    obs_pct = float((ni_hub_vals.mean() - i_hub_vals.mean()) / abs(i_hub_vals.mean()) * 100)
+    _, p_val = mannwhitneyu(ni_hub_vals, i_hub_vals, alternative="two-sided")
     return obs_pct, float(p_val)
 
 
@@ -69,41 +69,41 @@ if __name__ == "__main__":
     uniprot_df = pd.read_csv(snakemake.input.uniprot_annotation, sep="\t")
     disorder_df = pd.read_csv(snakemake.input.disorder, sep="\t")
 
-    hub_ids = hub_set.loc[hub_set["hub_status"] == "non-interaction", "uniprot_id"].tolist()
-    reference_ids = hub_set.loc[hub_set["hub_status"] == "interaction", "uniprot_id"].tolist()
-    print(f"{len(hub_ids)} non-interaction hubs, {len(reference_ids)} interaction "
-          f"reference proteins", file=log, flush=True)
+    ni_hub_ids = hub_set.loc[hub_set["hub_status"] == "non-interaction", "uniprot_id"].tolist()
+    i_hub_ids = hub_set.loc[hub_set["hub_status"] == "interaction", "uniprot_id"].tolist()
+    print(f"{len(ni_hub_ids)} non-interaction hubs (ni_hub), {len(i_hub_ids)} interaction "
+          f"hubs (i_hub)", file=log, flush=True)
 
-    if not hub_ids or not reference_ids:
-        print("Hub set or reference set is empty - writing an empty "
+    if not ni_hub_ids or not i_hub_ids:
+        print("ni_hub set or i_hub set is empty - writing an empty "
               "enrichment table, no testing performed.", file=log, flush=True)
         pd.DataFrame(columns=["feature", "feature_type", "effect", "p_val", "q_val",
-                               "n_hub", "n_reference"]).to_csv(
+                               "n_ni_hub", "n_i_hub"]).to_csv(
             snakemake.output.enrichment, sep="\t", index=False
         )
         log.close()
         raise SystemExit(0)
 
-    all_ids = sorted(set(hub_ids) | set(reference_ids))
+    all_ids = sorted(set(ni_hub_ids) | set(i_hub_ids))
     features_df = build_features(all_ids, uniprot_df, disorder_df).set_index("uniprot_id")
 
     rows = []
     for feat in BINARY_FEATURES:
-        hub_vals = features_df.loc[hub_ids, feat].to_numpy(dtype=bool)
-        ref_vals = features_df.loc[reference_ids, feat].to_numpy(dtype=bool)
-        obs_or, p_val = fisher_or(hub_vals, ref_vals)
+        ni_hub_vals = features_df.loc[ni_hub_ids, feat].to_numpy(dtype=bool)
+        i_hub_vals = features_df.loc[i_hub_ids, feat].to_numpy(dtype=bool)
+        obs_or, p_val = fisher_or(ni_hub_vals, i_hub_vals)
         print(f"{feat}: OR={obs_or:.3f} p={p_val:.4g}", file=log, flush=True)
         rows.append({"feature": feat, "feature_type": "binary", "effect": obs_or,
-                      "p_val": p_val, "n_hub": len(hub_ids), "n_reference": len(reference_ids)})
+                      "p_val": p_val, "n_ni_hub": len(ni_hub_ids), "n_i_hub": len(i_hub_ids)})
 
     for feat in CONTINUOUS_FEATURES:
-        hub_vals = features_df.loc[hub_ids, feat].dropna().to_numpy(dtype=float)
-        ref_vals = features_df.loc[reference_ids, feat].dropna().to_numpy(dtype=float)
-        obs_pct, p_val = mannwhitney_pct_diff(hub_vals, ref_vals)
-        print(f"{feat}: hub vs reference % diff={obs_pct:.4g}% p={p_val:.4g}",
+        ni_hub_vals = features_df.loc[ni_hub_ids, feat].dropna().to_numpy(dtype=float)
+        i_hub_vals = features_df.loc[i_hub_ids, feat].dropna().to_numpy(dtype=float)
+        obs_pct, p_val = mannwhitney_pct_diff(ni_hub_vals, i_hub_vals)
+        print(f"{feat}: ni_hub vs i_hub % diff={obs_pct:.4g}% p={p_val:.4g}",
               file=log, flush=True)
         rows.append({"feature": feat, "feature_type": "continuous", "effect": obs_pct,
-                      "p_val": p_val, "n_hub": len(hub_vals), "n_reference": len(ref_vals)})
+                      "p_val": p_val, "n_ni_hub": len(ni_hub_vals), "n_i_hub": len(i_hub_vals)})
 
     result_df = pd.DataFrame(rows)
     result_df["q_val"] = benjamini_hochberg(result_df["p_val"].to_numpy())

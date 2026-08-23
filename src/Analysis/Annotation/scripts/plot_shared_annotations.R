@@ -29,6 +29,8 @@ df <- bind_rows(lapply(snakemake@input, read_one)) %>%
     log10_ci_hi = log10(ci_hi)
   )
 
+strip_go_id <- function(x) sub("^GO:[0-9]+\\s*\\((.*)\\)$", "\\1", x)
+
 annotation_order <- df %>%
   group_by(annotation_type, annotation) %>%
   summarise(mean_log10_or = mean(log10_or), .groups = "drop") %>%
@@ -36,7 +38,7 @@ annotation_order <- df %>%
   pull(annotation)
 
 df <- df %>%
-  mutate(annotation = factor(annotation, levels = annotation_order))
+  mutate(annotation = factor(strip_go_id(annotation), levels = strip_go_id(annotation_order)))
 
 max_log10_ci_hi <- max(df$log10_ci_hi, na.rm = TRUE)
 
@@ -53,8 +55,8 @@ g <- ggplot(
   ) +
   facet_wrap(~ dataset_label, nrow = 1) +
   labs(
-    title = "Shared-annotation odds ratio",
-    x = expression(log[10](odds~ratio)),
+    title = "Shared annotation: HRI vs HRNI",
+    x = expression(log[10]("Odds ratio")),
     y = "",
     color = "Annotation type"
   ) +
@@ -64,4 +66,4 @@ g <- ggplot(
     legend.position = "bottom"
   )
 
-ggsave(snakemake@output[[1]], g, dpi = 300, height = 5, width = 5)
+ggsave(snakemake@output[[1]], g, dpi = 300, height = 4, width = 7)
