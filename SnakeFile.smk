@@ -27,6 +27,7 @@ include: "src/Analysis/AbundanceAwareDetection/MCMC_abundance.smk"
 
 include: "src/Analysis/Annotation/AnnotationProbabilities.smk"
 include: "src/Analysis/Annotation/InterfaceStatistics.smk"
+include: "src/Analysis/InterfaceStatistics/ProteinInterfaces.smk"
 
 include: "src/Analysis/Expression/Coexpression.smk"
 include: "src/Analysis/Co-essentiality/CoEssensiality.smk"
@@ -96,4 +97,5 @@ rule all:
         "work_folder/analysis/method_concordance/undirectional/mixed_effects_dist.png",
         
         # Interface size vs detection ratio
-        "work_folder/analysis/interfaces/plots/undirectional_interface_detection.png"
+        "work_folder/analysis/interfaces/plots/undirectional_interface_detection.png",
+        "work_folder/analysis/interfaces/y2h_undirectional_interfaces.pq"
