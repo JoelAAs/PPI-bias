@@ -98,4 +98,4 @@ rule all:
         
         # Interface size vs detection ratio
         "work_folder/analysis/interfaces/plots/undirectional_interface_detection.png",
-        "work_folder/analysis/interfaces/y2h_undirectional_interfaces.pq"
+        expand("work_folder/analysis/interfaces/{dataset}_interface_size_model.png", dataset = "flat")
