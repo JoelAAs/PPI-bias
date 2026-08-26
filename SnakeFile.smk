@@ -71,8 +71,21 @@ wildcard_constraints:
 
 rule all:
     input:
+        # Classification metrics
         expand("work_folder/classification/{classifier}/permuted/all_metrics_{network_type}_{esm_model}.csv",
             classifier="xgboost", network_type="undirectional",esm_model="ESM2"),
+        "work_folder/classification/xgboost/full_test_predictions/jaccard/all_jaccard_ESM2_undirectional_similarity.tsv",
+        "work_folder/classification/xgboost/permuted/negative_accuracy/plots/undirectional_ESM2_negative_accuracy_hrni_vs_no.png",
+        "work_folder/classification/xgboost/permuted/negative_accuracy/plots/undirectional_ESM2_hrni_positive_vs_negative_accuracy.png",
+        "work_folder/classification/xgboost/full_test_predictions/jaccard/plots/ESM2_undirectional_jaccard_negative_hrni_vs_no.png",
+        "work_folder/classification/xgboost/full_test_predictions/jaccard/plots/ESM2_undirectional_jaccard_interaction_vs_negative_hrni.png",
+
+        # Train subset similarity (content + degree across permutations, and negative/positive degree balance)
+        "work_folder/analysis/subset_similarity/balance/plots/undirectional_degree_balance.png",
+        "work_folder/analysis/subset_similarity/plots/undirectional_permutation_jaccard.png",
+        "work_folder/analysis/subset_similarity/plots/undirectional_permutation_spearman.png",
+
+        # Localisation analysis
         "work_folder/analysis/shared_annotation_proportions/plots/undirectional_OR.png",
         
         # Module 1: co-expression
@@ -98,4 +111,5 @@ rule all:
         
         # Interface size vs detection ratio
         "work_folder/analysis/interfaces/plots/undirectional_interface_detection.png",
-        expand("work_folder/analysis/interfaces/{dataset}_interface_size_model.png", dataset = "flat")
+
+        expand("work_folder/analysis/interfaces/plots/{dataset}_interface_size_model.png", dataset = "flat"),

@@ -20,6 +20,8 @@ def main():
     
     all_nodes = list(set(sel_neg_df["bait"]) | set(sel_neg_df["prey"]) )
     pos_set = set(zip(pos_df["bait"], pos_df["prey"])) | set(zip(sel_neg_df["bait"], sel_neg_df["prey"]))
+    if not directed:
+        pos_set |= {(v, u) for u, v in pos_set}
     comp_df = pd.DataFrame(
         [(u, v) for u in all_nodes for v in all_nodes if u != v and (u, v) not in pos_set],
         columns=["bait", "prey"],

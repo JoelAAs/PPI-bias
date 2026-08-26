@@ -2,7 +2,7 @@ import gzip
 import os
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
-from Bio.PDB import MMCIFParser, NeighborSearch
+from Bio.PDB import MMCIFParser, NeighborSearch, is_aa
 import pandas as pd
 import requests
 from requests.adapters import HTTPAdapter
@@ -25,32 +25,77 @@ def make_session(total_retries=5, backoff_factor=1.0):
     return session
 
 
-def build_entry_accessions(sifts_path, human_proteins, log):
-    ent = defaultdict(set)
-    ent_chains = defaultdict(lambda: defaultdict(set))
+def build_chain_map(sifts_path, human_proteins, log):
+    chain_accs = defaultdict(set)                            # (pdb,chain) -> {acc, ...}
+    ranges = defaultdict(lambda: defaultdict(list))          # (pdb,chain) -> acc -> [(pdb_beg, pdb_end), ...]
     opener = gzip.open if sifts_path.endswith(".gz") else open
     n = 0
     with opener(sifts_path, "rt") as fh:
-        for line in fh:
-            if line.startswith("#"):
+        for ln in fh:
+            if ln.startswith("#"):
                 continue
-            f = line.rstrip("\r\n").split("\t")
-            if len(f) < 3 or f[2] == "SP_PRIMARY":
+            f = ln.rstrip("\r\n").split("\t")
+            if len(f) < 7 or f[2] == "SP_PRIMARY":
                 continue
-            pdb, chain, acc = f[0].upper(), f[1], f[2]
+            acc = f[2]
             if acc not in human_proteins:
                 continue
-
-            ent[pdb].add(acc)
-            ent_chains[pdb][chain].add(acc)
+            pdb, chain = f[0].upper(), f[1]
+            chain_accs[(pdb, chain)].add(acc)
+            ranges[(pdb, chain)][acc].append((f[5], f[6]))
             n += 1
 
-    print(f"Uniprot->PDB ids: {n} from {sifts_path}", file=log, flush=True)
-    ent = {e: a for e, a in ent.items() if len(a) >= 2}
-    ent_chains = {e: dict(ent_chains[e]) for e in ent}
-    print(f"PDB entries with >=2 human chains: {len(ent)}", file=log, flush=True)
+    def _residue_window(raw_ranges):
+        allowed = set()
+        for beg, end in raw_ranges:
+            if not beg or not end:                          # blank author numbering, can't map
+                continue
+            try:
+                b, e = int(beg), int(end)
+            except ValueError:
+                continue
+            allowed.update(range(b, e + 1))
+        return allowed
 
-    return ent, ent_chains
+    chain_map = defaultdict(lambda: defaultdict(dict))
+    fusions = []
+    dropped = 0
+    for (pdb, chain), accs in chain_accs.items():
+        if len(accs) > 1:                                   # fusion: multiple accessions on one chain
+            windows = {a: _residue_window(ranges[(pdb, chain)][a]) for a in accs}
+            dominant = max(windows, key=lambda a: len(windows[a]))
+            fusions.append((pdb, chain, {a: len(w) for a, w in windows.items()}, dominant))
+            if windows[dominant]:
+                chain_map[pdb][dominant][chain] = windows[dominant]
+            else:
+                dropped += 1                                # no candidate has a usable residue range
+        else:
+            (acc,) = accs
+            chain_map[pdb][acc][chain] = None
+
+    chain_map = {p: {a: dict(c) for a, c in accs.items()} for p, accs in chain_map.items()}
+    print(f"Uniprot->PDB ids: {n} from {sifts_path}", file=log, flush=True)
+    print(f"Fusion chains detected: {len(fusions)} ({dropped} dropped, no usable residue window)", file=log, flush=True)
+    print(f"PDB entries retained: {len(chain_map)}", file=log, flush=True)
+    return chain_map, fusions
+
+
+def read_fasta_lengths(fasta_file):
+    lengths = {}
+    with open(fasta_file) as f:
+        acc = None
+        length = 0
+        for line in f:
+            if line.startswith(">"):
+                if acc is not None:
+                    lengths[acc] = length
+                acc = line.split("|")[1]
+                length = 0
+            else:
+                length += len(line.strip())
+        if acc is not None:
+            lengths[acc] = length
+    return lengths
 
 
 def load_protein_pair_file(pod_file):
@@ -59,15 +104,28 @@ def load_protein_pair_file(pod_file):
     return proteins, df
 
 
-def match_protein_pairs_to_pdbs(pp_df, ent, session, log):
-    prot2ent_dict = defaultdict(set)
-    for ent_id, prot_ids in ent.items():
-        for prot in prot_ids:
-            prot2ent_dict[prot].add(ent_id)
+def match_protein_pairs_to_pdbs(pp_df, chain_map, session, log):
+    """Pick one PDB entry per pair from chain_map (see build_chain_map).
+
+    A candidate is only considered if both bait and prey are the kept
+    (dominant) protein on at least one chain in that entry - a candidate
+    where one side is only ever a fusion tag can never yield an interface,
+    so it's excluded here rather than being selected and failing later.
+
+    Among remaining candidates, entries are ranked first by how fusion-free
+    they are for this specific pair (both sides on a clean, non-fusion
+    chain beats one side fusion-restricted beats both sides restricted),
+    and only resolution breaks ties within a tier - a worse-resolution
+    clean structure is preferred over a better-resolution fusion structure.
+    """
+    prot2pdbs = defaultdict(set)
+    for pdb, accs in chain_map.items():
+        for acc in accs:
+            prot2pdbs[acc].add(pdb)
 
     pp_df["matching_pdb"] = pp_df.apply(
-        lambda row: prot2ent_dict[row["uniprot_id_bait"]]
-        & prot2ent_dict[row["uniprot_id_prey"]],
+        lambda row: prot2pdbs[row["uniprot_id_bait"]]
+        & prot2pdbs[row["uniprot_id_prey"]],
         axis=1,
     )
     pp_df = pp_df[pp_df["matching_pdb"].map(len) > 0].copy()
@@ -76,24 +134,28 @@ def match_protein_pairs_to_pdbs(pp_df, ent, session, log):
 
     resolution_dict = {pdb: get_resolution(pdb, session) for pdb in unique_multi_pdbs}
 
-    print("Resolved best-resolution PDB entry per pair", file=log, flush=True)
+    print("Resolved best structure per pair (non-fusion first, then resolution)", file=log, flush=True)
 
-    def _get_min_resolution(pdb_set, resolution_dict):
+    def _fusion_tier(pdb, acc):
+        # 0 = has at least one clean (non-fusion) chain, 1 = fusion-restricted only
+        windows = chain_map.get(pdb, {}).get(acc, {})
+        return 0 if any(w is None for w in windows.values()) else 1
+
+    def _select_pdb(row):
+        pdb_set = row["matching_pdb"]
         if len(pdb_set) == 1:
             return next(iter(pdb_set))
 
-        min_res = float("inf")
-        best_pdb = None
-        for pdb in pdb_set:
+        def _key(pdb):
+            fusion_score = _fusion_tier(pdb, row["uniprot_id_bait"]) + _fusion_tier(pdb, row["uniprot_id_prey"])
             res = resolution_dict.get(pdb)
             if res is None: #nmr
                 res = 50 # set large
-            if res < min_res:
-                min_res = res
-                best_pdb = pdb
-        return best_pdb
+            return (fusion_score, res)
 
-    pp_df["matching_pdb"] = pp_df["matching_pdb"].apply(lambda x: _get_min_resolution(x, resolution_dict))
+        return min(pdb_set, key=_key)
+
+    pp_df["matching_pdb"] = pp_df.apply(_select_pdb, axis=1)
 
     return pp_df
 
@@ -148,54 +210,65 @@ def download_pdb_structures(pp_df, session, pdb_folder, log):
             print(f"Progress: {i}/{len(pdb_ids)} PDB structures ({n_cached} already cached)", file=log, flush=True)
 
 
-def get_interface_residues(structure, chains_a, chains_b, max_distance=6.0):
+
+def get_interface_residues(structure, smaller_windows, other_windows, max_distance=6.0):
+    """smaller_windows/other_windows: {chain_id: allowed_resseq_set_or_None}.
+
+    None means no residue-level restriction (use the whole chain); a set
+    restricts atoms to that chain's real-protein residue range (fusion
+    chains only, see build_chain_map).
+    """
     model = next(structure.get_models())
 
-    atoms_a = [
-        atom for chain in model if chain.id in chains_a for atom in chain.get_atoms()
-    ]
-    atoms_b = [
-        atom for chain in model if chain.id in chains_b for atom in chain.get_atoms()
-    ]
+    def _chain_atoms(windows):
+        atoms = []
+        for c in model:
+            if c.id not in windows:
+                continue
+            allowed = windows[c.id]
+            for res in c:
+                if not is_aa(res, standard=False):
+                    continue
+                if allowed is not None and res.id[1] not in allowed:
+                    continue
+                atoms.extend(res.get_atoms())
+        return atoms
 
-    ns_b = NeighborSearch(atoms_b)
-    ns_a = NeighborSearch(atoms_a)
-    n_residues = 0
+    atoms_smaller = _chain_atoms(smaller_windows)
+    atoms_other = _chain_atoms(other_windows)
+    ns = NeighborSearch(atoms_smaller)
+    positions = set()
+    for atom in atoms_other:
+        for r in ns.search(atom.coord, max_distance, level="R"):
+            positions.add(r.id[1:])
+    return len(positions)
 
-    res_b = set()
-    for atom in atoms_a:
-        for r in ns_b.search(atom.coord, max_distance, level="R"):
-            res_b.add(r)
-
-    res_a = set()
-    for atom in atoms_b:
-        for r in ns_a.search(atom.coord, max_distance, level="R"):
-            res_a.add(r)
-            
-    n_res_a, n_res_b = len(res_a), len(res_b)
-    avg = (n_res_a + n_res_b) / 2
-    return n_res_a, n_res_b, avg
-
-def get_interface_sizes_for_structure(pdb_id, pairs, ent_chains, pdb_folder, min_residues_per_side, max_distance=6.0):
+def get_interface_sizes_for_structure(pdb_id, pairs, chain_map, pdb_folder, lengths, min_residues, max_distance=6.0):
     with gzip.open(f"{pdb_folder}/{pdb_id}.cif.gz", "rt") as fh:
         structure = MMCIFParser(QUIET=True).get_structure(pdb_id, fh)
 
     sizes = {}
     for idx, acc_a, acc_b in pairs:
-        chains_a = [chain for chain, prots in ent_chains[pdb_id].items() if acc_a in prots]
-        chains_b = [chain for chain, prots in ent_chains[pdb_id].items() if acc_b in prots]
-        if not chains_a or not chains_b:
-            raise ValueError(f"Chains for {acc_a} or {acc_b} not found in PDB {pdb_id}")
-        n_res_a, n_res_b, avg = get_interface_residues(structure, chains_a, chains_b, max_distance)
-        if min(n_res_a, n_res_b) < min_residues_per_side:
+        windows_a = chain_map.get(pdb_id, {}).get(acc_a, {})
+        windows_b = chain_map.get(pdb_id, {}).get(acc_b, {})
+        if not windows_a or not windows_b:
             sizes[idx] = 0
+            continue
+
+        if lengths[acc_a] <= lengths[acc_b]:
+            smaller_windows_all, other_windows = windows_a, windows_b
         else:
-            sizes[idx] = avg
+            smaller_windows_all, other_windows = windows_b, windows_a
+
+        n_residues = max(
+            get_interface_residues(structure, {chain: allowed}, other_windows, max_distance)
+            for chain, allowed in smaller_windows_all.items()
+        )
+        sizes[idx] = n_residues if n_residues >= min_residues else 0
     return sizes
 
 
-def set_interface_sizes(pp_df, ent_chains, pdb_folder, log, min_residues_per_side=3, max_workers=None):
-    # check residue contanct on both sides of the interface
+def set_interface_sizes(pp_df, chain_map, pdb_folder, lengths, log, min_residues=3, max_workers=None):
     groups = [
         (pdb_id, list(sub_df[["uniprot_id_bait", "uniprot_id_prey"]].itertuples(name=None)))
         for pdb_id, sub_df in pp_df.groupby("matching_pdb")
@@ -204,14 +277,14 @@ def set_interface_sizes(pp_df, ent_chains, pdb_folder, log, min_residues_per_sid
     sizes = {}
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = [
-            executor.submit(get_interface_sizes_for_structure, pdb_id, pairs, ent_chains, pdb_folder, min_residues_per_side)
+            executor.submit(get_interface_sizes_for_structure, pdb_id, pairs, chain_map, pdb_folder, lengths, min_residues)
             for pdb_id, pairs in groups
         ]
         for future in futures:
             sizes.update(future.result())
 
     pp_df["interface_residues"] = pp_df.index.map(sizes)
-    pp_df = pp_df[pp_df["interface_residues"] > 0] # remoce pairs with no interface residues on either side
+    pp_df = pp_df[pp_df["interface_residues"] > 0] # remove pairs with no interface residues on the smaller protein's side
     print(f"Computed interface sizes for {len(pp_df)} pairs across {len(groups)} structures", file=log, flush=True)
     return pp_df
 
@@ -220,6 +293,7 @@ if __name__ == "__main__":
     matched_pairs_file = snakemake.input.matched_pairs
     sifts_path = snakemake.input.sifts_file
     pdb_folder = snakemake.input.pdb_folder
+    fasta_file = snakemake.input.gene_fasta
     output_file = snakemake.output.interface_annotated
     log_file = snakemake.log[0]
 
@@ -228,9 +302,13 @@ if __name__ == "__main__":
     pp_df = pd.read_parquet(matched_pairs_file)
     human_proteins = set(pp_df["uniprot_id_bait"]) | set(pp_df["uniprot_id_prey"])
     print(f"Loaded {len(pp_df)} matched pairs over {len(human_proteins)} proteins", file=log, flush=True)
-    _, ent_chains = build_entry_accessions(sifts_path, human_proteins, log)
+    chain_map, fusions = build_chain_map(sifts_path, human_proteins, log)
 
-    pp_df = set_interface_sizes(pp_df, ent_chains, pdb_folder, log, max_workers=snakemake.threads)
+    lengths = read_fasta_lengths(fasta_file)
+    pp_df = pp_df[pp_df["uniprot_id_bait"].isin(lengths) & pp_df["uniprot_id_prey"].isin(lengths)]
+    print(f"{len(pp_df)} pairs with known protein lengths", file=log, flush=True)
+
+    pp_df = set_interface_sizes(pp_df, chain_map, pdb_folder, lengths, log, max_workers=snakemake.threads)
     pp_df.to_parquet(output_file, index=False)
     print("Done.", file=log, flush=True)
     log.close()

@@ -33,11 +33,12 @@ rule match_pairs_to_pdbs:
         "scripts/match_pairs_to_pdbs.py"
 
 
-rule annotate_interfaces:
+rule set_interface_size:
     input:
         matched_pairs = "work_folder/analysis/interfaces/{dataset}_matched_pdbs.pq",
         sifts_file = "work_folder/analysis/interface/pdb_chain_uniprot.tsv.gz",
-        pdb_folder = "work_folder/analysis/interfaces/pdb_structures"
+        pdb_folder = "work_folder/analysis/interfaces/pdb_structures",
+        gene_fasta = "work_folder/protein_sequences/uniprot_canonical.fasta"
     output:
         interface_annotated = "work_folder/analysis/interfaces/{dataset}_undirectional_interfaces.pq"
     threads: 10
@@ -51,7 +52,7 @@ rule model_interface_vs_min_size:
         gene_fasta = "work_folder/protein_sequences/uniprot_canonical.fasta",
         interface_annotated = "work_folder/analysis/interfaces/{dataset}_undirectional_interfaces.pq"
     output:
-        model = "work_folder/analysis/interfaces/{dataset}_interface_size_model.joblib",
+        model = "work_folder/analysis/interfaces/model/{dataset}_interface_size_model.joblib",
         protein_lengths = "work_folder/analysis/interfaces/{dataset}_protein_lengths.csv"
     log:
         "logs/analysis/interfaces/{dataset}_interface_size_model.log"
@@ -61,10 +62,10 @@ rule model_interface_vs_min_size:
 
 rule plot_interface_size_model:
     input:
-        model = "work_folder/analysis/interfaces/{dataset}_interface_size_model.joblib",
+        model = "work_folder/analysis/interfaces/model/{dataset}_interface_size_model.joblib",
         protein_lengths = "work_folder/analysis/interfaces/{dataset}_protein_lengths.csv"
     output:
-        plot = "work_folder/analysis/interfaces/{dataset}_interface_size_model.png"
+        plot = "work_folder/analysis/interfaces/plots/{dataset}_interface_size_model.png"
     log:
         "logs/analysis/interfaces/{dataset}_plot_interface_size_model.log"
     script:

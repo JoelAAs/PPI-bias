@@ -60,7 +60,7 @@ if __name__ == "__main__":
     fit_columns = [
         "uniprot_id_bait", "uniprot_id_prey",
         "length_bait", "length_prey", "min_length",
-        "interface_residues", "r", "logL",
+        "interface_residues", "r", "logL", "matching_pdb"
     ]
     df[fit_columns].to_csv(protein_lengths_file, index=False)
 

@@ -1,62 +1,116 @@
+from scipy.stats import spearmanr
+
+
 rule get_all_balance_metrics:
     input:
         metrics=expand(
-            "work_folder/subsets/train/equal_edge/balance/{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}{random}_degree.csv",
+            "work_folder/subsets/train/permuted/{permutation}/balance/{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}{random}_degree.csv",
+            permutation=range(config.get("n_permutations", 10)),
             dataset=config["datasets"],
             pos_limit=config["positive_limits"],
             neg_limit=config["negative_limits"],
             random=["", "-random"],
         ),
     output:
-        all_models="work_folder/subsets/train/equal_edge/balance/all_metrics.csv",
+        all_models="work_folder/analysis/subset_similarity/balance/all_metrics_{network_type}.csv",
     shell:
         """
-        echo "dataset\tpos_limit\tneg_limit\trandom\tbait_degree_delta\tprey_degree_delta\tnum_edges" > {output.all_models}
+        echo "permutation\tdataset\tpos_limit\tneg_limit\trandom\tbait_degree_delta\tprey_degree_delta\tspearman_bait\tspearman_prey\tnum_edges" > {output.all_models}
         cat {input.metrics} >> {output.all_models}
         """
 
 
+rule plot_degree_balance:
+    input:
+        metrics="work_folder/analysis/subset_similarity/balance/all_metrics_{network_type}.csv",
+    output:
+        plot="work_folder/analysis/subset_similarity/balance/plots/{network_type}_degree_balance.png",
+    log:
+        "logs/analysis/subset_similarity/balance/plots/{network_type}_degree_balance.log",
+    script:
+        "scripts/plot_degree_balance.py"
+
+
+
 rule get_train_degree_balance:
     input:
-        train_pos="work_folder/subsets/train/equal_edge/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
-        train_neg="work_folder/subsets/train/equal_edge/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_neg.csv",
+        train_pos="work_folder/subsets/train/permuted/{permutation}/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
+        train_neg="work_folder/subsets/train/permuted/{permutation}/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_neg.csv",
     output:
-        balance="work_folder/subsets/train/equal_edge/balance/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_degree.csv",
+        balance="work_folder/subsets/train/permuted/{permutation}/balance/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_degree.csv",
     run:
         pos_df = pd.read_csv(input.train_pos, sep="\t")
         neg_df = pd.read_csv(input.train_neg, sep="\t")
 
-        pos_G = nx.from_pandas_edgelist(
-            pos_df, "bait", "prey", create_using=nx.DiGraph
-        )
-        neg_G = nx.from_pandas_edgelist(
-            neg_df, "bait", "prey", create_using=nx.DiGraph
-        )
+        if wildcards.network_type == "directional":
+            graph_type = nx.DiGraph
+        elif wildcards.network_type == "undirectional":
+            graph_type = nx.Graph
+        else:
+            raise ValueError(f"{wildcards.network_type} is not a valid network type.")
 
-        pos_out = dict(pos_G.out_degree())
-        neg_out = dict(neg_G.out_degree())
-        pos_in = dict(pos_G.in_degree())
-        neg_in = dict(neg_G.in_degree())
-
-        all_bait = set(pos_out) | set(neg_out)
-        all_prey = set(pos_in) | set(neg_in)
-        degree_bait_delta = sum(abs(pos_out[n] - neg_out[n]) for n in all_bait)
-        degree_prey_delta = sum(abs(pos_in[n] - neg_in[n]) for n in all_prey)
+        pos_G = nx.from_pandas_edgelist(pos_df, "bait", "prey", create_using=graph_type)
+        neg_G = nx.from_pandas_edgelist(neg_df, "bait", "prey", create_using=graph_type)
         n_edges = pos_G.number_of_edges() + neg_G.number_of_edges()
+
+        if wildcards.network_type == "directional":
+            pos_out = dict(pos_G.out_degree())
+            neg_out = dict(neg_G.out_degree())
+            pos_in = dict(pos_G.in_degree())
+            neg_in = dict(neg_G.in_degree())
+
+            all_bait = set(pos_out) | set(neg_out)
+            all_prey = set(pos_in) | set(neg_in)
+            degree_bait_delta = sum(abs(pos_out.get(n, 0) - neg_out.get(n, 0)) for n in all_bait)
+            degree_prey_delta = sum(abs(pos_in.get(n, 0) - neg_in.get(n, 0)) for n in all_prey)
+
+            bait_pos_deg = [pos_out.get(n, 0) for n in all_bait]
+            bait_neg_deg = [neg_out.get(n, 0) for n in all_bait]
+            prey_pos_deg = [pos_in.get(n, 0) for n in all_prey]
+            prey_neg_deg = [neg_in.get(n, 0) for n in all_prey]
+            spearman_bait = spearmanr(bait_pos_deg, bait_neg_deg).correlation if len(all_bait) > 1 else float("nan")
+            spearman_prey = spearmanr(prey_pos_deg, prey_neg_deg).correlation if len(all_prey) > 1 else float("nan")
+        else:
+            pos_deg = dict(pos_G.degree())
+            neg_deg = dict(neg_G.degree())
+            all_nodes = set(pos_deg) | set(neg_deg)
+
+            degree_bait_delta = sum(abs(pos_deg.get(n, 0) - neg_deg.get(n, 0)) for n in all_nodes)
+            degree_prey_delta = 0  # avoid double-counting the same delta in bait+prey sums downstream
+
+            pos_vals = [pos_deg.get(n, 0) for n in all_nodes]
+            neg_vals = [neg_deg.get(n, 0) for n in all_nodes]
+            spearman_bait = spearmanr(pos_vals, neg_vals).correlation if len(all_nodes) > 1 else float("nan")
+            spearman_prey = spearman_bait
+
         with open(output.balance, "w") as w:
             w.write(
-                f"{wildcards.dataset}\t{wildcards.pos_limit}\t{wildcards.neg_limit}\t{wildcards.random!= ""}\t{degree_bait_delta}\t{degree_prey_delta}\t{n_edges}\n"
+                f"{wildcards.permutation}\t{wildcards.dataset}\t{wildcards.pos_limit}\t{wildcards.neg_limit}\t{wildcards.random!= ""}\t"
+                f"{degree_bait_delta}\t{degree_prey_delta}\t{spearman_bait}\t{spearman_prey}\t{n_edges}\n"
             )
+
+rule define_balanced_negative:
+    input:
+        test_pos="work_folder/subsets/test/{dataset}_{network_type}_pos.csv",
+        test_neg="work_folder/subsets/test/{dataset}_{network_type}_neg.csv",
+    output:
+        selected_negative="work_folder/subsets/test/{dataset}_{network_type}_selected_hrni.tsv",
+    run:
+        df_pos = pd.read_csv(input.test_pos, sep="\t")[["bait", "prey"]]
+        df_negative = pd.read_csv(input.test_neg, sep="\t")[["bait", "prey"]]
+        if df_negative.shape[0] > df_pos.shape[0]:
+            df_negative = df_negative.sample(df_pos.shape[0], random_state=1234)
+        df_negative.to_csv(output.selected_negative, sep="\t", index=False)
 
 
 rule get_model_metrics_hnri:
     input:
         test_pos="work_folder/subsets/test/{dataset}_{network_type}_pos.csv",
         test_neg="work_folder/subsets/test/{dataset}_{network_type}_neg.csv",
+        selected_negative="work_folder/subsets/test/{dataset}_{network_type}_selected_hrni.tsv",
         saved_model="work_folder/classification/{classifier}/model/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_parameters.joblib",
         protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz",
     output:
-        selected_negative="work_folder/classification/{classifier}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_hrni.tsv",
         metrics="work_folder/classification/{classifier}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_metrics_hrni.txt",
         roc_png="work_folder/classification/{classifier}/metrics/plot/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_roc_curve_hrni.png",
     log:
@@ -76,12 +130,12 @@ rule get_model_metrics_hnri:
             --output_file {output.metrics} \
             --plot_roc_png {output.roc_png} \
             --network_type  {wildcards.network_type} \
-            --neg_output_file {output.selected_negative}> {log} 2>&1
+            --neg_input_file {input.selected_negative}> {log} 2>&1
         """
 
 rule get_eqivalent_negative:
     input:
-        selected_negative="work_folder/classification/{classifier}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_hrni.tsv",
+        selected_negative="work_folder/subsets/test/{dataset}_{network_type}_selected_hrni.tsv",
         test_pos = "work_folder/subsets/test/{dataset}_{network_type}_pos.csv"
     output:
         non_obs="work_folder/classification/{classifier}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_no.tsv"
@@ -151,17 +205,17 @@ rule get_model_metrics_permuted_hnri:
     input:
         test_pos="work_folder/subsets/test/{dataset}_{network_type}_pos.csv",
         test_neg="work_folder/subsets/test/{dataset}_{network_type}_neg.csv",
+        selected_negative="work_folder/subsets/test/{dataset}_{network_type}_selected_hrni.tsv",
         saved_model="work_folder/classification/{classifier}/permuted/{permutation}/model/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_parameters.joblib",
         protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz",
     output:
-        selected_negative="work_folder/classification/{classifier}/permuted/{permutation}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_hrni.tsv",
         metrics="work_folder/classification/{classifier}/permuted/{permutation}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_metrics_hrni.txt",
         roc_png="work_folder/classification/{classifier}/permuted/{permutation}/metrics/plot/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_roc_curve_hrni.png",
     log:
         "logs/classification/{classifier}/permuted/{permutation}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_{esm_model}_metrics_hrni.log",
-    threads: 10
+    threads: 1
     resources:
-        mem_gb=80,
+        mem_gb=3,
     params:
         script_location="src/PPIClassification/ModelEvaluation/evaluate_model.py",
     shell:
@@ -174,16 +228,16 @@ rule get_model_metrics_permuted_hnri:
             --output_file {output.metrics} \
             --plot_roc_png {output.roc_png} \
             --network_type  {wildcards.network_type} \
-            --neg_output_file {output.selected_negative}> {log} 2>&1
+            --neg_input_file {input.selected_negative}> {log} 2>&1
         """
 
 
 rule get_permuted_equivalent_negative:
     input:
-        selected_negative="work_folder/classification/{classifier}/permuted/{permutation}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_hrni.tsv",
+        selected_negative="work_folder/subsets/test/{dataset}_{network_type}_selected_hrni.tsv",
         test_pos="work_folder/subsets/test/{dataset}_{network_type}_pos.csv"
     output:
-        non_obs="work_folder/classification/{classifier}/permuted/{permutation}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_no.tsv"
+        non_obs="work_folder/classification/{classifier}/permuted/{permutation}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_model_{esm_model}_selected_no.tsv"
     script:
         "scripts/get_equivalent_negative.py"
 
@@ -194,15 +248,15 @@ rule get_model_metrics_permuted_no:
         test_neg="work_folder/subsets/test/{dataset}_{network_type}_neg.csv",
         saved_model="work_folder/classification/{classifier}/permuted/{permutation}/model/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_parameters.joblib",
         protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz",
-        selected_negative="work_folder/classification/{classifier}/permuted/{permutation}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_no.tsv",
+        selected_negative="work_folder/classification/{classifier}/permuted/{permutation}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_model_{esm_model}_selected_no.tsv",
     output:
         metrics="work_folder/classification/{classifier}/permuted/{permutation}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_metrics_no.txt",
         roc_png="work_folder/classification/{classifier}/permuted/{permutation}/metrics/plot/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_roc_curve_no.png",
     log:
         "logs/classification/{classifier}/permuted/{permutation}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_{esm_model}_metrics_no.log",
-    threads: 10
+    threads: 1
     resources:
-        mem_gb=80,
+        mem_gb=3,
     params:
         script_location="src/PPIClassification/ModelEvaluation/evaluate_model.py",
     shell:
@@ -284,3 +338,249 @@ rule plot_train_similarity:
     log:
         "logs/analysis/train_similarity/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_plot.log",
     script: "plot_train_similarity.R"
+
+
+rule compute_permutation_similarity:
+    input:
+        perm_pos=expand(
+            "work_folder/subsets/train/permuted/{permutation}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
+            permutation=range(config.get("n_permutations", 10)),
+        ),
+        perm_neg=expand(
+            "work_folder/subsets/train/permuted/{permutation}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv",
+            permutation=range(config.get("n_permutations", 10)),
+        ),
+        perm_random=expand(
+            "work_folder/subsets/train/permuted/{permutation}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}-random_neg.csv",
+            permutation=range(config.get("n_permutations", 10)),
+        ),
+    output:
+        similarity="work_folder/analysis/subset_similarity/permutation_similarity_{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}.tsv",
+    log:
+        "logs/analysis/subset_similarity/permutation_similarity_{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}.log",
+    script:
+        "scripts/compute_permutation_similarity.py"
+
+
+rule aggregate_permutation_similarity:
+    input:
+        similarity=expand(
+            "work_folder/analysis/subset_similarity/permutation_similarity_{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}.tsv",
+            dataset=config["datasets"],
+            pos_limit=config["positive_limits"],
+            neg_limit=config["negative_limits"],
+        ),
+    output:
+        all_similarity="work_folder/analysis/subset_similarity/all_permutation_similarity_{network_type}.tsv",
+    log:
+        "logs/analysis/subset_similarity/all_permutation_similarity_{network_type}.log",
+    shell:
+        """
+        echo "dataset\tnetwork_type\tpos_limit\tneg_limit\tlabel\tpermutation_a\tpermutation_b\tjaccard_edges\tspearman_bait\tspearman_prey\tn_a\tn_b" > {output.all_similarity}
+        for f in {input.similarity}; do
+            tail -n +2 "$f" >> {output.all_similarity}
+        done
+        """
+
+
+rule plot_permutation_similarity:
+    input:
+        similarity="work_folder/analysis/subset_similarity/all_permutation_similarity_{network_type}.tsv",
+    output:
+        jaccard_plot="work_folder/analysis/subset_similarity/plots/{network_type}_permutation_jaccard.png",
+        spearman_plot="work_folder/analysis/subset_similarity/plots/{network_type}_permutation_spearman.png",
+    log:
+        "logs/analysis/subset_similarity/plots/{network_type}_permutation_similarity.log",
+    script:
+        "scripts/plot_permutation_similarity.py"
+
+
+rule evaluate_predictions_random_no_hrni:
+    input:
+        test_pos="work_folder/subsets/test/{dataset}_{network_type}_pos.csv",
+        selected_negative="work_folder/subsets/test/{dataset}_{network_type}_selected_hrni.tsv",
+        non_obs="work_folder/classification/{classifier}/permuted/{permutation}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_model_{esm_model}_selected_no.tsv",
+        hrni_saved_model="work_folder/classification/{classifier}/permuted/{permutation}/model/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_model_{esm_model}_parameters.joblib",
+        no_saved_model="work_folder/classification/{classifier}/permuted/{permutation}/model/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}-random_model_{esm_model}_parameters.joblib",
+        protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz"
+    output:
+        predictions="work_folder/classification/{classifier}/permuted/{permutation}/full_test_predictions/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_model_{esm_model}_predictions.tsv",
+    log:
+        "logs/classification/{classifier}/permuted/{permutation}/full_test_predictions/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_{esm_model}_predictions.log",
+    threads: 2
+    resources:
+        mem_gb=10,
+    script:
+        "scripts/evaluate_predictions.py"
+
+
+rule get_prediction_jaccard:
+    input:
+        predictions = expand(
+            "work_folder/classification/{{classifier}}/permuted/{permutation}/full_test_predictions/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_model_{{esm_model}}_predictions.tsv", permutation=range(config.get("n_permutations", 10))
+        ),
+    output:
+        jaccard = "work_folder/classification/{classifier}/full_test_predictions/jaccard/jaccard_similarity_{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_{esm_model}.tsv",
+    log:
+        "logs/classification/{classifier}/full_test_predictions/jaccard_similarity_{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_{esm_model}.log",
+    script:
+        "scripts/get_prediction_jaccard.py"
+
+
+rule aggregate_jaccard:
+    input:
+        jaccard = expand(
+            "work_folder/classification/{{classifier}}/full_test_predictions/jaccard/jaccard_similarity_{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}_{{esm_model}}.tsv",
+            dataset=config["datasets"],
+            pos_limit=config["positive_limits"],
+            neg_limit=config["negative_limits"],
+        ),
+    output:
+        all_jaccard = "work_folder/classification/{classifier}/full_test_predictions/jaccard/all_jaccard_{esm_model}_{network_type}_similarity.tsv",
+    log:
+        "logs/classification/{classifier}/full_test_predictions/all_jaccard_{esm_model}_{network_type}_similarity.log",
+    shell:
+        """
+        echo "dataset\tnetwork_type\tpos_limit\tneg_limit\tpermutation\tlabel\tjaccard\tn_pairs" > {output.all_jaccard}
+        for f in {input.jaccard}; do
+            tail -n +2 "$f" >> {output.all_jaccard}
+        done
+        """
+
+
+rule aggregate_negative_accuracy_permuted:
+    input:
+        hrni=expand(
+            "work_folder/classification/{{classifier}}/permuted/{permutation}/metrics/{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}{{random}}_model_{{esm_model}}_metrics_hrni.txt",
+            permutation=range(config.get("n_permutations", 10)),
+            dataset=config["datasets"],
+            pos_limit=config["positive_limits"],
+            neg_limit=config["negative_limits"],
+        ),
+        no=expand(
+            "work_folder/classification/{{classifier}}/permuted/{permutation}/metrics/{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}{{random}}_model_{{esm_model}}_metrics_no.txt",
+            permutation=range(config.get("n_permutations", 10)),
+            dataset=config["datasets"],
+            pos_limit=config["positive_limits"],
+            neg_limit=config["negative_limits"],
+        ),
+    output:
+        table="work_folder/classification/{classifier}/permuted/negative_accuracy/{network_type}_{esm_model}{random}_negative_accuracy.tsv",
+    log:
+        "logs/classification/{classifier}/permuted/negative_accuracy/{network_type}_{esm_model}{random}_negative_accuracy.log",
+    run:
+        def parse_negative_accuracy(path):
+            with open(path) as f:
+                for line in f:
+                    if line.startswith("Accuracy non-interaction:"):
+                        return float(line.split(":", 1)[1].strip())
+            raise ValueError(f"missing negative accuracy in {path}")
+
+        def parse_key(path, negative_suffix):
+            permutation = path.split("/permuted/")[1].split("/")[0]
+            stem = path.split("/")[-1].removesuffix(f"_metrics_{negative_suffix}.txt")
+            stem = stem.removesuffix(f"_model_{wildcards.esm_model}")
+            dataset, rest = stem.split(f"_{wildcards.network_type}_limit_", 1)
+            neg_limit, pos_limit = rest.split("_poslim_", 1)
+            pos_limit = pos_limit.removesuffix(wildcards.random)
+            return dataset, pos_limit, neg_limit, permutation
+
+        no_accuracy = {
+            parse_key(path, "no"): parse_negative_accuracy(path) for path in input.no
+        }
+
+        with open(output.table, "w") as w:
+            w.write("dataset\tpos_limit\tneg_limit\tpermutation\tacc_hrni\tacc_no\n")
+            for path in input.hrni:
+                key = parse_key(path, "hrni")
+                dataset, pos_limit, neg_limit, permutation = key
+                acc_hrni = parse_negative_accuracy(path)
+                acc_no = no_accuracy[key]
+                w.write(f"{dataset}\t{pos_limit}\t{neg_limit}\t{permutation}\t{acc_hrni}\t{acc_no}\n")
+
+
+rule plot_negative_accuracy_hrni_vs_no:
+    input:
+        non_random="work_folder/classification/{classifier}/permuted/negative_accuracy/{network_type}_{esm_model}_negative_accuracy.tsv",
+        random="work_folder/classification/{classifier}/permuted/negative_accuracy/{network_type}_{esm_model}-random_negative_accuracy.tsv",
+    output:
+        plot="work_folder/classification/{classifier}/permuted/negative_accuracy/plots/{network_type}_{esm_model}_negative_accuracy_hrni_vs_no.png",
+    log:
+        "logs/classification/{classifier}/permuted/negative_accuracy/plots/{network_type}_{esm_model}_negative_accuracy_hrni_vs_no.log",
+    script:
+        "scripts/plot_negative_accuracy_hrni_vs_no.py"
+
+
+rule aggregate_hrni_accuracy_permuted:
+    input:
+        hrni=expand(
+            "work_folder/classification/{{classifier}}/permuted/{permutation}/metrics/{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}{{random}}_model_{{esm_model}}_metrics_hrni.txt",
+            permutation=range(config.get("n_permutations", 10)),
+            dataset=config["datasets"],
+            pos_limit=config["positive_limits"],
+            neg_limit=config["negative_limits"],
+        ),
+    output:
+        table="work_folder/classification/{classifier}/permuted/negative_accuracy/{network_type}_{esm_model}{random}_hrni_accuracy.tsv",
+    log:
+        "logs/classification/{classifier}/permuted/negative_accuracy/{network_type}_{esm_model}{random}_hrni_accuracy.log",
+    run:
+        def parse_accuracy(path, label):
+            with open(path) as f:
+                for line in f:
+                    if line.startswith(label):
+                        return float(line.split(":", 1)[1].strip())
+            raise ValueError(f"missing '{label}' in {path}")
+
+        def parse_key(path):
+            permutation = path.split("/permuted/")[1].split("/")[0]
+            stem = path.split("/")[-1].removesuffix("_metrics_hrni.txt")
+            stem = stem.removesuffix(f"_model_{wildcards.esm_model}")
+            dataset, rest = stem.split(f"_{wildcards.network_type}_limit_", 1)
+            neg_limit, pos_limit = rest.split("_poslim_", 1)
+            pos_limit = pos_limit.removesuffix(wildcards.random)
+            return dataset, pos_limit, neg_limit, permutation
+
+        with open(output.table, "w") as w:
+            w.write("dataset\tpos_limit\tneg_limit\tpermutation\tacc_pos\tacc_neg\n")
+            for path in input.hrni:
+                dataset, pos_limit, neg_limit, permutation = parse_key(path)
+                acc_pos = parse_accuracy(path, "Accuracy interaction:")
+                acc_neg = parse_accuracy(path, "Accuracy non-interaction:")
+                w.write(f"{dataset}\t{pos_limit}\t{neg_limit}\t{permutation}\t{acc_pos}\t{acc_neg}\n")
+
+
+rule plot_hrni_positive_vs_negative_accuracy:
+    input:
+        non_random="work_folder/classification/{classifier}/permuted/negative_accuracy/{network_type}_{esm_model}_hrni_accuracy.tsv",
+        random="work_folder/classification/{classifier}/permuted/negative_accuracy/{network_type}_{esm_model}-random_hrni_accuracy.tsv",
+    output:
+        plot="work_folder/classification/{classifier}/permuted/negative_accuracy/plots/{network_type}_{esm_model}_hrni_positive_vs_negative_accuracy.png",
+    log:
+        "logs/classification/{classifier}/permuted/negative_accuracy/plots/{network_type}_{esm_model}_hrni_positive_vs_negative_accuracy.log",
+    script:
+        "scripts/plot_hrni_positive_vs_negative_accuracy.py"
+
+
+rule plot_jaccard_negative_hrni_vs_no:
+    input:
+        jaccard="work_folder/classification/{classifier}/full_test_predictions/jaccard/all_jaccard_{esm_model}_{network_type}_similarity.tsv",
+    output:
+        plot="work_folder/classification/{classifier}/full_test_predictions/jaccard/plots/{esm_model}_{network_type}_jaccard_negative_hrni_vs_no.png",
+    log:
+        "logs/classification/{classifier}/full_test_predictions/jaccard/plots/{esm_model}_{network_type}_jaccard_negative_hrni_vs_no.log",
+    script:
+        "scripts/plot_jaccard_negative_hrni_vs_no.py"
+
+
+rule plot_jaccard_interaction_vs_negative_hrni:
+    input:
+        jaccard="work_folder/classification/{classifier}/full_test_predictions/jaccard/all_jaccard_{esm_model}_{network_type}_similarity.tsv",
+    output:
+        plot="work_folder/classification/{classifier}/full_test_predictions/jaccard/plots/{esm_model}_{network_type}_jaccard_interaction_vs_negative_hrni.png",
+    log:
+        "logs/classification/{classifier}/full_test_predictions/jaccard/plots/{esm_model}_{network_type}_jaccard_interaction_vs_negative_hrni.log",
+    script:
+        "scripts/plot_jaccard_interaction_vs_negative_hrni.py"
+
+
