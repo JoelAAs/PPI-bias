@@ -103,102 +103,17 @@ rule define_balanced_negative:
         df_negative.to_csv(output.selected_negative, sep="\t", index=False)
 
 
-rule get_model_metrics_hnri:
-    input:
-        test_pos="work_folder/subsets/test/{dataset}_{network_type}_pos.csv",
-        test_neg="work_folder/subsets/test/{dataset}_{network_type}_neg.csv",
-        selected_negative="work_folder/subsets/test/{dataset}_{network_type}_selected_hrni.tsv",
-        saved_model="work_folder/classification/{classifier}/model/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_parameters.joblib",
-        protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz",
-    output:
-        metrics="work_folder/classification/{classifier}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_metrics_hrni.txt",
-        roc_png="work_folder/classification/{classifier}/metrics/plot/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_roc_curve_hrni.png",
-    log:
-        "logs/classification/{classifier}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_{esm_model}_metrics.log",
-    threads: 10
-    resources:
-        mem_gb=20,
-    params:
-        script_location="src/PPIClassification/ModelEvaluation/evaluate_model.py",
-    shell:
-        """
-        python3 {params.script_location} \
-            --pos_data_file {input.test_pos} \
-            --neg_data_file {input.test_neg} \
-            --protein_embeddings_file {input.protein_embeddings} \
-            --model_file {input.saved_model} \
-            --output_file {output.metrics} \
-            --plot_roc_png {output.roc_png} \
-            --network_type  {wildcards.network_type} \
-            --neg_input_file {input.selected_negative}> {log} 2>&1
-        """
-
-rule get_eqivalent_negative:
+rule define_no_negative_test_set:
+    # Fixed per (dataset, network_type), same as define_balanced_negative above: used as the
+    # shared "NO" (non-observed) negative test set by every classifier/permutation/pos_limit/
+    # neg_limit/esm_model model, so it's computed once rather than once per model.
     input:
         selected_negative="work_folder/subsets/test/{dataset}_{network_type}_selected_hrni.tsv",
-        test_pos = "work_folder/subsets/test/{dataset}_{network_type}_pos.csv"
+        test_pos="work_folder/subsets/test/{dataset}_{network_type}_pos.csv"
     output:
-        non_obs="work_folder/classification/{classifier}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_no.tsv"
+        no_selected_negative="work_folder/subsets/test/{dataset}_{network_type}_selected_no.tsv"
     script:
         "scripts/get_equivalent_negative.py"
-
-rule get_model_metrics_random:
-    input:
-        test_pos="work_folder/subsets/test/{dataset}_{network_type}_pos.csv",
-        test_neg="work_folder/subsets/test/{dataset}_{network_type}_neg.csv",
-        saved_model="work_folder/classification/{classifier}/model/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_parameters.joblib",
-        protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz",
-        selected_negative="work_folder/classification/{classifier}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_selected_no.tsv",
-    output:
-        metrics="work_folder/classification/{classifier}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_metrics_no.txt",
-        roc_png="work_folder/classification/{classifier}/metrics/plot/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_roc_curve_no.png",
-    log:
-        "logs/classification/{classifier}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_{esm_model}_metrics.log",
-    threads: 10
-    resources:
-        mem_gb=20,
-    params:
-        script_location="src/PPIClassification/ModelEvaluation/evaluate_model.py",
-    shell:
-        """
-        python3 {params.script_location} \
-            --pos_data_file {input.test_pos} \
-            --neg_data_file {input.test_neg} \
-            --protein_embeddings_file {input.protein_embeddings} \
-            --model_file {input.saved_model} \
-            --output_file {output.metrics} \
-            --plot_roc_png {output.roc_png} \
-            --network_type  {wildcards.network_type} \
-            --neg_input_file {input.selected_negative}> {log} 2>&1
-        """
-
-
-rule all_metrics:
-    input:
-        metrics=expand(
-            "work_folder/classification/{{classifier}}/metrics/{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{{esm_model}}_metrics_{negative}.txt",
-            dataset=config["datasets"],
-            pos_limit=config["positive_limits"],
-            neg_limit=config["negative_limits"],
-            random=["", "-random"],
-            negative=["hrni", "no"]
-        ),
-    output:
-        all_models="work_folder/classification/{classifier}/metrics/all_metrics_{network_type}_{esm_model}.csv",
-    log:
-        "logs/classification/{classifier}/metrics/all_metrics_{network_type}_{esm_model}.log",
-    run:
-        with open(output[0], "a") as w:
-            w.write("model\troc_auc\tsamples\n")
-            for metric_file in input.metrics:
-                with open(metric_file, "r") as f:
-                    line_out = [line.strip().split(": ")[1] for line in f]
-                    line_out = "\t".join(line_out)
-                    model_name = metric_file.split("/")[-1].replace(
-                        "_metrics.txt", ""
-                    )
-                    line_out = model_name + "\t" + line_out + "\n"
-                    w.write(line_out)
 
 
 rule get_model_metrics_permuted_hnri:
@@ -232,23 +147,13 @@ rule get_model_metrics_permuted_hnri:
         """
 
 
-rule get_permuted_equivalent_negative:
-    input:
-        selected_negative="work_folder/subsets/test/{dataset}_{network_type}_selected_hrni.tsv",
-        test_pos="work_folder/subsets/test/{dataset}_{network_type}_pos.csv"
-    output:
-        non_obs="work_folder/classification/{classifier}/permuted/{permutation}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_model_{esm_model}_selected_no.tsv"
-    script:
-        "scripts/get_equivalent_negative.py"
-
-
 rule get_model_metrics_permuted_no:
     input:
         test_pos="work_folder/subsets/test/{dataset}_{network_type}_pos.csv",
         test_neg="work_folder/subsets/test/{dataset}_{network_type}_neg.csv",
         saved_model="work_folder/classification/{classifier}/permuted/{permutation}/model/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_parameters.joblib",
         protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz",
-        selected_negative="work_folder/classification/{classifier}/permuted/{permutation}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_model_{esm_model}_selected_no.tsv",
+        selected_negative="work_folder/subsets/test/{dataset}_{network_type}_selected_no.tsv",
     output:
         metrics="work_folder/classification/{classifier}/permuted/{permutation}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_metrics_no.txt",
         roc_png="work_folder/classification/{classifier}/permuted/{permutation}/metrics/plot/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_roc_curve_no.png",
@@ -256,7 +161,7 @@ rule get_model_metrics_permuted_no:
         "logs/classification/{classifier}/permuted/{permutation}/metrics/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_{esm_model}_metrics_no.log",
     threads: 1
     resources:
-        mem_gb=3,
+        mem_gb=2,
     params:
         script_location="src/PPIClassification/ModelEvaluation/evaluate_model.py",
     shell:
@@ -304,40 +209,67 @@ rule all_metrics_permuted:
                     )
 
 
-rule compute_train_similarity:
+rule hrni_no_delta_auc:
+    # Sister-pair delta ROC-AUC (train=HRNI minus train=NO), evaluated against the HRNI test set
+    # only. Permutations within a config are correlated repeats (~91-95% shared edges), so each
+    # config's 10 deltas are collapsed to one mean first; datasets are not pooled (Combined isn't
+    # independent of MS/Y2H) - a one-sample t-test then runs on each dataset's 6 config-level means.
     input:
-        similarity_tsv="work_folder/protein_sequences/similarity/sequencesimilarity.tsv",
-        perm_pos=expand(
-            "work_folder/subsets/train/permuted/{permutation}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_pos.csv",
-            permutation=range(config.get("n_permutations", 10)),
-            ),
-        perm_neg=expand(
-            "work_folder/subsets/train/permuted/{permutation}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_neg.csv",
-            permutation=range(config.get("n_permutations", 10))
-        ),
-        perm_random=expand(
-            "work_folder/subsets/train/permuted/{permutation}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}-random_neg.csv",
-            permutation=range(config.get("n_permutations", 10))
-        )
+        metrics="work_folder/classification/{classifier}/permuted/all_metrics_{network_type}_{esm_model}.csv",
     output:
-        per_protein_similarity="work_folder/analysis/train_similarity/protein_avg_similarity_{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}.tsv",
-        per_edge_similarity="work_folder/analysis/train_similarity/pair_similarity_{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}.tsv"
+        by_config="work_folder/classification/{classifier}/permuted/hrni_no_delta/{network_type}_{esm_model}_delta_auc_by_config.tsv",
+        summary="work_folder/classification/{classifier}/permuted/hrni_no_delta/{network_type}_{esm_model}_delta_auc_summary.tsv",
     log:
-        "logs/analysis/train_similarity/compute_similarity_{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}.log",
-    script:
-        "compute_train_similarity.py"
-        
+        "logs/classification/{classifier}/permuted/hrni_no_delta/{network_type}_{esm_model}_delta_auc.log",
+    run:
+        import re
+        from scipy.stats import ttest_1samp
 
-rule plot_train_similarity:
+        model_re = re.compile(
+            r"^(?P<dataset>[a-zA-Z0-9]+)_[a-zA-Z]+_limit_(?P<neg_limit>[0-9.]+)"
+            r"_poslim_(?P<pos_limit>[0-9.]+|all)(?P<random>-random)?_model_[A-Z0-9]+"
+            r"_metrics_(?P<test_neg>hrni|no)\.txt$"
+        )
+        df = pd.read_csv(input.metrics, sep="\t")
+        df = pd.concat([df, df["model"].str.extract(model_re)], axis=1)
+        df = df[df["test_neg"] == "hrni"]  # always score against the HRNI test set
+        df["train_type"] = df["random"].notna().map({True: "no", False: "hrni"})
+
+        pivot = df.pivot_table(
+            index=["dataset", "pos_limit", "neg_limit", "permutation"],
+            columns="train_type", values="roc_auc",
+        )
+        pivot["delta_auc"] = pivot["hrni"] - pivot["no"]
+
+        by_config = pivot.groupby(["dataset", "pos_limit", "neg_limit"])["delta_auc"].agg(
+            mean_delta_auc="mean", n_permutations="count"
+        ).reset_index()
+        by_config.to_csv(output.by_config, sep="\t", index=False)
+
+        rows = []
+        for dataset, sub in by_config.groupby("dataset"):
+            t, p = ttest_1samp(sub["mean_delta_auc"], 0.0)
+            rows.append({
+                "dataset": dataset,
+                "n_configs": len(sub),
+                "mean_delta_auc": sub["mean_delta_auc"].mean(),
+                "sem": sub["mean_delta_auc"].std(ddof=1) / len(sub) ** 0.5,
+                "t": t,
+                "p": p,
+            })
+        pd.DataFrame(rows).to_csv(output.summary, sep="\t", index=False)
+
+
+rule plot_hrni_no_delta_auc:
     input:
-        per_protein_similarity="work_folder/analysis/train_similarity/protein_avg_similarity_{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}.tsv",
-        per_edge_similarity="work_folder/analysis/train_similarity/pair_similarity_{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}.tsv"
+        by_config="work_folder/classification/{classifier}/permuted/hrni_no_delta/{network_type}_{esm_model}_delta_auc_by_config.tsv",
+        summary="work_folder/classification/{classifier}/permuted/hrni_no_delta/{network_type}_{esm_model}_delta_auc_summary.tsv",
     output:
-        avg_protein_similarity="work_folder/analysis/train_similarity/plots/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_avg_protein_similarity.png",
-        edge_similarity_density="work_folder/analysis/train_similarity/plots/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_pair_similarity_density.png",
+        plot="work_folder/classification/{classifier}/permuted/hrni_no_delta/plots/{network_type}_{esm_model}_delta_auc_boxplot.png",
     log:
-        "logs/analysis/train_similarity/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_plot.log",
-    script: "plot_train_similarity.R"
+        "logs/classification/{classifier}/permuted/hrni_no_delta/plots/{network_type}_{esm_model}_delta_auc_boxplot.log",
+    script:
+        "scripts/plot_hrni_no_delta_auc.py"
 
 
 rule compute_permutation_similarity:
@@ -399,7 +331,7 @@ rule evaluate_predictions_random_no_hrni:
     input:
         test_pos="work_folder/subsets/test/{dataset}_{network_type}_pos.csv",
         selected_negative="work_folder/subsets/test/{dataset}_{network_type}_selected_hrni.tsv",
-        non_obs="work_folder/classification/{classifier}/permuted/{permutation}/metrics/negative_data/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_model_{esm_model}_selected_no.tsv",
+        non_obs="work_folder/subsets/test/{dataset}_{network_type}_selected_no.tsv",
         hrni_saved_model="work_folder/classification/{classifier}/permuted/{permutation}/model/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_model_{esm_model}_parameters.joblib",
         no_saved_model="work_folder/classification/{classifier}/permuted/{permutation}/model/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}-random_model_{esm_model}_parameters.joblib",
         protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz"
@@ -407,11 +339,132 @@ rule evaluate_predictions_random_no_hrni:
         predictions="work_folder/classification/{classifier}/permuted/{permutation}/full_test_predictions/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_model_{esm_model}_predictions.tsv",
     log:
         "logs/classification/{classifier}/permuted/{permutation}/full_test_predictions/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_{esm_model}_predictions.log",
-    threads: 2
+    threads: 1
     resources:
-        mem_gb=10,
+        mem_gb=2,
     script:
         "scripts/evaluate_predictions.py"
+
+
+rule get_permuted_full_grid_predictions:
+    # For one permutation/dataset/network_type, score every trained model in the
+    # pos_limit x neg_limit x {train_hrni, train_no} grid against the same three fixed
+    # test sets (Interaction, Negative_HRNI, Negative_NO), one prediction column per model.
+    # Feeds the future train_hrni-vs-train_no robustness analysis.
+    input:
+        test_pos="work_folder/subsets/test/{dataset}_{network_type}_pos.csv",
+        selected_negative="work_folder/subsets/test/{dataset}_{network_type}_selected_hrni.tsv",
+        no_selected_negative="work_folder/subsets/test/{dataset}_{network_type}_selected_no.tsv",
+        models=expand(
+            "work_folder/classification/{{classifier}}/permuted/{{permutation}}/model/{{dataset}}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{{esm_model}}_parameters.joblib",
+            pos_limit=config["positive_limits"],
+            neg_limit=config["negative_limits"],
+            random=["", "-random"],
+        ),
+        protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz",
+    output:
+        predictions="work_folder/classification/{classifier}/permuted/{permutation}/full_test_predictions/all_models/{dataset}_{network_type}_model_{esm_model}_predictions.tsv",
+    log:
+        "logs/classification/{classifier}/permuted/{permutation}/full_test_predictions/all_models/{dataset}_{network_type}_{esm_model}_predictions.log",
+    threads: 1
+    resources:
+        mem_gb=4,
+    script:
+        "scripts/evaluate_all_model_predictions.py"
+
+
+rule compute_protein_accuracy:
+    input:
+        predictions="work_folder/classification/{classifier}/permuted/{permutation}/full_test_predictions/all_models/{dataset}_{network_type}_model_{esm_model}_predictions.tsv",
+    output:
+        protein_accuracy="work_folder/classification/{classifier}/permuted/{permutation}/full_test_predictions/all_models/protein_accuracy/{dataset}_{network_type}_model_{esm_model}_protein_accuracy.tsv",
+    log:
+        "logs/classification/{classifier}/permuted/{permutation}/full_test_predictions/all_models/protein_accuracy/{dataset}_{network_type}_{esm_model}_protein_accuracy.log",
+    script:
+        "scripts/compute_protein_accuracy.py"
+
+
+rule aggregate_protein_accuracy:
+    input:
+        protein_accuracy=expand(
+            "work_folder/classification/{{classifier}}/permuted/{permutation}/full_test_predictions/all_models/protein_accuracy/{dataset}_{{network_type}}_model_{{esm_model}}_protein_accuracy.tsv",
+            permutation=range(config.get("n_permutations", 10)),
+            dataset=config["datasets"],
+        ),
+    output:
+        all_protein_accuracy="work_folder/classification/{classifier}/permuted/full_test_predictions/all_models/protein_accuracy/all_protein_accuracy_{network_type}_{esm_model}.tsv",
+    log:
+        "logs/classification/{classifier}/permuted/full_test_predictions/all_models/protein_accuracy/all_protein_accuracy_{network_type}_{esm_model}.log",
+    run:
+        # Pool n_correct/n_total across all 10 permutations (each already summed over that
+        # permutation's 6 pos_limit x neg_limit models), so ratio = n_correct / 60 per protein.
+        df = pd.concat(
+            (pd.read_csv(f, sep="\t", dtype={"protein": "string"}) for f in input.protein_accuracy),
+            ignore_index=True,
+        )
+        count_columns = ["n_correct_interaction", "n_total_interaction", "n_correct_noninteraction", "n_total_noninteraction"]
+        summed = df.groupby(["dataset", "network_type", "esm_model", "train_type", "protein"], as_index=False)[count_columns].sum()
+        summed["interaction_ratio"] = summed["n_correct_interaction"] / summed["n_total_interaction"]
+        summed["noninteraction_ratio"] = summed["n_correct_noninteraction"] / summed["n_total_noninteraction"]
+        summed.to_csv(output.all_protein_accuracy, sep="\t", index=False)
+
+
+rule plot_protein_accuracy_scatter:
+    input:
+        protein_accuracy="work_folder/classification/{classifier}/permuted/full_test_predictions/all_models/protein_accuracy/all_protein_accuracy_{network_type}_{esm_model}.tsv",
+    output:
+        plot="work_folder/classification/{classifier}/permuted/full_test_predictions/all_models/protein_accuracy/plots/{network_type}_{esm_model}_{dataset}_protein_accuracy_scatter.png",
+    log:
+        "logs/classification/{classifier}/permuted/full_test_predictions/all_models/protein_accuracy/plots/{network_type}_{esm_model}_{dataset}_protein_accuracy_scatter.log",
+    script:
+        "scripts/plot_protein_accuracy_scatter.py"
+
+
+rule aggregate_protein_split_robustness:
+    # Unlike aggregate_protein_accuracy (which pools n_correct/n_total across all 10 permutations
+    # into one ratio per protein), this keeps each permutation's own ratio (already pooled over
+    # that permutation's 6 pos_limit x neg_limit configs) and takes the std across the 10
+    # permutations per protein/train_type -- i.e. how consistent a protein's classification is
+    # specifically across different train/test splits, isolated from pos_limit/neg_limit choice.
+    input:
+        protein_accuracy=expand(
+            "work_folder/classification/{{classifier}}/permuted/{permutation}/full_test_predictions/all_models/protein_accuracy/{dataset}_{{network_type}}_model_{{esm_model}}_protein_accuracy.tsv",
+            permutation=range(config.get("n_permutations", 10)),
+            dataset=config["datasets"],
+        ),
+    output:
+        robustness="work_folder/classification/{classifier}/permuted/full_test_predictions/all_models/protein_accuracy/protein_split_robustness_{network_type}_{esm_model}.tsv",
+    log:
+        "logs/classification/{classifier}/permuted/full_test_predictions/all_models/protein_accuracy/protein_split_robustness_{network_type}_{esm_model}.log",
+    run:
+        df = pd.concat(
+            (pd.read_csv(f, sep="\t", dtype={"protein": "string"}) for f in input.protein_accuracy),
+            ignore_index=True,
+        )
+        df["interaction_ratio"] = df["n_correct_interaction"] / df["n_total_interaction"]
+        df["noninteraction_ratio"] = df["n_correct_noninteraction"] / df["n_total_noninteraction"]
+
+        robustness = df.groupby(
+            ["dataset", "network_type", "esm_model", "train_type", "protein"], as_index=False
+        ).agg(
+            interaction_ratio_mean=("interaction_ratio", "mean"),
+            interaction_ratio_std=("interaction_ratio", "std"),
+            noninteraction_ratio_mean=("noninteraction_ratio", "mean"),
+            noninteraction_ratio_std=("noninteraction_ratio", "std"),
+            n_permutations=("permutation", "nunique"),
+        )
+        robustness.to_csv(output.robustness, sep="\t", index=False)
+
+
+rule plot_protein_split_robustness_boxplot:
+    input:
+        robustness="work_folder/classification/{classifier}/permuted/full_test_predictions/all_models/protein_accuracy/protein_split_robustness_{network_type}_{esm_model}.tsv",
+    output:
+        plot="work_folder/classification/{classifier}/permuted/full_test_predictions/all_models/protein_accuracy/plots/{network_type}_{esm_model}_protein_split_robustness_boxplot.png",
+    log:
+        "logs/classification/{classifier}/permuted/full_test_predictions/all_models/protein_accuracy/plots/{network_type}_{esm_model}_protein_split_robustness_boxplot.log",
+    script:
+        "scripts/plot_protein_split_robustness_boxplot.py"
 
 
 rule get_prediction_jaccard:
@@ -420,9 +473,9 @@ rule get_prediction_jaccard:
             "work_folder/classification/{{classifier}}/permuted/{permutation}/full_test_predictions/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{{pos_limit}}_model_{{esm_model}}_predictions.tsv", permutation=range(config.get("n_permutations", 10))
         ),
     output:
-        jaccard = "work_folder/classification/{classifier}/full_test_predictions/jaccard/jaccard_similarity_{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_{esm_model}.tsv",
+        jaccard = "work_folder/classification/{classifier}/full_test_predictions/jaccard/jaccard_similarity_{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_{esm_model}_{pair_set}.tsv",
     log:
-        "logs/classification/{classifier}/full_test_predictions/jaccard_similarity_{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_{esm_model}.log",
+        "logs/classification/{classifier}/full_test_predictions/jaccard_similarity_{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_{esm_model}_{pair_set}.log",
     script:
         "scripts/get_prediction_jaccard.py"
 
@@ -430,18 +483,18 @@ rule get_prediction_jaccard:
 rule aggregate_jaccard:
     input:
         jaccard = expand(
-            "work_folder/classification/{{classifier}}/full_test_predictions/jaccard/jaccard_similarity_{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}_{{esm_model}}.tsv",
+            "work_folder/classification/{{classifier}}/full_test_predictions/jaccard/jaccard_similarity_{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}_{{esm_model}}_{{pair_set}}.tsv",
             dataset=config["datasets"],
             pos_limit=config["positive_limits"],
             neg_limit=config["negative_limits"],
         ),
     output:
-        all_jaccard = "work_folder/classification/{classifier}/full_test_predictions/jaccard/all_jaccard_{esm_model}_{network_type}_similarity.tsv",
+        all_jaccard = "work_folder/classification/{classifier}/full_test_predictions/jaccard/all_jaccard_{esm_model}_{network_type}_{pair_set}_similarity.tsv",
     log:
-        "logs/classification/{classifier}/full_test_predictions/all_jaccard_{esm_model}_{network_type}_similarity.log",
+        "logs/classification/{classifier}/full_test_predictions/all_jaccard_{esm_model}_{network_type}_{pair_set}_similarity.log",
     shell:
         """
-        echo "dataset\tnetwork_type\tpos_limit\tneg_limit\tpermutation\tlabel\tjaccard\tn_pairs" > {output.all_jaccard}
+        echo "dataset\tnetwork_type\tpair_set\tpos_limit\tneg_limit\tpermutation\tlabel\tjaccard\tn_pairs" > {output.all_jaccard}
         for f in {input.jaccard}; do
             tail -n +2 "$f" >> {output.all_jaccard}
         done
@@ -564,23 +617,48 @@ rule plot_hrni_positive_vs_negative_accuracy:
 
 rule plot_jaccard_negative_hrni_vs_no:
     input:
-        jaccard="work_folder/classification/{classifier}/full_test_predictions/jaccard/all_jaccard_{esm_model}_{network_type}_similarity.tsv",
+        jaccard="work_folder/classification/{classifier}/full_test_predictions/jaccard/all_jaccard_{esm_model}_{network_type}_{pair_set}_similarity.tsv",
     output:
-        plot="work_folder/classification/{classifier}/full_test_predictions/jaccard/plots/{esm_model}_{network_type}_jaccard_negative_hrni_vs_no.png",
+        plot="work_folder/classification/{classifier}/full_test_predictions/jaccard/plots/{esm_model}_{network_type}_{pair_set}_jaccard_negative_hrni_vs_no.png",
     log:
-        "logs/classification/{classifier}/full_test_predictions/jaccard/plots/{esm_model}_{network_type}_jaccard_negative_hrni_vs_no.log",
+        "logs/classification/{classifier}/full_test_predictions/jaccard/plots/{esm_model}_{network_type}_{pair_set}_jaccard_negative_hrni_vs_no.log",
     script:
         "scripts/plot_jaccard_negative_hrni_vs_no.py"
 
 
 rule plot_jaccard_interaction_vs_negative_hrni:
     input:
-        jaccard="work_folder/classification/{classifier}/full_test_predictions/jaccard/all_jaccard_{esm_model}_{network_type}_similarity.tsv",
+        jaccard="work_folder/classification/{classifier}/full_test_predictions/jaccard/all_jaccard_{esm_model}_{network_type}_{pair_set}_similarity.tsv",
     output:
-        plot="work_folder/classification/{classifier}/full_test_predictions/jaccard/plots/{esm_model}_{network_type}_jaccard_interaction_vs_negative_hrni.png",
+        plot="work_folder/classification/{classifier}/full_test_predictions/jaccard/plots/{esm_model}_{network_type}_{pair_set}_jaccard_interaction_vs_negative_hrni.png",
     log:
-        "logs/classification/{classifier}/full_test_predictions/jaccard/plots/{esm_model}_{network_type}_jaccard_interaction_vs_negative_hrni.log",
+        "logs/classification/{classifier}/full_test_predictions/jaccard/plots/{esm_model}_{network_type}_{pair_set}_jaccard_interaction_vs_negative_hrni.log",
     script:
         "scripts/plot_jaccard_interaction_vs_negative_hrni.py"
+
+
+rule summarize_jaccard_gap_by_dataset:
+    input:
+        jaccard="work_folder/classification/{classifier}/full_test_predictions/jaccard/all_jaccard_{esm_model}_{network_type}_{pair_set}_similarity.tsv",
+    output:
+        summary="work_folder/classification/{classifier}/full_test_predictions/jaccard/gap_summary/{esm_model}_{network_type}_{pair_set}_interaction_vs_negative_hrni_gap_by_dataset.tsv",
+    log:
+        "logs/classification/{classifier}/full_test_predictions/jaccard/gap_summary/{esm_model}_{network_type}_{pair_set}_interaction_vs_negative_hrni_gap_by_dataset.log",
+    run:
+        df = pd.read_csv(input.jaccard, sep="\t")
+        pivot = df.pivot_table(
+            index=["dataset", "pos_limit", "neg_limit", "permutation"],
+            columns="label",
+            values="jaccard",
+        ).reset_index()
+        pivot["gap"] = pivot["Interaction"] - pivot["Negative_HRNI"]
+
+        summary = pivot.groupby("dataset").agg(
+            mean_gap=("gap", "mean"),
+            lo=("gap", lambda s: s.quantile(0.025)),
+            hi=("gap", lambda s: s.quantile(0.975)),
+            n=("gap", "count"),
+        ).reset_index()
+        summary.to_csv(output.summary, sep="\t", index=False)
 
 

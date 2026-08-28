@@ -46,6 +46,7 @@ include: "src/PPIClassification/DataSplit/GenerateSplits.smk"
 include: "src/PPIClassification/DataSplit/GetGoldenSplit.smk"
 include: "src/PPIClassification/DataSplit/CheckRedundancy.smk"
 include: "src/PPIClassification/ModelEvaluation/Evaluations.smk"
+include: "src/PPIClassification/DatasetBalance/DatasetBalance.smk"
 
 
 include: "src/PPIClassification/Classification/Classifiers.smk"
@@ -67,23 +68,42 @@ wildcard_constraints:
     random="(-random)?",
     esm_model="[A-Z0-9]+",
     permutation="[0-9]+",
-    classifier="[a-z]+"
+    classifier="[a-z]+",
+    pair_set="(all|correct)"
 
 rule all:
     input:
         # Classification metrics
         expand("work_folder/classification/{classifier}/permuted/all_metrics_{network_type}_{esm_model}.csv",
             classifier="xgboost", network_type="undirectional",esm_model="ESM2"),
-        "work_folder/classification/xgboost/full_test_predictions/jaccard/all_jaccard_ESM2_undirectional_similarity.tsv",
+        expand(
+            "work_folder/classification/xgboost/full_test_predictions/jaccard/all_jaccard_ESM2_undirectional_{pair_set}_similarity.tsv",
+            pair_set=["correct", "all"]),
         "work_folder/classification/xgboost/permuted/negative_accuracy/plots/undirectional_ESM2_negative_accuracy_hrni_vs_no.png",
         "work_folder/classification/xgboost/permuted/negative_accuracy/plots/undirectional_ESM2_hrni_positive_vs_negative_accuracy.png",
-        "work_folder/classification/xgboost/full_test_predictions/jaccard/plots/ESM2_undirectional_jaccard_negative_hrni_vs_no.png",
-        "work_folder/classification/xgboost/full_test_predictions/jaccard/plots/ESM2_undirectional_jaccard_interaction_vs_negative_hrni.png",
+        expand(
+            "work_folder/classification/xgboost/full_test_predictions/jaccard/plots/ESM2_undirectional_{pair_set}_jaccard_negative_hrni_vs_no.png",
+            pair_set=["correct", "all"]),
+        expand(
+            "work_folder/classification/xgboost/full_test_predictions/jaccard/plots/ESM2_undirectional_{pair_set}_jaccard_interaction_vs_negative_hrni.png",
+            pair_set=["correct", "all"]),
+        expand(
+            "work_folder/classification/xgboost/full_test_predictions/jaccard/gap_summary/ESM2_undirectional_{pair_set}_interaction_vs_negative_hrni_gap_by_dataset.tsv",
+            pair_set=["correct", "all"]),
+        "work_folder/classification/xgboost/permuted/hrni_no_delta/undirectional_ESM2_delta_auc_by_config.tsv",
+        "work_folder/classification/xgboost/permuted/hrni_no_delta/undirectional_ESM2_delta_auc_summary.tsv",
+        "work_folder/classification/xgboost/permuted/hrni_no_delta/plots/undirectional_ESM2_delta_auc_boxplot.png",
+        expand(
+            "work_folder/classification/xgboost/permuted/full_test_predictions/all_models/protein_accuracy/plots/undirectional_ESM2_{dataset}_protein_accuracy_scatter.png",
+            dataset=config["datasets"]),
+        "work_folder/classification/xgboost/permuted/full_test_predictions/all_models/protein_accuracy/plots/undirectional_ESM2_protein_split_robustness_boxplot.png",
 
         # Train subset similarity (content + degree across permutations, and negative/positive degree balance)
         "work_folder/analysis/subset_similarity/balance/plots/undirectional_degree_balance.png",
         "work_folder/analysis/subset_similarity/plots/undirectional_permutation_jaccard.png",
         "work_folder/analysis/subset_similarity/plots/undirectional_permutation_spearman.png",
+        "work_folder/subsets/dataset_eval/jaccard_dist/undirectional_intra_permutation_jaccard_distances.png",
+        "work_folder/subsets/dataset_eval/jaccard_dist/undirectional_inter_permutation_jaccard_distances.png",
 
         # Localisation analysis
         "work_folder/analysis/shared_annotation_proportions/plots/undirectional_OR.png",
@@ -112,4 +132,4 @@ rule all:
         # Interface size vs detection ratio
         "work_folder/analysis/interfaces/plots/undirectional_interface_detection.png",
 
-        expand("work_folder/analysis/interfaces/plots/{dataset}_interface_size_model.png", dataset = "flat"),
+        expand("work_folder/analysis/interfaces/plots/{dataset}_interface_size_model.png", dataset = "flat")

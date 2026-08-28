@@ -111,7 +111,7 @@ rule get_degree_values:
     """
     params:
         hci_limits=config["hci_limits"],
-        hcni_tested=config["hcni_tested"]
+        hrni_tested=config["hrni_tested"]
     input:
         pod_file="work_folder/analysis/POD/POD_{data}.csv"
     output:
@@ -120,9 +120,9 @@ rule get_degree_values:
         hci_threshold=expand(
             "work_folder/degree/{{data}}_HCI_{hci_limit}.csv",
             hci_limit=config["hci_limits"],pn=pn),
-        hcni_tests=expand(
-            "work_folder/degree/{{data}}_HCNI_{hcni_tested}.csv",
-            hcni_tested=config["hcni_tested"],pn=pn)
+        hrni_tests=expand(
+            "work_folder/degree/{{data}}_HRNI_{hrni_tested}.csv",
+            hrni_tested=config["hrni_tested"],pn=pn)
     log:
         "logs/degree/{data}_summed.log"
     run:
@@ -139,9 +139,9 @@ rule get_degree_values:
             df_hci = threshold_degree(df,hci_limit)
             df_hci.to_csv(hci_filename,sep="\t",index=False)
 
-        for hcni_filename, hcni_limit in zip(output.hcni_tests,params.hcni_tested):
-            df_hcni = threshold_degree(df,hcni_limit,mode="non_interaction")
-            df_hcni.to_csv(hcni_filename,sep="\t",index=False)
+        for hrni_filename, hrni_limit in zip(output.hrni_tests,params.hrni_tested):
+            df_hrni = threshold_degree(df,hrni_limit,mode="non_interaction")
+            df_hrni.to_csv(hrni_filename,sep="\t",index=False)
 
         threshold_degree(df,0,mode="all").to_csv(output.naive_degree,sep="\t",index=False)
 

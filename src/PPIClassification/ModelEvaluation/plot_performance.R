@@ -71,7 +71,7 @@ g <- ggplot(
   ) +
   scale_color_manual(
     values = c("darkorange", "blue"),
-    labels = c("HCNI", "Non-observed")
+    labels = c("HRNI", "Non-observed")
   ) +
   theme_bw() +
   facet_grid(
@@ -88,7 +88,7 @@ g <- ggplot(
 
 ggsave("manual_figures/ROC_auc.png", g, height = 5, width = 6)
 
-# AUC for HCNI and non-observed negative sets, plotted separately as a
+# AUC for HRNI and non-observed negative sets, plotted separately as a
 # function of the positive threshold.
 auc_summary <- auc_data %>%
   group_by(dataset, neg_limit, pos_limit, random) %>%
@@ -120,7 +120,7 @@ g_delta <- ggplot(
   ) +
   scale_linetype_manual(
     values = c("FALSE" = "solid", "TRUE" = "dashed"),
-    labels = c("HCNI", "Non-observed")
+    labels = c("HRNI", "Non-observed")
   ) +
   scale_x_discrete(
     labels = parse(text = pos_limit_labels)
@@ -132,7 +132,7 @@ g_delta <- ggplot(
     )
   ) +
   labs(
-    title = "AUC over thresholds, HCNI vs. non-observed negatives",
+    title = "AUC over thresholds, HRNI vs. non-observed negatives",
     x = "Positive threshold",
     y = "AUC",
     color = "Dataset",
@@ -204,7 +204,7 @@ g_acc <- ggplot(
   ) +
   scale_fill_manual(
     values = c("FALSE" = "darkorange", "TRUE" = "blue"),
-    labels = c("HCNI", "Non-observed")
+    labels = c("HRNI", "Non-observed")
   ) +
   facet_wrap(~dataset) +
   labs(

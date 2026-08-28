@@ -5,7 +5,7 @@ df = pd.read_csv(snakemake.input.similarity, sep="\t")
 df["spearman"] = df[["spearman_bait", "spearman_prey"]].mean(axis=1)
 
 label_order = ["pos", "neg_hrni", "neg_random"]
-label_titles = {"pos": "Positives", "neg_hrni": "Negatives (HCNI)", "neg_random": "Negatives (random)"}
+label_titles = {"pos": "Positives", "neg_hrni": "Negatives (HRNI)", "neg_random": "Negatives (random)"}
 
 
 def pos_limit_sort_key(value):

@@ -108,7 +108,7 @@ def main():
         return df[[bait_col, prey_col]].rename(columns={bait_col: "bait", prey_col: "prey"})
 
     hci_df = read_edgelist(snakemake.input.interaction_data)
-    hcni_df = read_edgelist(snakemake.input.max_negative)
+    hrni_df = read_edgelist(snakemake.input.max_negative)
 
     network_type = snakemake.wildcards.network_type
     if network_type == "directional":
@@ -119,21 +119,21 @@ def main():
         raise ValueError(f"{network_type} is not a valid network type.")
     
     G_validation_pos, G_validation_neg, G_test_pos, G_test_neg = define_validation_test(
-        hci_df, hcni_df, 20, directed=directed
+        hci_df, hrni_df, 20, directed=directed
     )
 
     sanity_check(
         [G_validation_pos],
         [G_validation_neg],
         [hci_df],
-        [hcni_df], directed=directed) # validation set
+        [hrni_df], directed=directed) # validation set
 
     try: # test-set doesn't need the same node set
         sanity_check(
             [G_test_pos],
             [G_test_neg],
             [hci_df],
-            [hcni_df], directed=directed)
+            [hrni_df], directed=directed)
     except AssertionError as e:
         expected = (
             "Node sets do not match" not in str(e),

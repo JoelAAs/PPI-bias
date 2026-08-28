@@ -4,14 +4,14 @@ import matplotlib.pyplot as plt
 df = pd.read_csv(snakemake.input.metrics, sep="\t")
 df["delta_per_edge"] = (df["bait_degree_delta"] + df["prey_degree_delta"]) / df["num_edges"]
 df["spearman"] = df[["spearman_bait", "spearman_prey"]].mean(axis=1)
-df["negative_data"] = df["random"].map({True: "Non-observed", False: "HCNI"})
+df["negative_data"] = df["random"].map({True: "Non-observed", False: "HRNI"})
 
 dataset_labels = {"ms": "MS", "y2h": "Y2H", "flat": "Combined"}
 df["dataset_label"] = df["dataset"].map(lambda d: dataset_labels.get(d, d))
 
 datasets = sorted(df["dataset_label"].unique())
-groups = ["HCNI", "Non-observed"]
-colors = {"HCNI": "#e07b1a", "Non-observed": "#1a3fe0"}
+groups = ["HRNI", "Non-observed"]
+colors = {"HRNI": "#e07b1a", "Non-observed": "#1a3fe0"}
 
 
 def grouped_box(ax, value_col, title, ylabel):

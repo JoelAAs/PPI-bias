@@ -74,6 +74,6 @@ legend_dataset = fig.legend(handles=color_handles, title="Dataset", loc="lower l
 fig.add_artist(legend_dataset)
 fig.legend(handles=shape_handles, title=r"$Q_{2.5}$ threshold", loc="upper left", bbox_to_anchor=(1.0, 0.5))
 
-fig.suptitle("Prediction overlap (Jaccard): Negative_HRNI vs Negative_NO")
+fig.suptitle(f"Prediction overlap (Jaccard, {snakemake.wildcards.pair_set} pairs): Negative_HRNI vs Negative_NO")
 plt.tight_layout()
 plt.savefig(snakemake.output.plot, dpi=150, bbox_inches="tight")

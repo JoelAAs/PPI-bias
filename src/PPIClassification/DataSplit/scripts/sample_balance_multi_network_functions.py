@@ -45,7 +45,7 @@ def drop_exclusive_nodes(pos_edges, neg_edges, directed):
 
     Args:
         pos_edges: DataFrame of positive (HCI) bait/prey edges.
-        neg_edges: DataFrame of negative (HCNI) bait/prey edges.
+        neg_edges: DataFrame of negative (HRNI) bait/prey edges.
 
     Returns:
         Tuple (pos_edges, neg_edges) with exclusive-protein edges removed.
@@ -464,7 +464,7 @@ def degree_balace_edges(pos_edges, neg_edges, min_flow, directed, max_edges=None
 
     Args:
         pos_edges: DataFrame of positive (HCI) bait/prey edges.
-        neg_edges: DataFrame of negative (HCNI) bait/prey edges.
+        neg_edges: DataFrame of negative (HRNI) bait/prey edges.
         min_flow: Minimum fraction of max-flow that must be reached before stopping
             (e.g. 0.95 means ≥95% of the theoretical maximum flow).
         directed: If True, balance bait out-degrees and prey in-degrees separately;

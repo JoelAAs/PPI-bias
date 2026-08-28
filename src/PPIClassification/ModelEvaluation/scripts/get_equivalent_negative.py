@@ -33,7 +33,7 @@ def main():
 
     _, selected_neg, _ = degree_balace_edges(sel_neg_df, comp_df, min_flow=0.80, directed=directed)
 
-    selected_neg.to_csv(snakemake.output.non_obs, sep="\t", index=False)
+    selected_neg.to_csv(snakemake.output.no_selected_negative, sep="\t", index=False)
 
 
 if __name__ == "__main__":

@@ -19,9 +19,16 @@ def degree_dicts(df, directed):
     return deg, deg
 
 
-def jaccard_edges(df_a, df_b):
-    set_a = set(zip(df_a["bait"], df_a["prey"]))
-    set_b = set(zip(df_b["bait"], df_b["prey"]))
+def edge_set(df, directed):
+    # Undirected: canonicalize (bait, prey) vs (prey, bait) to the same id, matching the
+    # "A->B and B->A is considered the same" semantics - bait/prey column order isn't
+    # otherwise guaranteed consistent across permutation files.
+    pairs = zip(df["bait"], df["prey"])
+    return set(pairs) if directed else set(tuple(sorted(p)) for p in pairs)
+
+
+def jaccard_edges(df_a, df_b, directed):
+    set_a, set_b = edge_set(df_a, directed), edge_set(df_b, directed)
     union = set_a | set_b
     return (len(set_a & set_b) / len(union)) if union else float("nan")
 
@@ -69,7 +76,7 @@ for label, paths in groups.items():
             "label": label,
             "permutation_a": perm_a,
             "permutation_b": perm_b,
-            "jaccard_edges": jaccard_edges(df_a, df_b),
+            "jaccard_edges": jaccard_edges(df_a, df_b, directed),
             "spearman_bait": spearman_degree(bait_a, bait_b),
             "spearman_prey": spearman_degree(prey_a, prey_b),
             "n_a": len(df_a),

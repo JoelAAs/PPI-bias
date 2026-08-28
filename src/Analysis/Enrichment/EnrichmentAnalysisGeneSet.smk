@@ -36,7 +36,7 @@ def input_enrichments(wc, types, c_limits, c_ont):
     c_data = wc.data
     expected_input = []
     for c_type in types:
-        if c_type == "HCNI":
+        if c_type == "HRNI":
             c_limit = c_limits[1]
         else:
             c_limit = c_limits[0]
@@ -69,10 +69,10 @@ def input_enrichments(wc, types, c_limits, c_ont):
 rule n_enriched_per_method:
     params:
         hci_limits=config["hci_limits"],
-        hcni_tested=config["hcni_tested"]
+        hrni_tested=config["hrni_tested"]
     input:
         all_degree_enrichments=lambda wc: input_enrichments(
-            wc,["HCI", "delta", "HCNI"],[config["hci_limits"], config["hcni_tested"]],["go", "do"])
+            wc,["HCI", "delta", "HRNI"],[config["hci_limits"], config["hrni_tested"]],["go", "do"])
     output:
         n_enrichments="work_folder/degree/enrichment/significant_ontologies/{data}.csv"
     log:
@@ -163,14 +163,14 @@ rule test_top_degree_against_naive:
         permutations=1000000,# probability should make sure that same permutation isn't picked
         n_top_genes=50,
         hci_limits=config["hci_limits"],
-        hcni_limits=config["hcni_tested"]
+        hrni_limits=config["hrni_tested"]
     input:
         hci_degree=expand(
             "work_folder/degree/doid/{{data}}_HCI_{hci_limit}_doid.csv",
             pn=pn,hci_limit=config["hci_limits"]),
-        hcni_degree=expand(
-            "work_folder/degree/doid/{{data}}_HCNI_{hcni_limit}_doid.csv",
-            pn=pn,hcni_limit=config["hcni_tested"]),
+        hrni_degree=expand(
+            "work_folder/degree/doid/{{data}}_HRNI_{hrni_limit}_doid.csv",
+            pn=pn,hrni_limit=config["hrni_tested"]),
 
         naive_degree="work_folder/degree/doid/{data}_naive_doid.csv",
         summed_degree="work_folder/degree/doid/{data}_summed.csv"
@@ -199,11 +199,11 @@ rule test_top_degree_against_naive:
                     w.write(f"{wildcards.data}\tHCI\t{hci_limit}\t{degree_type}\t"
                             f"{hci_mean}\t{c_naive_mean}\t{p_permuted}\t{params.permutations}\n")
 
-                for hcni_file, hcni_limit in zip(input.hcni_degree,params.hcni_limits):
-                    hcni_mean, p_permuted, c_naive_mean = extreme_value_permutation_test(
-                        degree_type,hcni_file,naive_permute_dict[degree_type],params.n_top_genes)
-                    w.write(f"{wildcards.data}\tHCNI\t{hcni_limit}\t{degree_type}\t"
-                            f"{hcni_mean}\t{c_naive_mean}\t{p_permuted}\t{params.permutations}\n")
+                for hrni_file, hrni_limit in zip(input.hrni_degree,params.hrni_limits):
+                    hrni_mean, p_permuted, c_naive_mean = extreme_value_permutation_test(
+                        degree_type,hrni_file,naive_permute_dict[degree_type],params.n_top_genes)
+                    w.write(f"{wildcards.data}\tHRNI\t{hrni_limit}\t{degree_type}\t"
+                            f"{hrni_mean}\t{c_naive_mean}\t{p_permuted}\t{params.permutations}\n")
 
                 summed_mean, p_permuted, c_naive_mean = extreme_value_permutation_test(
                     degree_type,input.summed_degree,naive_permute_dict[degree_type],params.n_top_genes)
@@ -299,15 +299,15 @@ rule test_go_terms:
         n_tested_genes=50,
         min_observed=0.16,
         hci_limit=[.2,],
-        hcni_tested=[4,] # as it's what I chose for DOID comparison
+        hrni_tested=[4,] # as it's what I chose for DOID comparison
     input:
         naive_go_frequency_df="work_folder/degree/GO/{data}_naive_count_{source}.csv",
         hci_observations=expand(
             "work_folder/degree/GO/{{data}}_HCI_{limit}_count_{{source}}.csv",
             pn=pn, limit=config["hci_limits"]),
-        hcni_observations=expand(
-            "work_folder/degree/GO/{{data}}_HCNI_{limit}_count_{{source}}.csv",
-            pn=pn,limit=config["hcni_tested"])
+        hrni_observations=expand(
+            "work_folder/degree/GO/{{data}}_HRNI_{limit}_count_{{source}}.csv",
+            pn=pn,limit=config["hrni_tested"])
     output:
         test_csv = "work_folder/degree/GO/tested/{data}_{source}.csv"
     log:
@@ -318,14 +318,14 @@ rule test_go_terms:
         )
         naive_go_frequency_df = naive_go_frequency_df.set_index("go_term")
         go_to_keep = set()
-        for alt_obs in input.hci_observations + input.hcni_observations:
+        for alt_obs in input.hci_observations + input.hrni_observations:
             alt_obs_df = pd.read_csv(alt_obs,sep="\t")
             go_to_keep |= set(alt_obs_df[alt_obs_df["go_frequency"] > params.min_observed]["go_term"])
 
         go_set_zips = list(zip(
             input.hci_observations,params.hci_limit,["HCI"] * len(params.hci_limit)
         )) +  list(zip(
-            input.hcni_observations,params.hcni_tested,["HCNI"] * len(params.hcni_tested)
+            input.hrni_observations,params.hrni_tested,["HRNI"] * len(params.hrni_tested)
         ))
         data_cols = ["go_term", "or", "p_value", "naive_obs", "set_obs"]
         id_cols = ["data","type", "limit", "source"]
