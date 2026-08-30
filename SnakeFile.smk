@@ -9,6 +9,7 @@ from src.support_functions import read_fasta
 
 datasets = config["datasets"]
 esm_models = ["ESM2", "ESMC"]
+prediction_models = ["AF", "RF2-PPI", "DCA"]
 #expected_output += colocalisation_plot + go_jaccards_plot + hydro_delta_plot +  do_jaccards_plot
 #expected_output += negatome_compare + matched_colocalisation_plot + negatome_entropy
 
@@ -38,6 +39,7 @@ include: "src/Analysis/MethodConcordance/MethodConcordance.smk"
 include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
 include: "src/Analysis/NegatomeComparison/CompareSharedBaits.smk"
 include: "src/Analysis/CompareLocalisationMethod/MethodLocalisation.smk"
+include: "src/Analysis/CheckAgainstPredictions/CheckAgainstPredicted.smk"
 
 include: "src/PPIClassification/Embeddings/Embeddings.smk"
 include: "src/PPIClassification/DataSplit/GetGraphs.smk"
@@ -108,19 +110,19 @@ rule all:
         # Localisation analysis
         "work_folder/analysis/shared_annotation_proportions/plots/undirectional_OR.png",
         
-        # Module 1: co-expression
+        # co-expression
         "work_folder/analysis/coexpression/plots/undirectional_expression_boxplot.png",
         "work_folder/analysis/coexpression/plots/undirectional_expression_or_barplot.png",
         
-        # Module 5: co-essentiality
+        # co-essentiality
         "work_folder/analysis/coessentiality/plots/undirectional_coessentiality_OR.png",
         
-        # Module 4: assay concordance
+        # assay concordance
         "work_folder/analysis/protein_degree/plots/undirectional_degree_distributions.png",
         "work_folder/analysis/protein_degree/plots/undirectional_degree_bin_heatmap.png",
         "work_folder/analysis/protein_degree/plots/undirectional_degree_dist.png",
 
-        ## Module 2: no-interaction hubs
+        # no-interaction hubs
         "work_folder/analysis/no_interaction_hubs/plots/undirectional_hub_properties_binary.png",
         "work_folder/analysis/no_interaction_hubs/plots/undirectional_hub_properties_continuous.png",
         
@@ -132,4 +134,9 @@ rule all:
         # Interface size vs detection ratio
         "work_folder/analysis/interfaces/plots/undirectional_interface_detection.png",
 
-        expand("work_folder/analysis/interfaces/plots/{dataset}_interface_size_model.png", dataset = "flat")
+        # Other preciditon analysis
+        expand("work_folder/analysis/interfaces/plots/{dataset}_interface_size_model.png", dataset = "flat"),
+        expand(
+            "work_folder/analysis/predicted_interactions/survival/plot/{dataset}_survival.png",
+            dataset = datasets
+            )
