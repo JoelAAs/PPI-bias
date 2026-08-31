@@ -40,6 +40,7 @@ include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
 include: "src/Analysis/NegatomeComparison/CompareSharedBaits.smk"
 include: "src/Analysis/CompareLocalisationMethod/MethodLocalisation.smk"
 include: "src/Analysis/CheckAgainstPredictions/CheckAgainstPredicted.smk"
+include: "src/Analysis/CheckAgainstPredictions/CheckAgainstOtherMethods.smk"
 
 include: "src/PPIClassification/Embeddings/Embeddings.smk"
 include: "src/PPIClassification/DataSplit/GetGraphs.smk"
@@ -136,7 +137,25 @@ rule all:
 
         # Other preciditon analysis
         expand("work_folder/analysis/interfaces/plots/{dataset}_interface_size_model.png", dataset = "flat"),
+        expand("work_folder/analysis/interfaces/plots/{dataset}_detection_vs_interface_size.png", dataset = "flat"),
+        expand("work_folder/analysis/interfaces/plots/{dataset}_detection_interface_OR.png", dataset = datasets),
         expand(
             "work_folder/analysis/predicted_interactions/survival/plot/{dataset}_survival.png",
             dataset = datasets
-            )
+            ),
+        expand(
+            "work_folder/analysis/predicted_interactions/DCA/plot/{dataset}_DCA_HRNI_vs_NEG.png",
+            dataset = datasets
+            ),
+        expand(
+            "work_folder/analysis/predicted_interactions/survival/plot/{dataset}_funnel.png",
+            dataset = datasets
+            ),
+        expand(
+            "work_folder/analysis/predicted_interactions/survival/plot/{dataset}_survival_RF2_zoom.png",
+            dataset = datasets
+            ),
+        expand(
+            "work_folder/analysis/other_methods/detection_stats/plot/{dataset}_contradiction_rate.png",
+            dataset = datasets
+            ),

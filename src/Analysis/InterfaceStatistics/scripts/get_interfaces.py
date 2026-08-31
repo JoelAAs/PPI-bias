@@ -61,7 +61,7 @@ def build_chain_map(sifts_path, human_proteins, log):
     fusions = []
     dropped = 0
     for (pdb, chain), accs in chain_accs.items():
-        if len(accs) > 1:                                   # fusion: multiple accessions on one chain
+        if len(accs) > 1:                                   # fusion: multiple accessions on one chain only use the largest segment
             windows = {a: _residue_window(ranges[(pdb, chain)][a]) for a in accs}
             dominant = max(windows, key=lambda a: len(windows[a]))
             fusions.append((pdb, chain, {a: len(w) for a, w in windows.items()}, dominant))

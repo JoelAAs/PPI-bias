@@ -23,26 +23,26 @@ rule get_zhang_heteromer:
         raise IOError("You need to download these files yourself, cant wget")
 
 
-rule join_top_to_negatome:
-    # prediction columns:
-    # RFprob — RF2-PPI contact probability (the fast screening network).
-    # AFprob — AlphaFold2 contact probability, model 3, run on their omicMSAs.
-    # CFprob — ColabFold pipeline using the AF2 network.
-    # AFMprob — ColabFold using the AlphaFold-Multimer network.
-    input:
-        interaction_prediction = "work_folder/data/predicted_interactions/final_predictions/final_predictions_80.tsv",
-        pod = "work_folder/analysis/POD/undirectional/POD_{dataset}.pq" # Obs undirectional
-    output:
-        joined = "work_folder/analysis/fpr_comparission/predicted/Zhang_{dataset}_joined.pq"
-    run:
-        df_af_predictions = pd.read_csv(input.interaction_prediction, sep="\t", comment="#")
-        df_pod = pd.read_parquet(input.pod)
+# rule join_top_to_negatome:
+#     # prediction columns:
+#     # RFprob — RF2-PPI contact probability (the fast screening network).
+#     # AFprob — AlphaFold2 contact probability, model 3, run on their omicMSAs.
+#     # CFprob — ColabFold pipeline using the AF2 network.
+#     # AFMprob — ColabFold using the AlphaFold-Multimer network.
+#     input:
+#         interaction_prediction = "work_folder/data/predicted_interactions/final_predictions/final_predictions_80.tsv",
+#         pod = "work_folder/analysis/POD/undirectional/POD_{dataset}.pq" # Obs undirectional
+#     output:
+#         joined = "work_folder/analysis/fpr_comparission/predicted/Zhang_{dataset}_joined.pq"
+#     run:
+#         df_af_predictions = pd.read_csv(input.interaction_prediction, sep="\t", comment="#")
+#         df_pod = pd.read_parquet(input.pod)
 
-        df_pod["pair_id"] = df[["uniprot_id_bait","uniprot_id_prey"]].min(axis=1) + ":" + df[["a","b"]].max(axis=1)
-        df_af_predictions["pair_id"] = df_af_predictions.apply(lambda row: ":".join(sorted([row["Protein1"], row["Protein2"]])), axis=1)
+#         df_pod["pair_id"] = df[["uniprot_id_bait","uniprot_id_prey"]].min(axis=1) + ":" + df[["a","b"]].max(axis=1)
+#         df_af_predictions["pair_id"] = df_af_predictions.apply(lambda row: ":".join(sorted([row["Protein1"], row["Protein2"]])), axis=1)
 
-        df_merged = df_pod.merge(df_af_predictions, on="pair_id", how="inner")
-        df_merged.to_parquet(output.joined)
+#         df_merged = df_pod.merge(df_af_predictions, on="pair_id", how="inner")
+#         df_merged.to_parquet(output.joined)
 
 
 rule sort_score:
@@ -206,7 +206,7 @@ rule plot_survival:
         # calling cutoffs sit near 0.99 (Fig. 3C/3D). DCA has no published
         # cutoff, so nothing is marked there.
         cutoffs = {"RF2-PPI": [0.3, 0.99], "AF": [0.99]},
-        denom = "uncond"   # "uncond" for the paper, "cond" for the funnel-conditional version
+        denom = "cond"   # "uncond" for the paper, "cond" for the funnel-conditional version
     run:
         import matplotlib
         matplotlib.use("Agg")
@@ -268,5 +268,204 @@ rule plot_survival:
         fig.legend(handles, labels, loc="lower center", ncol=5, frameon=False,
                    bbox_to_anchor=(0.5, -0.06))
 
+        fig.savefig(output.png, dpi=300, bbox_inches="tight")
+        plt.close(fig)
+
+
+rule plot_survival_RF2_zoom:
+    """
+    plot_survival, but RF2-PPI only and zoomed to the score in [0.9, 1]
+    range, with the fold enrichment of HRNI_n5 over random_NEG marked at
+    score >= 0.95 and score >= 0.99.
+    """
+    input:
+        curves = "work_folder/analysis/predicted_interactions/survival/{dataset}_survival.tsv"
+    output:
+        png = "work_folder/analysis/predicted_interactions/survival/plot/{dataset}_survival_RF2_zoom.png"
+    params:
+        thresholds = [0.95, 0.99],
+        denom = "uncond"
+    run:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        curves = pd.read_csv(input.curves, sep="\t")
+        ycol = f"frac_above_{params.denom}"
+        sub_m = curves[curves["model"] == "RF2-PPI"]
+
+        style = {
+            "HRI":        dict(color="#2ca02c", ls="-",  lw=1.8, label="Interaction (any)"),
+            "random_NEG": dict(color="#1f77b4", ls="--", lw=1.8, label="Pre-selected Random negatives"),
+            "HRNI_n1":    dict(color="#ff7f0e", ls="-",  lw=1.2, alpha=0.55, label="HRNI, $N\\geq1$"),
+            "HRNI_n3":    dict(color="#ff7f0e", ls="-",  lw=1.5, alpha=0.78, label="HRNI, $N\\geq3$"),
+            "HRNI_n5":    dict(color="#ff7f0e", ls="-",  lw=1.9, alpha=1.0,  label="HRNI, $N\\geq5$"),
+        }
+
+        fig, ax = plt.subplots(figsize=(7, 5.5))
+
+        curves_by_set = {}
+        for set_name, st in style.items():
+            s = sub_m[sub_m["set"] == set_name].sort_values("threshold")
+            if s.empty:
+                continue
+            ax.plot(s["threshold"], s[ycol], **st)
+            curves_by_set[set_name] = s
+
+        factor_lines = []
+        for t in params.thresholds:
+            ax.axvline(t, color="grey", lw=0.8, ls="-.", alpha=0.7)
+            ax.text(t, 1.02, f"{t:g}", transform=ax.get_xaxis_transform(),
+                    ha="center", va="bottom", fontsize=7, color="grey")
+
+            if "random_NEG" in curves_by_set and "HRNI_n5" in curves_by_set:
+                y_neg = np.interp(t, curves_by_set["random_NEG"]["threshold"], curves_by_set["random_NEG"][ycol])
+                y_hrni5 = np.interp(t, curves_by_set["HRNI_n5"]["threshold"], curves_by_set["HRNI_n5"][ycol])
+                if y_neg > 0:
+                    factor = y_hrni5 / y_neg
+                    factor_lines.append(f"@{t:g}: {factor:.1f}×  ({y_hrni5 * 100:.2e}% vs {y_neg * 100:.2e}%)")
+                    ax.axhline(y_hrni5, xmin=0, xmax=(t - 0.90) / 0.10,
+                               color="#ff7f0e", lw=0.7, ls=":", alpha=0.6)
+
+        ax.set_xlim(0.90, 1.0)
+        ax.set_yscale("log")
+        ax.set_xlabel("RF2-PPI interaction probability")
+        ax.set_ylabel(
+            "Fraction of pairs above threshold"
+            + ("" if params.denom == "uncond" else "\n(among pairs scored by this model)")
+        )
+        ax.set_title(f"{wildcards.dataset}: RF2-PPI survival, high-confidence range")
+        ax.grid(alpha=0.25, which="both", lw=0.4)
+        ax.legend(loc="upper right", frameon=False, fontsize=8)
+
+        if factor_lines:
+            box_text = "Fold enrichment, HRNI $N\\geq5$ vs random negatives\n" + "\n".join(factor_lines)
+            ax.text(0.02, 0.98, box_text, transform=ax.transAxes,
+                    ha="left", va="top", fontsize=8,
+                    bbox=dict(boxstyle="round", facecolor="white", edgecolor="grey", alpha=0.9))
+
+        fig.tight_layout()
+        fig.savefig(output.png, dpi=300, bbox_inches="tight")
+        plt.close(fig)
+
+
+rule plot_DCA_distribution:
+    input:
+        joined = "work_folder/data/predicted_interactions/joined/{dataset}_scores.pq"
+    output:
+        DCA_plot = "work_folder/analysis/predicted_interactions/DCA/plot/{dataset}_DCA_HRNI_vs_NEG.png"
+    params:
+        n_thresholds = [1, 3, 5],
+        dca_cutoff = 0.12
+    run:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from scipy.stats import gaussian_kde
+
+        DCA_EPS = 1e-6
+
+        df = pd.read_parquet(input.joined)
+        df = df[df["DCA_score"].notna()].copy()
+        df["DCA_score"] = np.log(df["DCA_score"].clip(lower=DCA_EPS))
+
+        is_neg = pd.Series(False, index=df.index)
+        for m in ("RF2-PPI", "AF"):
+            col = f"{m}_subset"
+            if col in df.columns:
+                is_neg |= df[col].eq("NEG")
+
+        tested   = df["n_tested"].fillna(0)
+        observed = df["n_observed"].fillna(-1)
+
+        sets = {"random_NEG": df[is_neg]}
+        for k in params.n_thresholds:
+            sets[f"HRNI_n{k}"] = df[(observed == 0) & (tested >= k)]
+
+        style = {
+            "random_NEG": dict(color="#1f77b4", ls="--", lw=1.8, label="Pre-selected Random negatives"),
+            "HRNI_n1":    dict(color="#ff7f0e", ls="-",  lw=1.2, alpha=0.55, label="HRNI, $N\\geq1$"),
+            "HRNI_n3":    dict(color="#ff7f0e", ls="-",  lw=1.5, alpha=0.78, label="HRNI, $N\\geq3$"),
+            "HRNI_n5":    dict(color="#ff7f0e", ls="-",  lw=1.9, alpha=1.0,  label="HRNI, $N\\geq5$"),
+        }
+
+        fig, ax = plt.subplots(figsize=(7, 5))
+
+        x_grid = np.linspace(df["DCA_score"].min(), df["DCA_score"].max(), 500)
+        for set_name, st in style.items():
+            scores = sets[set_name]["DCA_score"].to_numpy()
+            if len(scores) < 2:
+                continue
+            density = gaussian_kde(scores)(x_grid)
+            ax.plot(x_grid, density, **st)
+            ax.fill_between(x_grid, density, color=st["color"], alpha=0.08)
+
+        cutoff = np.log(max(params.dca_cutoff, DCA_EPS))
+        ax.axvline(cutoff, color="grey", lw=0.8, ls=":", alpha=0.7)
+        ax.text(cutoff, 1.02, f"{params.dca_cutoff:g}", transform=ax.get_xaxis_transform(),
+                ha="center", va="bottom", fontsize=7, color="grey")
+
+        ax.set_xlabel("log(DCA) score")
+        ax.set_ylabel("Density")
+        ax.set_title(f"{wildcards.dataset}: DCA score distribution, HRNI vs random negatives")
+        ax.legend(loc="best", frameon=False)
+        ax.grid(alpha=0.25, lw=0.4)
+
+        fig.tight_layout()
+        fig.savefig(output.DCA_plot, dpi=300, bbox_inches="tight")
+        plt.close(fig)
+
+
+rule plot_funnel:
+    """
+    Attrition through the screening funnel: eligible -> RF2-PPI-scored ->
+    AF-scored, one line per set, fraction of that set's eligible pairs
+    still present at each stage.
+    """
+    input:
+        counts = "work_folder/analysis/predicted_interactions/survival/{dataset}_counts.tsv"
+    output:
+        png = "work_folder/analysis/predicted_interactions/survival/plot/{dataset}_funnel.png"
+    run:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        counts = pd.read_csv(input.counts, sep="\t")
+        stages = ["Eligible", "RF2-PPI scored", "AF scored"]
+        x = np.arange(len(stages))
+
+        style = {
+            "HRI":        dict(color="#2ca02c", ls="-",  lw=1.8, label="Interaction (any)"),
+            "random_NEG": dict(color="#1f77b4", ls="--", lw=1.8, label="Pre-selected Random negatives"),
+            "HRNI_n1":    dict(color="#ff7f0e", ls="-",  lw=1.2, alpha=0.55, label="HRNI, $N\\geq1$"),
+            "HRNI_n3":    dict(color="#ff7f0e", ls="-",  lw=1.5, alpha=0.78, label="HRNI, $N\\geq3$"),
+            "HRNI_n5":    dict(color="#ff7f0e", ls="-",  lw=1.9, alpha=1.0,  label="HRNI, $N\\geq5$"),
+        }
+
+        fig, ax = plt.subplots(figsize=(6, 5))
+
+        for set_name, st in style.items():
+            sub = counts[counts["set"] == set_name]
+            if sub.empty:
+                continue
+            n_elig = sub["n_eligible"].iloc[0]
+            rf2 = sub.loc[sub["model"] == "RF2-PPI", "n_scored"]
+            af = sub.loc[sub["model"] == "AF", "n_scored"]
+            if not n_elig or rf2.empty or af.empty:
+                continue
+
+            y = np.array([n_elig, rf2.iloc[0], af.iloc[0]], dtype=float) / n_elig
+            ax.plot(x, y, marker="o", **st)
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(stages)
+        ax.set_yscale("log")
+        ax.set_ylabel("Fraction of eligible pairs surviving")
+        ax.set_title(f"{wildcards.dataset}: attrition through the screening funnel")
+        ax.grid(alpha=0.25, which="both", lw=0.4)
+        ax.legend(loc="best", frameon=False)
+
+        fig.tight_layout()
         fig.savefig(output.png, dpi=300, bbox_inches="tight")
         plt.close(fig)
