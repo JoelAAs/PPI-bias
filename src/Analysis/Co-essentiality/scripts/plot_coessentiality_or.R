@@ -40,4 +40,4 @@ g <- ggplot(df, aes(x = dataset_label, y = log10_or, fill = dataset_label)) +
   theme_bw() +
   theme(legend.position = "none")
 
-ggsave(snakemake@output[[1]], g, dpi = 300, height = 4, width = 3)
+ggsave(snakemake@output[[1]], g, dpi = 300, height = 4, width = 3.4)

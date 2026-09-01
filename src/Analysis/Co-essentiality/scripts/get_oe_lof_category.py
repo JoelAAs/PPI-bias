@@ -5,17 +5,17 @@ import pandas as pd
 if __name__ == "__main__":
     log = open(snakemake.log[0], "w")
     
-    h_q = snakemake.params.high_quantile
+    l_q = snakemake.params.low_quantile
 
     lof = pd.read_csv(snakemake.input.gnomad_lof_metrics, sep="\t", compression="gzip")
     lof = lof[["gene", "oe_lof_upper"]].dropna().drop_duplicates(subset="gene")
     print(f"{len(lof)} genes with an oe_lof_upper value", file=log, flush=True)
 
-    threshold = lof["oe_lof_upper"].quantile(h_q)
-    lof["category"] = np.where(lof["oe_lof_upper"] >= threshold, "high", "low")
+    threshold = lof["oe_lof_upper"].quantile(l_q)
+    lof["category"] = np.where(lof["oe_lof_upper"] <= threshold, "low", "high")
     print(
-        f"oe_lof_upper {h_q:.0%} threshold: {threshold:.4f} "
-        f"({(lof['category'] == 'high').sum()} high, {(lof['category'] == 'low').sum()} low)",
+        f"oe_lof_upper {l_q:.0%} threshold: {threshold:.4f} "
+        f"({(lof['category'] == 'low').sum()} low, {(lof['category'] == 'high').sum()} high)",
         file=log, flush=True,
     )
 

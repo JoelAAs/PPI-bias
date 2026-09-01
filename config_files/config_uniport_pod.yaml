@@ -76,7 +76,7 @@ partitions:
 positive_max: 0.29
 negative_max: 3
 
-oe_lof_high_quantile: 0.75
+oe_lof_low_quantile: 0.25
 
 positive_limits:
   - "all"

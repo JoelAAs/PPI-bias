@@ -23,16 +23,16 @@ if __name__ == "__main__":
     print(f"{n_dropped} edges dropped (protein missing an oe_lof_upper category)", file=log, flush=True)
     print(f"{combined['pos'].sum()} HRI edges, {(~combined['pos']).sum()} HRNI edges", file=log, flush=True)
 
-    both_high = ((combined["bait_category"] == "high") & (combined["prey_category"] == "high")).to_numpy()
-    value_matrix = both_high.reshape(-1, 1)
+    both_low = ((combined["bait_category"] == "low") & (combined["prey_category"] == "low")).to_numpy()
+    value_matrix = both_low.reshape(-1, 1)
 
     result = cluster_bootstrap_stats(
-        combined, "bait", "prey", "pos", value_matrix, ["both_high"],
+        combined, "bait", "prey", "pos", value_matrix, ["both_low"],
         B=5000, n_workers=snakemake.threads,
     ).rename(columns={"obs_pos": "rate_hri", "obs_neg": "rate_hrni", "effect": "odds_ratio"})
 
     print(
-        f"OR both-high (HRI vs HRNI): {result['odds_ratio'].iloc[0]:.3f} "
+        f"OR both-low (HRI vs HRNI): {result['odds_ratio'].iloc[0]:.3f} "
         f"[{result['ci_lo'].iloc[0]:.3f}, {result['ci_hi'].iloc[0]:.3f}] "
         f"p={result['p_val'].iloc[0]:.4g}",
         file=log, flush=True,

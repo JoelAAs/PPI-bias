@@ -10,7 +10,7 @@ rule coessentiality:
 
 rule get_oe_lof_category:
     params:
-        high_quantile = config["oe_lof_high_quantile"]
+        low_quantile = config["oe_lof_low_quantile"]
     input:
         gnomad_lof_metrics = "work_folder/analysis/coessentiality/gnomad.v2.1.1.lof_metrics.by_gene.txt.bgz",
         symbol_map = "work_folder/analysis/coexpression/uniprot_to_hgnc_symbol.tsv"
