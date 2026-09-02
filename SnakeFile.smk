@@ -35,6 +35,7 @@ include: "src/Analysis/Co-essentiality/CoEssensiality.smk"
 include: "src/Analysis/NonInteractionHubs/NoInteractionHubs.smk"
 include: "src/Analysis/NonInteractionHubs/DegreeQuadrants.smk"
 include: "src/Analysis/MethodConcordance/MethodConcordance.smk"
+include: "src/Analysis/ProteinPromiscuity/ProteinPromiscuity.smk"
 
 include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
 include: "src/Analysis/NegatomeComparison/CompareSharedBaits.smk"
@@ -159,3 +160,8 @@ rule all:
             "work_folder/analysis/other_methods/detection_stats/plot/{dataset}_contradiction_rate.png",
             dataset = datasets
             ),
+
+        # Protein promiscuity (bait/prey random-effects model)
+        "work_folder/analysis/ProteinPromiscuity/y2h_variance_components.tsv",
+        "work_folder/analysis/ProteinPromiscuity/ms_observed_vs_expected_prey.tsv",
+        "work_folder/analysis/ProteinPromiscuity/plot/cross_method_detectability.png",
