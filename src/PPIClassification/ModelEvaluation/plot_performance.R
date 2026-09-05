@@ -43,14 +43,14 @@ auc_data$pos_limit <- factor(
 
 # plotmath expressions shared by both plots' pos_limit/neg_limit labels
 pos_limit_labels <- c(
-  "all" = "Any~interactions",
+  "all" = "N[obs]>0",
   "0.02" = "Q[2.5] > 0.02",
   "0.15" = "Q[2.5] > 0.15"
 )
 
 neg_limit_labels <- c(
-  "1" = "Negative~tests >= 1",
-  "2" = "Negative~tests >= 2"
+  "1" = "N[tested] >= 1",
+  "2" = "N[tested] >= 2"
 )
 
 
@@ -61,17 +61,17 @@ g <- ggplot(
     y = roc_auc
   )
 ) +
-  geom_boxplot(aes(color = random)) +
+  geom_boxplot(aes(fill = random)) +
   labs(
     title = "ROC AUC per datasets and threshold configurations",
     x = "Detection dataset",
     y = "ROC AUC",
-    color = "Negative data",
+    fill = "Negative data",
     shape = "Data type"
   ) +
-  scale_color_manual(
+  scale_fill_manual(
     values = c("darkorange", "blue"),
-    labels = c("HRNI", "Non-observed")
+    labels = c("Experimental", "Non-observed")
   ) +
   theme_bw() +
   facet_grid(
@@ -86,7 +86,7 @@ g <- ggplot(
     axis.text.x = element_text(angle = -45, hjust = 0, vjust = 0)
   )
 
-ggsave("manual_figures/ROC_auc.png", g, height = 5, width = 6)
+ggsave("manual_figures/ROC_auc.png", g, height = 5, width = 8)
 
 # AUC for HRNI and non-observed negative sets, plotted separately as a
 # function of the positive threshold.
@@ -120,7 +120,7 @@ g_delta <- ggplot(
   ) +
   scale_linetype_manual(
     values = c("FALSE" = "solid", "TRUE" = "dashed"),
-    labels = c("HRNI", "Non-observed")
+    labels = c("Experimental", "Non-observed")
   ) +
   scale_x_discrete(
     labels = parse(text = pos_limit_labels)
@@ -132,7 +132,7 @@ g_delta <- ggplot(
     )
   ) +
   labs(
-    title = "AUC over thresholds, HRNI vs. non-observed negatives",
+    title = "AUC over thresholds, experimental vs. non-observed negatives",
     x = "Positive threshold",
     y = "AUC",
     color = "Dataset",

@@ -36,6 +36,7 @@ include: "src/Analysis/NonInteractionHubs/NoInteractionHubs.smk"
 include: "src/Analysis/NonInteractionHubs/DegreeQuadrants.smk"
 include: "src/Analysis/MethodConcordance/MethodConcordance.smk"
 include: "src/Analysis/ProteinPromiscuity/ProteinPromiscuity.smk"
+include: "src/Analysis/DegreeEstimation/DegreeEstimation.smk"
 
 include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
 include: "src/Analysis/NegatomeComparison/CompareSharedBaits.smk"
@@ -77,91 +78,115 @@ wildcard_constraints:
 
 rule all:
     input:
-        # Classification metrics
-        expand("work_folder/classification/{classifier}/permuted/all_metrics_{network_type}_{esm_model}.csv",
-            classifier="xgboost", network_type="undirectional",esm_model="ESM2"),
-        expand(
-            "work_folder/classification/xgboost/full_test_predictions/jaccard/all_jaccard_ESM2_undirectional_{pair_set}_similarity.tsv",
-            pair_set=["correct", "all"]),
-        "work_folder/classification/xgboost/permuted/negative_accuracy/plots/undirectional_ESM2_negative_accuracy_hrni_vs_no.png",
-        "work_folder/classification/xgboost/permuted/negative_accuracy/plots/undirectional_ESM2_hrni_positive_vs_negative_accuracy.png",
-        expand(
-            "work_folder/classification/xgboost/full_test_predictions/jaccard/plots/ESM2_undirectional_{pair_set}_jaccard_negative_hrni_vs_no.png",
-            pair_set=["correct", "all"]),
-        expand(
-            "work_folder/classification/xgboost/full_test_predictions/jaccard/plots/ESM2_undirectional_{pair_set}_jaccard_interaction_vs_negative_hrni.png",
-            pair_set=["correct", "all"]),
-        expand(
-            "work_folder/classification/xgboost/full_test_predictions/jaccard/gap_summary/ESM2_undirectional_{pair_set}_interaction_vs_negative_hrni_gap_by_dataset.tsv",
-            pair_set=["correct", "all"]),
-        "work_folder/classification/xgboost/permuted/hrni_no_delta/undirectional_ESM2_delta_auc_by_config.tsv",
-        "work_folder/classification/xgboost/permuted/hrni_no_delta/undirectional_ESM2_delta_auc_summary.tsv",
-        "work_folder/classification/xgboost/permuted/hrni_no_delta/plots/undirectional_ESM2_delta_auc_boxplot.png",
-        expand(
-            "work_folder/classification/xgboost/permuted/full_test_predictions/all_models/protein_accuracy/plots/undirectional_ESM2_{dataset}_protein_accuracy_scatter.png",
-            dataset=config["datasets"]),
-        "work_folder/classification/xgboost/permuted/full_test_predictions/all_models/protein_accuracy/plots/undirectional_ESM2_protein_split_robustness_boxplot.png",
-
-        # Train subset similarity (content + degree across permutations, and negative/positive degree balance)
-        "work_folder/analysis/subset_similarity/balance/plots/undirectional_degree_balance.png",
-        "work_folder/analysis/subset_similarity/plots/undirectional_permutation_jaccard.png",
-        "work_folder/analysis/subset_similarity/plots/undirectional_permutation_spearman.png",
-        "work_folder/subsets/dataset_eval/jaccard_dist/undirectional_intra_permutation_jaccard_distances.png",
-        "work_folder/subsets/dataset_eval/jaccard_dist/undirectional_inter_permutation_jaccard_distances.png",
-
-        # Localisation analysis
-        "work_folder/analysis/shared_annotation_proportions/plots/undirectional_OR.png",
-        
-        # co-expression
-        "work_folder/analysis/coexpression/plots/undirectional_expression_boxplot.png",
-        "work_folder/analysis/coexpression/plots/undirectional_expression_or_barplot.png",
-        
-        # co-essentiality
-        "work_folder/analysis/coessentiality/plots/undirectional_coessentiality_OR.png",
-        
-        # assay concordance
-        "work_folder/analysis/protein_degree/plots/undirectional_degree_distributions.png",
-        "work_folder/analysis/protein_degree/plots/undirectional_degree_bin_heatmap.png",
-        "work_folder/analysis/protein_degree/plots/undirectional_degree_dist.png",
-
-        # no-interaction hubs
-        "work_folder/analysis/no_interaction_hubs/plots/undirectional_hub_properties_binary.png",
-        "work_folder/analysis/no_interaction_hubs/plots/undirectional_hub_properties_continuous.png",
-        
-        # Method concordance: shared negatives test
-        "work_folder/analysis/method_concordance/undirectional/shared_negatives_fit.rds",
-        "work_folder/analysis/method_concordance/undirectional/shared_negatives_summary.txt",
-        "work_folder/analysis/method_concordance/undirectional/mixed_effects_dist.png",
-        
-        # Interface size vs detection ratio
-        "work_folder/analysis/interfaces/plots/undirectional_interface_detection.png",
-
-        # Other preciditon analysis
-        expand("work_folder/analysis/interfaces/plots/{dataset}_interface_size_model.png", dataset = "flat"),
-        expand("work_folder/analysis/interfaces/plots/{dataset}_detection_vs_interface_size.png", dataset = "flat"),
-        expand("work_folder/analysis/interfaces/plots/{dataset}_detection_interface_OR.png", dataset = datasets),
-        expand(
-            "work_folder/analysis/predicted_interactions/survival/plot/{dataset}_survival.png",
-            dataset = datasets
-            ),
-        expand(
-            "work_folder/analysis/predicted_interactions/DCA/plot/{dataset}_DCA_HRNI_vs_NEG.png",
-            dataset = datasets
-            ),
-        expand(
-            "work_folder/analysis/predicted_interactions/survival/plot/{dataset}_funnel.png",
-            dataset = datasets
-            ),
-        expand(
-            "work_folder/analysis/predicted_interactions/survival/plot/{dataset}_survival_RF2_zoom.png",
-            dataset = datasets
-            ),
-        expand(
-            "work_folder/analysis/other_methods/detection_stats/plot/{dataset}_contradiction_rate.png",
-            dataset = datasets
-            ),
-
-        # Protein promiscuity (bait/prey random-effects model)
-        "work_folder/analysis/ProteinPromiscuity/y2h_variance_components.tsv",
-        "work_folder/analysis/ProteinPromiscuity/ms_observed_vs_expected_prey.tsv",
         "work_folder/analysis/ProteinPromiscuity/plot/cross_method_detectability.png",
+        "work_folder/analysis/ProteinPromiscuity/plot/bait_prey_detectability.png",
+        "work_folder/analysis/ProteinPromiscuity/plot/ms_sticky_proteins_dispersion.png",
+        "work_folder/analysis/ProteinPromiscuity/plot/sticky_and_detectable_proteins.png",
+        "work_folder/analysis/ProteinPromiscuity/plot/y2h_auto_activators_detectability.png",
+        "work_folder/analysis/ProteinPromiscuity/plot/ms_degree_distribution.png",
+        "work_folder/analysis/ProteinPromiscuity/plot/ms_log_normality.png",
+
+# expand(
+#     "work_folder/analysis/degree_estimation/plot/{dataset}_bait_prey_detectability_correlation.png",
+#     dataset = ["y2h","ms"]
+#     ),
+# expand("work_folder/analysis/ProteinPromiscuity/{dataset}_bait_detectability.tsv",
+#     dataset = ["y2h",]
+#     ),
+# # Classification metrics
+# expand("work_folder/classification/{classifier}/permuted/all_metrics_{network_type}_{esm_model}.csv",
+#     classifier="xgboost", network_type="undirectional",esm_model="ESM2"),
+# expand(
+#     "work_folder/classification/xgboost/full_test_predictions/jaccard/all_jaccard_ESM2_undirectional_{pair_set}_similarity.tsv",
+#     pair_set=["correct", "all"]),
+# "work_folder/classification/xgboost/permuted/negative_accuracy/plots/undirectional_ESM2_negative_accuracy_hrni_vs_no.png",
+# "work_folder/classification/xgboost/permuted/negative_accuracy/plots/undirectional_ESM2_hrni_positive_vs_negative_accuracy.png",
+# expand(
+#     "work_folder/classification/xgboost/full_test_predictions/jaccard/plots/ESM2_undirectional_{pair_set}_jaccard_negative_hrni_vs_no.png",
+#     pair_set=["correct", "all"]),
+# expand(
+#     "work_folder/classification/xgboost/full_test_predictions/jaccard/plots/ESM2_undirectional_{pair_set}_jaccard_interaction_vs_negative_hrni.png",
+#     pair_set=["correct", "all"]),
+# expand(
+#     "work_folder/classification/xgboost/full_test_predictions/jaccard/gap_summary/ESM2_undirectional_{pair_set}_interaction_vs_negative_hrni_gap_by_dataset.tsv",
+#     pair_set=["correct", "all"]),
+# "work_folder/classification/xgboost/full_test_predictions/all_models/jaccard_pairs/plots/undirectional_ESM2_hrni_no_jaccard_boxplot.png",
+# "work_folder/classification/xgboost/permuted/hrni_no_delta/undirectional_ESM2_delta_auc_by_config.tsv",
+# "work_folder/classification/xgboost/permuted/hrni_no_delta/undirectional_ESM2_delta_auc_summary.tsv",
+# "work_folder/classification/xgboost/permuted/hrni_no_delta/plots/undirectional_ESM2_delta_auc_boxplot.png",
+# "work_folder/classification/xgboost/permuted/pos_neg_limit_auc/undirectional_ESM2_auc_by_config.tsv",
+# expand(
+#     "work_folder/classification/xgboost/permuted/full_test_predictions/all_models/protein_accuracy/plots/undirectional_ESM2_{dataset}_protein_accuracy_scatter.png",
+#     dataset=config["datasets"]),
+# "work_folder/classification/xgboost/permuted/full_test_predictions/all_models/protein_accuracy/plots/undirectional_ESM2_protein_split_robustness_boxplot.png",
+
+# # Train subset similarity (content + degree across permutations, and negative/positive degree balance)
+# "work_folder/analysis/subset_similarity/balance/plots/undirectional_degree_balance.png",
+# "work_folder/analysis/subset_similarity/plots/undirectional_permutation_jaccard.png",
+# "work_folder/analysis/subset_similarity/plots/undirectional_permutation_spearman.png",
+# "work_folder/subsets/dataset_eval/jaccard_dist/undirectional_intra_permutation_jaccard_distances.png",
+# "work_folder/subsets/dataset_eval/jaccard_dist/undirectional_inter_permutation_jaccard_distances.png",
+# "work_folder/subsets/dataset_eval/jaccard_dist/undirectional_train_edge_jaccard_boxplot.png",
+
+# # Localisation analysis
+# "work_folder/analysis/shared_annotation_proportions/plots/undirectional_OR.png",
+
+# # co-expression
+# "work_folder/analysis/coexpression/plots/undirectional_expression_boxplot.png",
+# "work_folder/analysis/coexpression/plots/undirectional_expression_or_barplot.png",
+
+# # co-essentiality
+# "work_folder/analysis/coessentiality/plots/undirectional_coessentiality_OR.png",
+
+# # assay concordance
+# "work_folder/analysis/protein_degree/plots/undirectional_degree_distributions.png",
+# "work_folder/analysis/protein_degree/plots/undirectional_degree_bin_heatmap.png",
+# "work_folder/analysis/protein_degree/plots/undirectional_degree_dist.png",
+
+# # no-interaction hubs
+# "work_folder/analysis/no_interaction_hubs/plots/undirectional_hub_properties_binary.png",
+# "work_folder/analysis/no_interaction_hubs/plots/undirectional_hub_properties_continuous.png",
+
+# # Method concordance: shared negatives test
+# "work_folder/analysis/method_concordance/undirectional/shared_negatives_fit.rds",
+# "work_folder/analysis/method_concordance/undirectional/shared_negatives_summary.txt",
+# "work_folder/analysis/method_concordance/undirectional/mixed_effects_dist.png",
+
+# # Interface size vs detection ratio
+# "work_folder/analysis/interfaces/plots/undirectional_interface_detection.png",
+
+# # Other preciditon analysis
+# expand("work_folder/analysis/interfaces/plots/{dataset}_interface_size_model.png", dataset = "flat"),
+# expand("work_folder/analysis/interfaces/plots/{dataset}_detection_vs_interface_size.png", dataset = "flat"),
+# expand("work_folder/analysis/interfaces/plots/{dataset}_detection_interface_OR.png", dataset = datasets),
+# expand(
+#     "work_folder/analysis/predicted_interactions/survival/plot/{dataset}_survival.png",
+#     dataset = datasets
+#     ),
+# expand(
+#     "work_folder/analysis/predicted_interactions/DCA/plot/{dataset}_DCA_HRNI_vs_NEG.png",
+#     dataset = datasets
+#     ),
+# expand(
+#     "work_folder/analysis/predicted_interactions/survival/plot/{dataset}_funnel.png",
+#     dataset = datasets
+#     ),
+# expand(
+#     "work_folder/analysis/predicted_interactions/survival/plot/{dataset}_survival_RF2_zoom.png",
+#     dataset = datasets
+#     ),
+# expand(
+#     "work_folder/analysis/other_methods/detection_stats/plot/{dataset}_contradiction_rate.png",
+#     dataset = datasets
+#     ),
+
+# # Protein promiscuity (bait/prey random-effects model)
+# "work_folder/analysis/ProteinPromiscuity/y2h_variance_components.tsv",
+# "work_folder/analysis/ProteinPromiscuity/ms_observed_vs_expected_prey.tsv",
+# "work_folder/analysis/ProteinPromiscuity/plot/cross_method_detectability.png",
+
+# Degree estimation (bait vs prey detectability rank correlation)
+# expand(
+#     "work_folder/analysis/degree_estimation/plot/{dataset}_spearman_cross_detectability.png",
+#     dataset = datasets
+#     ),

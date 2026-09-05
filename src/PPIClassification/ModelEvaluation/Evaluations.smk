@@ -210,10 +210,6 @@ rule all_metrics_permuted:
 
 
 rule hrni_no_delta_auc:
-    # Sister-pair delta ROC-AUC (train=HRNI minus train=NO), evaluated against the HRNI test set
-    # only. Permutations within a config are correlated repeats (~91-95% shared edges), so each
-    # config's 10 deltas are collapsed to one mean first; datasets are not pooled (Combined isn't
-    # independent of MS/Y2H) - a one-sample t-test then runs on each dataset's 6 config-level means.
     input:
         metrics="work_folder/classification/{classifier}/permuted/all_metrics_{network_type}_{esm_model}.csv",
     output:
@@ -240,20 +236,17 @@ rule hrni_no_delta_auc:
             columns="train_type", values="roc_auc",
         )
         pivot["delta_auc"] = pivot["hrni"] - pivot["no"]
-
-        by_config = pivot.groupby(["dataset", "pos_limit", "neg_limit"])["delta_auc"].agg(
-            mean_delta_auc="mean", n_permutations="count"
-        ).reset_index()
-        by_config.to_csv(output.by_config, sep="\t", index=False)
+        pivot = pivot.reset_index()
+        pivot.to_csv(output.by_config, sep="\t", index=False)
 
         rows = []
-        for dataset, sub in by_config.groupby("dataset"):
-            t, p = ttest_1samp(sub["mean_delta_auc"], 0.0)
+        for dataset, sub in pivot.groupby("dataset"):
+            t, p = ttest_1samp(sub["delta_auc"], 0.0)
             rows.append({
                 "dataset": dataset,
-                "n_configs": len(sub),
-                "mean_delta_auc": sub["mean_delta_auc"].mean(),
-                "sem": sub["mean_delta_auc"].std(ddof=1) / len(sub) ** 0.5,
+                "n_configs": len(sub),  # n_permutations * n(pos_limit x neg_limit)
+                "mean_delta_auc": sub["delta_auc"].mean(),
+                "sem": sub["delta_auc"].std(ddof=1) / len(sub) ** 0.5,
                 "t": t,
                 "p": p,
             })
@@ -263,13 +256,50 @@ rule hrni_no_delta_auc:
 rule plot_hrni_no_delta_auc:
     input:
         by_config="work_folder/classification/{classifier}/permuted/hrni_no_delta/{network_type}_{esm_model}_delta_auc_by_config.tsv",
-        summary="work_folder/classification/{classifier}/permuted/hrni_no_delta/{network_type}_{esm_model}_delta_auc_summary.tsv",
     output:
         plot="work_folder/classification/{classifier}/permuted/hrni_no_delta/plots/{network_type}_{esm_model}_delta_auc_boxplot.png",
     log:
         "logs/classification/{classifier}/permuted/hrni_no_delta/plots/{network_type}_{esm_model}_delta_auc_boxplot.log",
     script:
         "scripts/plot_hrni_no_delta_auc.py"
+
+
+rule pos_neg_limit_auc:
+    input:
+        metrics="work_folder/classification/{classifier}/permuted/all_metrics_{network_type}_{esm_model}.csv",
+    output:
+        by_config="work_folder/classification/{classifier}/permuted/pos_neg_limit_auc/{network_type}_{esm_model}_auc_by_config.tsv",
+    log:
+        "logs/classification/{classifier}/permuted/pos_neg_limit_auc/{network_type}_{esm_model}_auc_by_config.log",
+    run:
+        import re
+
+        model_re = re.compile(
+            r"^(?P<dataset>[a-zA-Z0-9]+)_[a-zA-Z]+_limit_(?P<neg_limit>[0-9.]+)"
+            r"_poslim_(?P<pos_limit>[0-9.]+|all)(?P<random>-random)?_model_[A-Z0-9]+"
+            r"_metrics_(?P<test_neg>hrni|no)\.txt$"
+        )
+        df = pd.read_csv(input.metrics, sep="\t")
+        df = pd.concat([df, df["model"].str.extract(model_re)], axis=1)
+        df = df[df["test_neg"] == "hrni"]  # always score against the HRNI test set
+        df = df[df["random"].isna()]  # HRNI-trained models only, drop the "-random" (NO) models
+
+        by_config = df.groupby(["dataset", "pos_limit", "neg_limit"])["roc_auc"].agg(
+            mean_auc="mean", std_auc="std", n_permutations="count"
+        ).reset_index()
+        by_config["sem_auc"] = by_config["std_auc"] / by_config["n_permutations"] ** 0.5
+        by_config.to_csv(output.by_config, sep="\t", index=False)
+
+
+rule plot_pos_neg_limit_auc_boxplot:
+    input:
+        by_config="work_folder/classification/{classifier}/permuted/pos_neg_limit_auc/{network_type}_{esm_model}_auc_by_config.tsv",
+    output:
+        plot="work_folder/classification/{classifier}/permuted/pos_neg_limit_auc/plots/{network_type}_{esm_model}_auc_boxplot.png",
+    log:
+        "logs/classification/{classifier}/permuted/pos_neg_limit_auc/plots/{network_type}_{esm_model}_auc_boxplot.log",
+    script:
+        "scripts/plot_pos_neg_limit_auc_boxplot.py"
 
 
 rule compute_permutation_similarity:
@@ -660,5 +690,40 @@ rule summarize_jaccard_gap_by_dataset:
             n=("gap", "count"),
         ).reset_index()
         summary.to_csv(output.summary, sep="\t", index=False)
+
+
+rule get_hrni_no_jaccard_pairs:
+    # Reuses the already-computed full grid predictions (one column per pos_limit x neg_limit x
+    # train_type model, per permutation) to build, per threshold config: 10 HRNI-vs-NO jaccard
+    # values (same permutation) and 10 choose 2 = 45 NO-vs-NO jaccard values (across permutations),
+    # both restricted to predicted-interaction calls on the Negative_HRNI test set.
+    input:
+        predictions=expand(
+            "work_folder/classification/{{classifier}}/permuted/{permutation}/full_test_predictions/all_models/{{dataset}}_{{network_type}}_model_{{esm_model}}_predictions.tsv",
+            permutation=range(config.get("n_permutations", 10)),
+        ),
+    output:
+        jaccard="work_folder/classification/{classifier}/full_test_predictions/all_models/jaccard_pairs/{dataset}_{network_type}_model_{esm_model}_hrni_no_jaccard_pairs.tsv",
+    log:
+        "logs/classification/{classifier}/full_test_predictions/all_models/jaccard_pairs/{dataset}_{network_type}_{esm_model}_hrni_no_jaccard_pairs.log",
+    script:
+        "scripts/get_hrni_no_jaccard_pairs.py"
+
+
+rule plot_hrni_no_jaccard_boxplot:
+    # 3 dataset pairs (combined/MS/Y2H) of boxplots on Negative_HRNI prediction overlap:
+    # HRNI-vs-NO next to NO-vs-NO, pooling all pos_limit x neg_limit threshold configs per box
+    # (no jaccard is ever computed between two different threshold configs).
+    input:
+        jaccard=expand(
+            "work_folder/classification/{{classifier}}/full_test_predictions/all_models/jaccard_pairs/{dataset}_{{network_type}}_model_{{esm_model}}_hrni_no_jaccard_pairs.tsv",
+            dataset=config["datasets"],
+        ),
+    output:
+        plot="work_folder/classification/{classifier}/full_test_predictions/all_models/jaccard_pairs/plots/{network_type}_{esm_model}_hrni_no_jaccard_boxplot.png",
+    log:
+        "logs/classification/{classifier}/full_test_predictions/all_models/jaccard_pairs/plots/{network_type}_{esm_model}_hrni_no_jaccard_boxplot.log",
+    script:
+        "scripts/plot_hrni_no_jaccard_boxplot.py"
 
 

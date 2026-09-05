@@ -26,7 +26,7 @@ directed = snakemake.wildcards.network_type == "directional"
 
 edges = {
     permutation_index(path): edge_id(read_positive_edges(path), directed)
-    for path in snakemake.input.permuted_pos
+    for path in snakemake.input.edge_files
 }
 
 rows = []
