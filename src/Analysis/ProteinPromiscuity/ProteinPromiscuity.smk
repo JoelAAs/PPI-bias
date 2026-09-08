@@ -1,8 +1,7 @@
 import random
 
-def get_row_wise_input_files(methods, id_pattern, filename, remove_single=True):
-    STUDY_FOLDER = checkpoints.infer_experimental_search_space.get(cell_line="_method").output[0]
-    STUDY_FOLDER = "work_folder" + STUDY_FOLDER.split("work_folder")[1]
+def select_row_wise_study_files(study_folder, methods, id_pattern, filename, remove_single=True):
+    STUDY_FOLDER = study_folder
 
     ppi_df = pd.read_csv(filename, sep="\t")
     ppi_df = ppi_df[ppi_df["detection_method"].isin(methods)]
@@ -23,6 +22,11 @@ def get_row_wise_input_files(methods, id_pattern, filename, remove_single=True):
     ]
     return expected
 
+def get_row_wise_input_files(methods, id_pattern, filename, remove_single=True):
+    STUDY_FOLDER = checkpoints.infer_experimental_search_space.get(cell_line="_method").output[0]
+    STUDY_FOLDER = "work_folder" + STUDY_FOLDER.split("work_folder")[1]
+    return select_row_wise_study_files(STUDY_FOLDER, methods, id_pattern, filename, remove_single)
+
 rule get_row_wise_detection:
     input:
         studies = lambda wc: get_row_wise_input_files(config[wc.dataset], config["id_pattern"], "work_folder/formated/bait_prey_publications.csv"),
@@ -33,9 +37,16 @@ rule get_row_wise_detection:
     threads:
         1
     run:
+        studies = list(input.studies)
+        study_folder = next((f for f in studies if os.path.isdir(f)), None)
+        if study_folder:  # Checkpoint left unresolved (spawned job), select the studies ourselves
+            studies = select_row_wise_study_files(
+                study_folder, config[wildcards.dataset], config["id_pattern"],
+                "work_folder/formated/bait_prey_publications.csv"
+            )
         with open(output.row_wise_data, "w") as w:
             w.write("\t".join(["bait", "prey", "experiment", "detection"]) + "\n")
-            for study in input.studies:
+            for study in studies:
                 with open(study, "r") as f:
                     next(f) # skip header
                     for l in f:
@@ -56,7 +67,7 @@ rule fit_protein_promiscuity_model:
     conda:
         "julia"
     threads:
-        30
+        15
     shell:
         """
         OMP_NUM_THREADS={threads} OPENBLAS_NUM_THREADS={threads} julia -t 1 src/Analysis/ProteinPromiscuity/scripts/fit_protein_promiscuity_model.jl \

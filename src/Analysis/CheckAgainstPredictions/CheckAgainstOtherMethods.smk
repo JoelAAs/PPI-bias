@@ -43,73 +43,97 @@ rule contradiciton_rate:
 
 rule plot_contradiction_rate:
     input:
-        stats = "work_folder/analysis/other_methods/detection_stats/{dataset}_stats.csv"
+        stats_file = "work_folder/analysis/other_methods/detection_stats/{dataset}_stats.csv"
     output:
         png = "work_folder/analysis/other_methods/detection_stats/plot/{dataset}_contradiction_rate.png"
+    script:
+        "scripts/plot_contradiction_rate.py"
+
+
+rule get_fdr_for:
+    params:
+        hrni_limit = [1,3],
+        hri_limit = 0.15
+    input:
+        ms_pod = "work_folder/analysis/POD/undirectional/POD_ms.pq",
+        y2h_pod = "work_folder/analysis/POD/undirectional/POD_y2h.pq",
+        y2h_leave_out = "work_folder/inferred_search_space/experimental_method/20211142_MI-0397.csv",
+        ms_leave_out = "work_folder/inferred_search_space/experimental_method/32707033_MI-0096.csv"
+    output:
+        rates = "work_folder/analysis/other_methods/leave_out/fdr_for.csv"
+    log:
+        "logs/analysis/other_methods/leave_out_fdr_for.log"
+    threads:
+        1
     run:
-        import matplotlib
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-        from matplotlib.lines import Line2D
+        import pyarrow.parquet as pq
+        from scipy.stats import beta
 
-        stats = pd.read_csv(input.stats)
+        id_pattern = config["id_pattern"]
+        bait_col, prey_col = f"{id_pattern}_bait", f"{id_pattern}_prey"
 
-        hrni_alpha = {"HRNI_n1": 0.55, "HRNI_n3": 0.78, "HRNI_n5": 1.0}
-        groups = sorted(stats["group"].unique())
-        colors = plt.cm.tab10.colors
-        color_map = {g: colors[i % len(colors)] for i, g in enumerate(groups)}
+        def evaluate(pod_path, leave_out_path, dataset):
+            # 1. load pod (arrow reader, the POD tables run to ~1e8 rows)
+            pod = pq.read_table(pod_path, columns=[
+                bait_col, prey_col, "n_tested", "n_observed",
+                "alpha_post", "beta_post"],
+            ).to_pandas(split_blocks=True, self_destruct=True)
 
-        fig, ax = plt.subplots(figsize=(7, 6))
+            pod["pair_id"] = pod[[bait_col, prey_col]].apply(lambda row: ":".join(sorted(row)), axis=1)
+            
+            row = pod.iloc[0]
+            prior_alpha = row["alpha_post"] - row["n_observed"]
+            prior_beta = row["beta_post"] - (row["n_tested"] - row["n_observed"])
 
-        for group_name in groups:
-            sub = stats[stats["group"] == group_name]
-            points = []
-            for set_name, alpha in hrni_alpha.items():
-                row = sub[sub["set"] == set_name]
-                if row.empty:
-                    continue
-                x = row["discovered_agreement"].iloc[0]
-                y = row["discovered_disagreement"].iloc[0]
-                # 0 cannot be drawn on a log axis; clip to the resolution
-                # floor of that group so "zero" reads as "below 1/n", not as absent
-                n_group = row["n_other_ppi_group"].iloc[0]
-                floor = 1.0 / n_group if n_group else 1e-6
-                marker = "D" if y == 0 else "o"
-                points.append((max(x, floor), max(y, floor), alpha, marker))
+            # 2. remove protein pairs from pod from correct leave out.
+            held = pd.read_csv(leave_out_path, sep="\t")
+            held["pair_id"] = held[[bait_col, prey_col]].apply(lambda row: ":".join(sorted(row)), axis=1)
+            held = held.groupby("pair_id", as_index=False).agg(
+                held_tested=("n_tested", "sum"), held_observed=("n_observed", "sum"))
 
-            if len(points) > 1:
-                # points share the same x (discovered_agreement is computed once
-                # per group, not per HRNI set) so this traces the n1->n3->n5
-                # stringency progression as a near-vertical line
-                ax.plot([p[0] for p in points], [p[1] for p in points],
-                        color=color_map[group_name], linewidth=1.2, alpha=0.5, zorder=1)
+            df = pod.merge(held, on="pair_id", how="inner")
+            df["n_tested_loo"] = (df["n_tested"] - df["held_tested"]).clip(lower=0)
+            df["n_observed_loo"] = (df["n_observed"] - df["held_observed"]).clip(lower=0)            
 
-            for x, y, alpha, marker in points:
-                ax.scatter(x, y, color=color_map[group_name], alpha=alpha, s=70,
-                           marker=marker, edgecolor="black", linewidth=0.3, zorder=2)
+            # 3. calculate the Q.025 for affected rows
+            df["alpha_post_loo"] = prior_alpha + df["n_observed_loo"]
+            df["beta_post_loo"] = prior_beta + df["n_tested_loo"] - df["n_observed_loo"]
+            df["lower_bound_pod_loo"] = beta.ppf(
+                0.025, df["alpha_post_loo"], df["beta_post_loo"])
+            
+            #df["hri"] = df["lower_bound_pod_loo"] > params.hri_limit
+            df["hri"] = df["n_observed"] != 0
 
-        ax.set_xscale("log")
-        ax.set_yscale("log")
-        ax.set_xlabel("Discovered agreement (log10)")
-        ax.set_ylabel("Discovered disagreement (log10)")
-        ax.set_title(f"{wildcards.dataset}: other-method agreement vs disagreement")
-        ax.grid(alpha=0.25, which="both", lw=0.4)
+            fp_dict = []
+            for hrni_lim in params.hrni_limit:
+                df["hrni"] = (df["n_tested_loo"] >= hrni_lim) & (df["n_observed_loo"] == 0) 
+                ss_df = df[
+                    (df["hri"]) |
+                    (df["hrni"])
+                ]
+                # unit is one held-out test; "positive" means that test detected the pair
+                hri_rows, hrni_rows = ss_df[ss_df["hri"]], ss_df[ss_df["hrni"]]
+                tp = hri_rows["held_observed"].sum()
+                fn = hri_rows["held_tested"].sum() - tp
+                fp = hrni_rows["held_observed"].sum()
+                tn = hrni_rows["held_tested"].sum() - fn
+                FDR = fp/(fp+tp)
+                FOR = fn/(tn+fn)
+                cov = ss_df.shape[0]
+                fp_dict.append([hrni_lim, tp, fp, fn, tn, FDR, FOR, cov])
 
-        color_handles = [
-            Line2D([0], [0], marker="o", color="w", markerfacecolor=color_map[g], markersize=8, label=g)
-            for g in groups
-        ]
-        alpha_handles = [
-            Line2D([0], [0], marker="o", color="black", linestyle="", alpha=a, markersize=8, label=n)
-            for n, a in hrni_alpha.items()
-        ]
-        legend_groups = ax.legend(handles=color_handles, title="Method group",
-                                   loc="upper left", bbox_to_anchor=(1.02, 1))
-        ax.add_artist(legend_groups)
-        legend_hrni = ax.legend(handles=alpha_handles, title="HRNI stringency",
-                                 loc="lower left", bbox_to_anchor=(1.02, 0))
+            return fp_dict
 
-        fig.savefig(output.png, dpi=300, bbox_inches="tight",
-                    bbox_extra_artists=[legend_groups, legend_hrni])
-        plt.close(fig)
+        results = []
+        for dataset, pod_path, held_path in [
+            ("y2h", input.y2h_pod, input.y2h_leave_out),
+            ("ms", input.ms_pod, input.ms_leave_out),
+        ]:
+            for row in evaluate(pod_path, held_path, dataset):
+                print(dataset, row, flush=True)
+                results.append([dataset] + row)
 
+        pd.DataFrame(results, columns=[
+            "dataset", "hrni_limit", "TP", "FP", "FN", "TN",
+            "fdr", "for", "n_called",
+        ]).to_csv(output.rates, sep="\t", index=False)

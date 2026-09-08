@@ -15,6 +15,10 @@ def aggregate_inferred_experiments(pids, output_file, id_pattern, single=True):
     :return: -
     :param single: (boolean) if its from a single study or aggregation
     """
+    print(pids)
+    if isinstance(pids, str):
+        pids = [pids]
+
     ppi_dict = defaultdict(lambda: [0, 0, set()])
     bait_idx = dict()
     prey_idx = dict()

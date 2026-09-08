@@ -55,8 +55,11 @@ for pos_limit, neg_limit in configs:
         })
 
     for perm_a, perm_b in itertools.combinations(permutations, 2):
-        set_a = permutation_configs[perm_a][("no", pos_limit, neg_limit)]
-        set_b = permutation_configs[perm_b][("no", pos_limit, neg_limit)]
+        no_set_a = permutation_configs[perm_a][("no", pos_limit, neg_limit)]
+        no_set_b = permutation_configs[perm_b][("no", pos_limit, neg_limit)]
+        hrni_set_a = permutation_configs[perm_a][("hrni", pos_limit, neg_limit)]
+        hrni_set_b = permutation_configs[perm_b][("hrni", pos_limit, neg_limit)]
+        
         rows.append({
             "dataset": snakemake.wildcards.dataset,
             "network_type": snakemake.wildcards.network_type,
@@ -65,7 +68,18 @@ for pos_limit, neg_limit in configs:
             "comparison": "no_vs_no",
             "permutation_a": perm_a,
             "permutation_b": perm_b,
-            "jaccard": jaccard(set_a, set_b),
+            "jaccard": jaccard(no_set_a, no_set_b),
+        })
+
+        rows.append({
+            "dataset": snakemake.wildcards.dataset,
+            "network_type": snakemake.wildcards.network_type,
+            "pos_limit": pos_limit,
+            "neg_limit": neg_limit,
+            "comparison": "hrni_vs_hrni",
+            "permutation_a": perm_a,
+            "permutation_b": perm_b,
+            "jaccard": jaccard(hrni_set_a, hrni_set_b),
         })
 
 pd.DataFrame(rows).to_csv(snakemake.output.jaccard, sep="\t", index=False)

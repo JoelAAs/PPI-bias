@@ -1,49 +1,52 @@
 import pandas as pd
-from scipy.stats import fisher_exact
+import pyarrow as pa
+import pyarrow.dataset as ds
+
 
 rule negatome_comparison:
     """
     Compare if Negatome2.0 is comparable to high confidence non-interactors
     """
-    params:
-        negatome2="data/PFAM-manual-stringent-negatome2.csv"
     input:
-        pod_data="work_folder/analysis/POD/POD_{data}.csv",
-        uniprot="work_folder/gene_names/gene_names.csv"
+        pod_data="work_folder/analysis/POD/undirectional/POD_flat.pq",
+        negatome2="data/negatome2.tsv"
     output:
-        table="work_folder/analysis/neg2compare/{data}.txt"
+        table="work_folder/analysis/neg2compare/negatome2.txt"
     log:
-        "logs/analysis/neg2compare/{data}.log"
+        "logs/analysis/neg2compare/negatome2.log"
     run:
-        uniprot_2_gene = pd.read_csv(input.uniprot,sep="\t")
-        pod_df = pd.read_csv(input.pod_data,sep="\t")
-        neg2_df = pd.read_csv(params.negatome2,sep="\t")
+        neg2_df = pd.read_csv(input.negatome2, sep="\t")
+        protein_a = neg2_df["ProteinA"].astype(str)
+        protein_b = neg2_df["ProteinB"].astype(str)
+        # Undirectional: order the two accessions so A-B and B-A collapse to one key.
+        neg2_pairs = {
+            f"{a}_{b}" if a < b else f"{b}_{a}" for a, b in zip(protein_a, protein_b)
+        }
+        # POD_flat.pq is ~100M rows. A row can only match a negatome pair if both of its
+        # proteins are negatome proteins, so push that down to the parquet reader: it prunes
+        # row groups on column statistics and never materialises the rest. The pair key is
+        # then built on the few thousand survivors instead of on every row.
+        neg2_proteins = pa.array(
+            sorted(set(protein_a) | set(protein_b)), type=pa.string()
+        )
+        candidates = ds.dataset(input.pod_data, format="parquet").to_table(
+            columns=["uniprot_id_bait", "uniprot_id_prey", "n_observed"],
+            filter=ds.field("uniprot_id_bait").isin(neg2_proteins)
+            & ds.field("uniprot_id_prey").isin(neg2_proteins),
+        ).to_pandas()
 
-        p_cols = ["ProteinA", "ProteinB"]
-        neg2_df = neg2_df[p_cols]
-        neg2_df_swp = neg2_df.rename(columns={'ProteinA': 'ProteinB', 'ProteinB': 'ProteinA'})[p_cols]
+        bait = candidates["uniprot_id_bait"].astype(str)
+        prey = candidates["uniprot_id_prey"].astype(str)
+        bait_first = bait < prey
+        pair_id = bait.where(bait_first, prey) + "_" + prey.where(bait_first, bait)
 
-        neg2_directional_df = pd.concat([neg2_df, neg2_df],ignore_index=True).rename(
-            columns={
-                p: f"uniprot_{c}" for p, c in zip(p_cols,["bait", "prey"])
-            })
-        neg2_genes = neg2_directional_df.merge(
-            uniprot_2_gene,left_on="uniprot_bait",right_on="uniprot_id"
-        ).merge(
-            uniprot_2_gene,left_on="uniprot_prey",right_on="uniprot_id",suffixes=["_bait", "_prey"]
-        )[["gene_name_bait", "gene_name_prey"]]
-        neg2_genes["in_neg2"] = True
-        pod_neg = pod_df.merge(neg2_genes,on=["gene_name_bait", "gene_name_prey"],how="outer").copy()
-        pod_neg.loc[pod_neg["in_neg2"].isna(), "in_neg2"] = False
-        pod_neg = pod_neg.loc[~pod_neg["upper_bound_pod"].isna()]
-        if wildcards.data == "abundance_mcmc":
-            pod_neg["n_tested"] = pod_neg[[c for c in pod_neg.columns if "n_tested_" in c]].sum(axis=1)
-            pod_neg["n_observed"] = pod_neg[[c for c in pod_neg.columns if "n_observed_" in c]].sum(axis=1)
-        c_table = pod_neg.groupby("in_neg2")[["n_tested", "n_observed"]].sum()
-        c_table["n_not_observed"] = c_table["n_tested"] - c_table["n_observed"]
-        OR, p_value = fisher_exact(c_table[["n_observed", "n_not_observed"]])
+        joined = candidates[pair_id.isin(neg2_pairs)]
+        n_observed = int((joined["n_observed"] != 0).sum())
+        n_not_observed = int((joined["n_observed"] == 0).sum())
+
         with open(output.table, "w") as w:
-            w.write(str(c_table) + "\n")
-            w.write(f"OR: {OR}\n")
-            w.write(f"P-value: {p_value}\n")
-
+            print(f"negatome2 rows:\t{len(neg2_df)}\n")
+            print(f"negatome2 unique undirectional pairs:\t{len(neg2_pairs)}\n")
+            print(f"joined rows, n_observed != 0:\t{n_observed}\n")
+            print(f"joined rows, n_observed == 0:\t{n_not_observed}\n")
+            print(f"joined rows, total:\t{n_observed + n_not_observed}\n")

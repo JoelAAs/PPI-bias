@@ -61,7 +61,7 @@ function main()
         [:p_reduced, :n_tested] => ((p, n) -> sum(p .* n) / sum(n)) => :expected_hit_rate,
         :observed_p => var => :obs_var,
         # expected: sampling variance under the reduced (bait-independent) rate
-        [:p_reduced, :n_tested] => ((p, n) -> mean(p .* (1 .- p) ./ n)) => :expected_var,
+        [:p_reduced, :n_tested] => ((p, n) -> var(p) + mean(p .* (1 .- p) ./ n)) => :expected_var,
     )
 
     filter!(:n_baits_tested => >=(3), prey_disp)

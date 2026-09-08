@@ -23,27 +23,6 @@ rule get_zhang_heteromer:
         raise IOError("You need to download these files yourself, cant wget")
 
 
-# rule join_top_to_negatome:
-#     # prediction columns:
-#     # RFprob — RF2-PPI contact probability (the fast screening network).
-#     # AFprob — AlphaFold2 contact probability, model 3, run on their omicMSAs.
-#     # CFprob — ColabFold pipeline using the AF2 network.
-#     # AFMprob — ColabFold using the AlphaFold-Multimer network.
-#     input:
-#         interaction_prediction = "work_folder/data/predicted_interactions/final_predictions/final_predictions_80.tsv",
-#         pod = "work_folder/analysis/POD/undirectional/POD_{dataset}.pq" # Obs undirectional
-#     output:
-#         joined = "work_folder/analysis/fpr_comparission/predicted/Zhang_{dataset}_joined.pq"
-#     run:
-#         df_af_predictions = pd.read_csv(input.interaction_prediction, sep="\t", comment="#")
-#         df_pod = pd.read_parquet(input.pod)
-
-#         df_pod["pair_id"] = df[["uniprot_id_bait","uniprot_id_prey"]].min(axis=1) + ":" + df[["a","b"]].max(axis=1)
-#         df_af_predictions["pair_id"] = df_af_predictions.apply(lambda row: ":".join(sorted([row["Protein1"], row["Protein2"]])), axis=1)
-
-#         df_merged = df_pod.merge(df_af_predictions, on="pair_id", how="inner")
-#         df_merged.to_parquet(output.joined)
-
 
 rule sort_score:
     input: 
@@ -469,3 +448,16 @@ rule plot_funnel:
         fig.tight_layout()
         fig.savefig(output.png, dpi=300, bbox_inches="tight")
         plt.close(fig)
+
+
+rule plot_FDR_RF_ppi2:
+    input:
+        joined = "work_folder/data/predicted_interactions/joined/{dataset}_scores.pq"
+    output:
+        fdr_plot = "work_folder/analysis/predicted_interactions/plots/{dataset}_RF.png"
+    params:
+        n_thresholds = [3, 5, 7],
+        cutoffs = [0.5, 0.99]
+    script:
+        "script/plot_RF_prediction.py"
+

@@ -36,7 +36,7 @@ include: "src/Analysis/NonInteractionHubs/NoInteractionHubs.smk"
 include: "src/Analysis/NonInteractionHubs/DegreeQuadrants.smk"
 include: "src/Analysis/MethodConcordance/MethodConcordance.smk"
 include: "src/Analysis/ProteinPromiscuity/ProteinPromiscuity.smk"
-include: "src/Analysis/DegreeEstimation/DegreeEstimation.smk"
+include: "src/Analysis/ProteinPromiscuity/AutoActivatorsContaminants.smk"
 
 include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
 include: "src/Analysis/NegatomeComparison/CompareSharedBaits.smk"
@@ -78,6 +78,7 @@ wildcard_constraints:
 
 rule all:
     input:
+        # Protein detectability
         "work_folder/analysis/ProteinPromiscuity/plot/cross_method_detectability.png",
         "work_folder/analysis/ProteinPromiscuity/plot/bait_prey_detectability.png",
         "work_folder/analysis/ProteinPromiscuity/plot/ms_sticky_proteins_dispersion.png",
@@ -85,11 +86,27 @@ rule all:
         "work_folder/analysis/ProteinPromiscuity/plot/y2h_auto_activators_detectability.png",
         "work_folder/analysis/ProteinPromiscuity/plot/ms_degree_distribution.png",
         "work_folder/analysis/ProteinPromiscuity/plot/ms_log_normality.png",
+        
+        # Autoactivators
+        "work_folder/analysis/ProteinPromiscuity/autoactivators/ms_prey_model.jls",
+        "work_folder/analysis/ProteinPromiscuity/autoactivators/y2h_bait_model.jls",
+        ## todo, figure thisshit outq
 
-# expand(
-#     "work_folder/analysis/degree_estimation/plot/{dataset}_bait_prey_detectability_correlation.png",
-#     dataset = ["y2h","ms"]
-#     ),
+        "work_folder/analysis/ProteinPromiscuity/plot/naive_detectability.png",
+        "work_folder/analysis/ProteinPromiscuity/plot/adjusted_detectability_kurtosis.png",
+
+        "work_folder/data/predicted_interactions/plot/flat_RF.png",
+        "work_folder/analysis/autoactivators/dispersion/y2h_bait.tsv",
+        "work_folder/analysis/autoactivators/dispersion/ms_prey.tsv",
+        "work_folder/analysis/ProteinPromiscuity/plot/partner_effect_validation.png",
+        "work_folder/analysis/ProteinPromiscuity/plot/partner_effect.png",
+        "work_folder/analysis/other_methods/leave_out/fdr_for.csv",
+        expand(
+            "work_folder/analysis/ProteinPromiscuity/plot/naive_{dataset}_detectability.png",
+            dataset = ["ms", "y2h"]
+        )
+
+
 # expand("work_folder/analysis/ProteinPromiscuity/{dataset}_bait_detectability.tsv",
 #     dataset = ["y2h",]
 #     ),
@@ -97,8 +114,6 @@ rule all:
 # expand("work_folder/classification/{classifier}/permuted/all_metrics_{network_type}_{esm_model}.csv",
 #     classifier="xgboost", network_type="undirectional",esm_model="ESM2"),
 # expand(
-#     "work_folder/classification/xgboost/full_test_predictions/jaccard/all_jaccard_ESM2_undirectional_{pair_set}_similarity.tsv",
-#     pair_set=["correct", "all"]),
 # "work_folder/classification/xgboost/permuted/negative_accuracy/plots/undirectional_ESM2_negative_accuracy_hrni_vs_no.png",
 # "work_folder/classification/xgboost/permuted/negative_accuracy/plots/undirectional_ESM2_hrni_positive_vs_negative_accuracy.png",
 # expand(

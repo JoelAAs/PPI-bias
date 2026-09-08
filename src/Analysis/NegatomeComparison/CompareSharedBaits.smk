@@ -1,4 +1,5 @@
 from collections import Counter
+import pathlib
 import pandas as pd
 import networkx as nx
 from scipy.stats import entropy
@@ -121,3 +122,4 @@ rule non_interaction_prey_entropy_entropy:
                     write_header = False
                 else:
                     protein_pair_prey_ss.to_csv(output.entropy_annotated,sep="\t",mode="a",index=False,header=False)
+
