@@ -104,8 +104,7 @@ rule all_methods_filter_out_cell_line:
     Get upper and lower bound probability of detection given test/observations of each bait-prey combination per cell line
     """
     params:
-        pseudo_n=config["pseudo_n"],
-        id_pattern= config["id_pattern"]
+        pseudo_n=config["pseudo_n"]
     input:
         method_aggregate="work_folder/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv"
     output:
@@ -113,65 +112,58 @@ rule all_methods_filter_out_cell_line:
     log:
         "logs/analysis/POD/{network_type}/POD_cell_line.log"
     run:
+        # the cell line aggregate is always written gene wise, BioPlex only reports genes
+        bait_col = "gene_name_bait"
+        prey_col = "gene_name_prey"
+
         inferred_negative_df = pd.read_csv(
             input.method_aggregate,
-            sep="\t"
+            sep="\t",
+            dtype={
+                bait_col: "string",
+                prey_col: "string"
+            }
         )
 
         inferred_negative_df = inferred_negative_df[
             inferred_negative_df[bait_col] != inferred_negative_df[prey_col]
-            ].copy()
+            ].copy() # no y2h
 
         if wildcards.network_type == "undirectional":
-            prot_a = inferred_negative_df[[bait_col, prey_col]].min(axis=1)
-            prot_b = inferred_negative_df[[bait_col, prey_col]].max(axis=1)
-            inferred_negative_df["id_var"] = prot_a + "_" + prot_b + "_" + inferred_negative_df["CVCL"]
-            
-            inferred_negative_df.sort_values("id_var", inplace=True)
-            inferred_negative_mat = inferred_negative_df.to_numpy()
-            aggregated_negative_mat = np.zeros_like(inferred_negative_mat)
-            prev_bait, prev_prey, prev_n_observed, prev_n_tested, prev_pids, prev_cl, prev_id = inferred_negative_mat[0]
-            prev_pids = set(prev_pids.split(";"))
-            s = datetime.datetime.now()
-            for i in range(1, inferred_negative_mat.shape[0]):
-                c_bait, c_prey, c_n_observed, c_n_tested, c_pid, c_cl, c_id = inferred_negative_mat[i]
-                pids = set(c_pid.split(";"))
-                c_bait, c_prey = sorted([c_bait, c_prey])
-                
-                if prev_id == c_id:
-                    prev_n_observed += c_n_observed
-                    prev_n_tested += c_n_tested
-                    prev_pids |= pids 
-                else:
-                    aggregated_negative_mat[i-1] = [
-                        prev_bait,
-                        prev_prey,
-                        prev_n_observed,
-                        prev_n_tested,
-                        ";".join(prev_pids),
-                        prev_cl,
-                        prev_id
-                    ]
-                    prev_bait, prev_prey, prev_n_observed, prev_n_tested, prev_pids, prev_cl, prev_id = c_bait, c_prey, c_n_observed, c_n_tested, pids, c_cl, c_id
-                
-            aggregated_negative_mat[i] = [
-                prev_bait,
-                prev_prey,
-                prev_n_observed,
-                prev_n_tested,
-                ";".join(prev_pids),
-                prev_cl,
-                prev_id
-            ]
-
-            ppis_joined_idx = aggregated_negative_mat[:, 1] != 0
-            print(f"joined {-sum(ppis_joined_idx-1)} out of {inferred_negative_mat.shape[0]} rows in {(datetime.datetime.now() - s).total_seconds()} seconds", flush=True)
-            aggregated_negative_mat = aggregated_negative_mat[ppis_joined_idx, :]
-            inferred_negative_df = pd.DataFrame(
-                aggregated_negative_mat,
-                columns=inferred_negative_df.columns
+            prot_a = np.minimum(
+                inferred_negative_df[bait_col].to_numpy(),
+                inferred_negative_df[prey_col].to_numpy())
+            prot_b = np.maximum(
+                inferred_negative_df[bait_col].to_numpy(),
+                inferred_negative_df[prey_col].to_numpy())
+            inferred_negative_df[bait_col] = prot_a
+            inferred_negative_df[prey_col] = prot_b
+            inferred_negative_df["id_var"] = (
+                inferred_negative_df[bait_col] + "_" +
+                inferred_negative_df[prey_col] + "_" +
+                inferred_negative_df["CVCL"]
             )
+            orig_cols = inferred_negative_df.columns.tolist()
 
+            to_merge = inferred_negative_df["id_var"].duplicated(keep=False)  # only pairs seen both ways need aggregating
+            merged = (
+                inferred_negative_df[to_merge]
+                .groupby("id_var", sort=False)
+                .agg({
+                    bait_col: "first",
+                    prey_col: "first",
+                    "n_tested": "sum",
+                    "n_observed": "sum",
+                    "pubmed_id": lambda x: ";".join({p for ids in x for p in ids.split(";")}),
+                    "CVCL": "first",
+                })
+                .reset_index()
+            )
+            inferred_negative_df = pd.concat(
+                [inferred_negative_df[~to_merge], merged[orig_cols]],
+                ignore_index=True
+            )
+            
         inferred_negative_df["n_observed"] = inferred_negative_df["n_observed"].astype(int)
         inferred_negative_df["n_tested"] = inferred_negative_df["n_tested"].astype(int)
 

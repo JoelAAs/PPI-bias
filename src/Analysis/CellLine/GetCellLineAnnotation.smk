@@ -26,9 +26,9 @@ def parse_cellosaurus(filename, output_file):
 
 
 def format_bioplex(bp_f, gene_name_df, cl):
-        bp_df = pd.read_csv(bp_f, sep="\t")[["Bait Symbol", "Prey Symbol"]]
+        bp_df = pd.read_csv(bp_f, sep="\t")[["Bait GeneID", "Prey GeneID"]]
         bp_df.columns = ["gene_name_bait", "gene_name_prey"]
-        bp_df[["pubmed_id", "detection_method", "CVCL"]] = ["33961781", "MS-0006", cl]
+        bp_df[["pubmed_id", "detection_method", "CVCL"]] = ["33961781", "MI-0007", cl]
 
 
         bp_df = bp_df.merge(gene_name_df, left_on="gene_name_bait", right_on="gene_name")
