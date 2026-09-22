@@ -175,6 +175,7 @@ cython_debug/
 
 # work folder
 work_folder
+work_folder_old
 .idea/
 .snakemake/
 data/

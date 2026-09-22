@@ -83,20 +83,21 @@ checkpoint infer_experimental_search_space:
         os.makedirs(output[0], exist_ok=True)
         bait_prey_df = pd.read_csv(input.bait_prey_file, sep="\t")
 
-        if params.id_pattern == "gene_name":
-            id_cols = [
-                f"{params.id_pattern}_bait", f"{params.id_pattern}_prey",
-                "pubmed_id", "detection_method"
+        id_cols = [
+            f"{params.id_pattern}_bait", f"{params.id_pattern}_prey",
+            "pubmed_id", "detection_method"
             ]
-            if wildcards.cell_line == "_cell_line":
-                id_cols.append("CVCL")
-            if params.drop_isoforms:
-                if params.id_pattern == "uniprot_id": # Drop all isoform info
-                    bait_prey_df[f"{params.id_pattern}_bait"] = bait_prey_df[f"{params.id_pattern}_bait"].str.split("-").str[0]
-                    bait_prey_df[f"{params.id_pattern}_prey"] = bait_prey_df[f"{params.id_pattern}_prey"].str.split("-").str[0]
+        
+        if wildcards.cell_line == "_cell_line":
+            id_cols.append("CVCL")
+            
+        if params.drop_isoforms and params.id_pattern == "uniprot_id":
+            bait_prey_df[f"{params.id_pattern}_bait"] = bait_prey_df[f"{params.id_pattern}_bait"].str.split("-").str[0]
+            bait_prey_df[f"{params.id_pattern}_prey"] = bait_prey_df[f"{params.id_pattern}_prey"].str.split("-").str[0]
 
-            bait_prey_df = bait_prey_df[
-                ~bait_prey_df[id_cols].duplicated(keep="first")]  # Isoforms of gene name gives more observed than tested
+        bait_prey_df = bait_prey_df[
+            ~bait_prey_df[id_cols].duplicated(keep="first")]
+
 
         for pid in bait_prey_df["pubmed_id"].unique():
             pid_ss = bait_prey_df[bait_prey_df["pubmed_id"] == pid]

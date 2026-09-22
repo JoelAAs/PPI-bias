@@ -35,7 +35,7 @@ rule all_methods_filter_out:
                 prey_col: "string"
             }
         )
-
+        
         inferred_negative_df = inferred_negative_df[
             inferred_negative_df[bait_col].isin(fasta_ids) &
             inferred_negative_df[prey_col].isin(fasta_ids)

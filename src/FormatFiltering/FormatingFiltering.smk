@@ -37,6 +37,8 @@ rule get_ncbi_gene_info:
         """
 
 rule map_uniprot_to_entrez:
+    params:
+        keep_non_canonical=config["keep_non_canonical"]
     input:
         miTab     = "work_folder/data/intact/human.txt",
         sec_ac    = "work_folder/data/uniprot/sec_ac.txt",
@@ -51,7 +53,8 @@ rule map_uniprot_to_entrez:
         build_entrez_mapping(
             input.miTab, input.sec_ac,
             input.idmapping, input.gene_info,
-            output.uniprot, output.unmapped
+            output.uniprot, output.unmapped,
+            params.keep_non_canonical
         )
 
 

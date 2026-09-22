@@ -148,7 +148,7 @@ def build_entrez_mapping(mitab_file, sec_ac_file, idmapping_gz, gene_info_gz, ou
     Steps:
     1. Collect all UniProt IDs from the human-only rows of miTab.
     2. For isoform-suffixed IDs, query UniProt to find the displayed isoform;
-       keep only those that are canonical, drop the rest.
+       keep only those that are canonical, drop the rest. (unless keep_non_canonical=True)
     3. Remap secondary/retired ACs to current primary ACs via sec_ac.txt.
     4. Look up Entrez GeneID in HUMAN_9606_idmapping.dat.gz.
     5. For entries missing a direct GeneID: resolve via gene symbol in
@@ -164,10 +164,10 @@ def build_entrez_mapping(mitab_file, sec_ac_file, idmapping_gz, gene_info_gz, ou
     intact_df["IDB"] = intact_df["ID(s) interactor B"].apply(
         _find_pattern, args=(r"uniprotkb:(.+)",))
 
-    raw_ids = {i for i in (list(intact_df["IDA"]) + list(intact_df["IDB"])) if i}
+    ids = {i for i in (list(intact_df["IDA"]) + list(intact_df["IDB"])) if i}
 
-    bare_ids = {uid for uid in raw_ids if "-" not in uid}
-    isoform_ids = {uid for uid in raw_ids if "-" in uid}
+    general_ids = {uid for uid in ids if "-" not in uid}
+    isoform_ids = {uid for uid in ids if "-" in uid}
 
     canonical_isoforms = set()
     if isoform_ids:
@@ -183,7 +183,7 @@ def build_entrez_mapping(mitab_file, sec_ac_file, idmapping_gz, gene_info_gz, ou
     if dropped:
         warnings.warn(f"{dropped} non-canonical isoforms excluded (interactions dropped).")
 
-    all_ids = list(bare_ids | canonical_isoforms)
+    all_ids = list(general_ids | canonical_isoforms)
 
     sec_ac_map = parse_sec_ac_mapping(sec_ac_file)
 

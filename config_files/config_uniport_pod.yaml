@@ -91,6 +91,8 @@ permutation_fraction: 0.95
 n_permutations: 10
 drop_isoforms: True
 include_y2h_self_interactions: False
+keep_non_canonical: False
+n_em_iterations: 1000
 
 # --- biological insights ---
 bootstrap_replicates: 5000
