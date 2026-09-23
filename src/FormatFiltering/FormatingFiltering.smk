@@ -62,6 +62,8 @@ rule format_miTab:
     """
     Filter and format miTab interaction file into bait-prey-publication-detection_method csv
     """
+    params:
+        pseudo_replicated = config["pid_pseudo_replication"]
     input:
         miTab      = "work_folder/data/intact/human.txt",
         gene_names = "work_folder/gene_names/uniprot_to_gene_name.csv"
@@ -73,6 +75,7 @@ rule format_miTab:
     run:
         mitab_df     = filter_mitab(input.miTab)
         bait_prey_df = reform_to_bait_prey(mitab_df)
+        bait_prey_df = bait_prey_df[~bait_prey_df.pubmed_id.isin(params.pseudo_replicated)]
         gene_name_df = pd.read_csv(input.gene_names, sep="\t")
         gene_name_df.to_csv(output.gene_names, sep="\t", index=None)
 

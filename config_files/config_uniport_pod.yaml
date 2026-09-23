@@ -4,6 +4,9 @@ cell_line_ppis: "/home/joel/Projects/Cl-annotated-ppis/work_folder/CL_annotated_
 remove_single_publications: True
 pid_to_remove:
   - "33961781"
+
+pid_pseudo_replication:
+  - "28514442"
 min_total_tests: 30
 min_total_observed: 4
 part_or_difference_cutoff: 50

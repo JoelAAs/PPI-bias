@@ -19,6 +19,18 @@ def get_consituent_studies(wc):
     return expand(f"{study_folder}/{{study}}.csv", study=sorted(studies))
 
 
+
+rule global_detection_mixture:
+    params:
+        n_em_iterations = 10000
+    input:
+        pod_file = "work_folder/analysis/POD/{network_type}/POD_{dataset}.pq",
+    output:
+        study_fdr = "work_folder/analysis/FDR_aware/study_metrics/global_{network_type}_{dataset}.tsv"
+    script:
+        "scripts/estimate_global_fdr.py"
+
+
 rule leave_one_out_FDR_TPR:
     """
     Leave each study out of POD in turn and score the pairs it reported against the rest
@@ -36,3 +48,14 @@ rule leave_one_out_FDR_TPR:
         "logs/analysis/FDR_aware/study_metrics/{network_type}_{dataset}.log"
     script:
         "scripts/estimate_study_fdr.py"
+
+
+rule plot_observable_prey_vs_bait_count:
+    params:
+        ms_methods = config["ms"]
+    input:
+        bp_df = "work_folder/formated/bait_prey_publications.csv"
+    output:
+        plot = "work_folder/analysis/FDR_aware/plots/bait_vs_prey.png"
+    script:
+        "scripts/baits_vs_bait_saturation.R"
