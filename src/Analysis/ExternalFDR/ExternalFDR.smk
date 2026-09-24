@@ -42,12 +42,13 @@ rule leave_one_out_FDR_TPR:
         pod_file = "work_folder/analysis/POD/{network_type}/POD_{dataset}.pq",
         consituent_studies = get_consituent_studies
     output:
-        study_fdr = "work_folder/analysis/FDR_aware/study_metrics/{network_type}_{dataset}.tsv"
-    threads: 10
+        study_fdr = "work_folder/analysis/FDR_aware/study_metrics/{network_type}_{dataset}.tsv",
+        pair_posterior = "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq"
+    threads: 20
     log:
         "logs/analysis/FDR_aware/study_metrics/{network_type}_{dataset}.log"
     script:
-        "scripts/estimate_study_fdr.py"
+        "scripts/per_pair_study_fdr.py"
 
 
 rule plot_observable_prey_vs_bait_count:

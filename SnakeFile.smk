@@ -80,4 +80,4 @@ wildcard_constraints:
 
 rule all:
     input:
-        expand("work_folder/analysis/FDR_aware/study_metrics/global_{network_type}_{dataset}.tsv", dataset=datasets, network_type = network_types)
+        expand( "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq", dataset=datasets, network_type = network_types)
