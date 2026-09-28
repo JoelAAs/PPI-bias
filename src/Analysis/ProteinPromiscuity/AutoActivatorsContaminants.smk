@@ -178,8 +178,8 @@ rule rank_partner_effect:
 
         pair = df.groupby([role, partner], as_index=False).agg(
             n=("detection", "size"), k=("detection", "sum"))
-        pair = pair[pair["n"] >= 2]          # n==1 pairs are uninformative by construction
 
+        pair = pair[pair["n"] >= 2]          # n==1 pairs are uninformative by construction
         tot = pair.groupby(role).agg(
             n_pairs=("n", "size"), n_obs=("n", "sum"), n_pos=("k", "sum"))
         tot["p"] = tot["n_pos"] / tot["n_obs"]

@@ -1,3 +1,19 @@
+import functools
+import pyarrow as pa
+import pyarrow.parquet as pq
+import pyarrow.compute as pc
+
+
+@functools.cache
+def _pod_study_ids(network_type, dataset):
+    pod = f"work_folder/analysis/POD/{network_type}/POD_{dataset}.pq"
+    prefix = workflow.storage_settings.default_storage_prefix
+    pod_path = f"{prefix.rstrip('/')}/{pod}" if prefix else pod
+    col = pq.read_table(pod_path, columns=["pubmed_id"], read_dictionary=["pubmed_id"])["pubmed_id"]
+    joined = pc.unique(pa.chunked_array([c.dictionary for c in col.chunks]))
+    return sorted(pc.unique(pc.list_flatten(pc.split_pattern(joined, ";"))).to_pylist())
+
+
 def get_consituent_studies(wc):
     """
     The studies POD was aggregated from, read back out of its pubmed_id column
@@ -7,28 +23,10 @@ def get_consituent_studies(wc):
     study_folder = checkpoints.infer_experimental_search_space.get(cell_line="_method").output[0]
     study_folder = "work_folder" + study_folder.split("work_folder")[1]
 
-    pod = f"work_folder/analysis/POD/{wc.network_type}/POD_{wc.dataset}.pq"
-    prefix = workflow.storage_settings.default_storage_prefix
-    storage_file = storage.fs(f"{prefix.rstrip('/')}/{pod}" if prefix else pod)
-    storage_object = storage_file.flags["storage_object"]
-    storage_object.local_path().parent.mkdir(parents=True, exist_ok=True)
-    storage_object.retrieve_object()
-
-    pids = pd.read_parquet(storage_file, columns=["pubmed_id"])["pubmed_id"]
-    studies = {p for ids in pids for p in ids.split(";")}
-    return expand(f"{study_folder}/{{study}}.csv", study=sorted(studies))
+    studies = _pod_study_ids(wc.network_type, wc.dataset)
+    return expand(f"{study_folder}/{{study}}.csv", study=studies)
 
 
-
-rule global_detection_mixture:
-    params:
-        n_em_iterations = 10000
-    input:
-        pod_file = "work_folder/analysis/POD/{network_type}/POD_{dataset}.pq",
-    output:
-        study_fdr = "work_folder/analysis/FDR_aware/study_metrics/global_{network_type}_{dataset}.tsv"
-    script:
-        "scripts/estimate_global_fdr.py"
 
 
 rule leave_one_out_FDR_TPR:

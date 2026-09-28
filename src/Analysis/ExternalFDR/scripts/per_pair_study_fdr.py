@@ -9,16 +9,25 @@ from scipy.optimize import minimize
 import multiprocessing as mp
 
 # ----------------------------------------------------------------------------
-# Phase 0: global mixture fit  (unchanged)
+# Phase 0: global mixture fit
 # ----------------------------------------------------------------------------
 
 
-def fit_mixture(bg_df, max_iter, tol=1e-8):
-    cell = bg_df.groupby(["n_observed", "n_tested"]).size().reset_index(name="w")
-    n, t, w = cell.n_observed.values, cell.n_tested.values, cell.w.values.astype(float)
+def combinations_count(n_observed, n_tested):
+    """
+    Return unique key per ntested/observed combinations and the number of studies with that combinations (for weighting)
+    """
+    keys, weights = np.unique(n_observed * max_tested + n_tested, return_counts=True)
+    return pd.Series(weights, index=keys)
+
+
+def fit_mixture(pair_testing_combinations, max_iter, tol=1e-8):
+    n, t = pair_testing_combinations.index.values // max_tested, pair_testing_combinations.index.values % max_tested
+    w = pair_testing_combinations.values.astype(float)
 
     pi, a, b, phi = 0.01, 0.5, 2.5, 4e-4
     ll_old = -np.inf
+    converged = False
 
     for _ in range(max_iter):
         A = betabinom.pmf(n, t, a, b)
@@ -38,6 +47,7 @@ def fit_mixture(bg_df, max_iter, tol=1e-8):
         ).sum()
         if ll - ll_old < tol * abs(ll):
             ll_old = ll
+            converged = True
             break
         ll_old = ll
 
@@ -49,16 +59,18 @@ def fit_mixture(bg_df, max_iter, tol=1e-8):
         p_mean=a / (a + b),
         p_var=a * b / ((a + b) ** 2 * (a + b + 1)),
         loglik=ll_old,
+        # true pairs must be detected more often than false ones, else the components swapped
+        swapped=a / (a + b) <= phi,
+        converged=converged,  # False when max_iter was hit before tol
     )
 
 
 
-def score_reported(external_df, g_pi, g_a, g_b, g_phi, max_iter, tol=1e-8):
+def score_reported(n, t, g_pi, g_a, g_b, g_phi, max_iter, tol=1e-8):
     """
     Given the background estimation of alpha beta, interaction-rate and false negative rate
     Given whats reported in this study, what the precision of the study?
     """
-    n, t = external_df.n_observed.values, external_df.n_tested.values
     if len(n) == 0:
         return dict(theta_g_sum=np.nan, n_reported_informative=0, theta_se=np.inf)
 
@@ -82,56 +94,61 @@ def score_reported(external_df, g_pi, g_a, g_b, g_phi, max_iter, tol=1e-8):
     return dict(theta_g_sum=g.sum(), n_reported_informative=len(n), theta_se=se)
 
 
-def score_negatives(external_df, g_pi, g_a, g_b, g_phi):
+def score_negatives(n, t, g_pi, g_a, g_b, g_phi):
     """
-    From the rest of the studies, what is the expected number of false negatives. 
+    From the rest of the studies, what is the expected number of false negatives.
     """
-    n, t = external_df.n_observed.values, external_df.n_tested.values
-    
     A = betabinom.pmf(n, t, g_a, g_b) # P(external evidence | pair is a true interaction)
     B = binom.pmf(n, t, g_phi)        # P(external evidence | pair is not an interaction)
     gamma = g_pi * A / (g_pi * A + (1 - g_pi) * B) # P(true interaction | external evidence)
     return dict(for_g_sum=gamma.sum(), n_negative_informative=len(n))
 
 
-def load_study(study_path):
-    s_df = pd.read_csv(study_path, sep="\t")
+def lookup_pair_ids(bait, prey):
+    """ protein ids -> POD pair_id via the sorted pair-key table, -1 when not in POD """
+    ca, cb = id_vocab.get_indexer(bait), id_vocab.get_indexer(prey)
     if not directed:
-        s_df["pair_id"] = s_df.apply(
-            lambda row: id_dict.get(tuple(sorted([row[prot_a], row[prot_b]])), -1),
-            axis=1,
-        )
-        s_df = s_df.groupby("pair_id", as_index=False, sort=False).agg(
-            {"n_tested": "sum", "n_observed": "sum"}
-        )
-    else:
-        s_df["pair_id"] = s_df.apply(
-            lambda row: id_dict.get((row[prot_a], row[prot_b]), -1), axis=1
-        )
+        # vocab is sorted, so ordering codes is ordering ids
+        ca, cb = np.minimum(ca, cb), np.maximum(ca, cb)
+    key = ca.astype(np.int64) * len(id_vocab) + cb
+    pos = np.searchsorted(pod_keys, key).clip(max=len(pod_keys) - 1)
+    hit = (ca >= 0) & (cb >= 0) & (pod_keys[pos] == key)
+    return np.where(hit, pod_key_pair_ids[pos], -1)
 
+
+def load_study(study_path):
+    s_df = pd.read_csv(
+        study_path, sep="\t", usecols=[prot_a, prot_b, "n_tested", "n_observed"]
+    )
+    s_df["pair_id"] = lookup_pair_ids(s_df[prot_a].values, s_df[prot_b].values)
     s_df = s_df[s_df.pair_id != -1]
-    return s_df.set_index("pair_id")
+    s_df = s_df.groupby("pair_id", sort=False)[["n_tested", "n_observed"]].sum()
+    return (
+        s_df.index.values.astype(np.int32),
+        s_df.n_observed.values.astype(np.int32),
+        s_df.n_tested.values.astype(np.int32),
+    )
 
 
 def _run_study(study):
     study_name = os.path.basename(study).removesuffix(".csv")
-    s_df = load_study(study)
+    pair_ids, s_obs, s_tst = load_study(study)
+    detected = s_obs > 0
 
-    detected_pairs = s_df.index[s_df.n_observed > 0]
-    k_s = float(s_df.n_observed.sum())  # positive calls made by this study
-    T_s = float(s_df.n_tested.sum())  # tests performed by this study
+    # Leave-one-out background, only the pairs this study touched change
+    old_o, old_t = pod_observed[pair_ids], pod_tested[pair_ids]
+    new_o, new_t = old_o - s_obs, old_t - s_tst
+    assert (new_t < 0).sum() == 0, "There are negative tested"
+    kept = new_t != 0
 
-    # Leave-one-out background
-    background_df = full_search_df.copy()
-    background_df.loc[s_df.index, "n_tested"] -= s_df.n_tested
-    background_df.loc[detected_pairs, "n_observed"] -= s_df.loc[
-        detected_pairs, "n_observed"
-    ]
-    background_df = background_df[background_df.n_tested != 0]
+    background = (
+        bg_cells.sub(combinations_count(old_o, old_t), fill_value=0)
+        .add(combinations_count(new_o[kept], new_t[kept]), fill_value=0)
+    )
+    assert (background < 0).sum() == 0, "Negative cell count in background"
+    background = background[background > 0]
 
-    assert (background_df.n_tested < 1).sum() == 0, "There are negative tested"
-
-    global_estimates = fit_mixture(background_df, max_iter)
+    global_estimates = fit_mixture(background, max_iter)
     gp = (
         global_estimates["pi"],
         global_estimates["a"],
@@ -139,27 +156,23 @@ def _run_study(study):
         global_estimates["phi"],
     )
 
-    # Interactions reported in backgound, for FDR
-    reported_ext = background_df.loc[detected_pairs]
-
-    # Tested but not reported pairs for FOR
-    negative_pairs = s_df.index[s_df.n_observed == 0]
-    negative_ext = full_search_df.loc[negative_pairs].copy()
-
-    negative_ext["n_tested"] -= s_df.loc[negative_ext.index, "n_tested"]
-    negative_ext = negative_ext[negative_ext.n_tested != 0]
-
     row = dict(
         study=study_name,
-        k_s=k_s,
-        T_s=T_s,
-        n_reported=len(detected_pairs),
-        n_negative=len(negative_pairs),
+        k_s=float(s_obs.sum()),  # positive calls made by this study
+        T_s=float(s_tst.sum()),  # tests performed by this study
+        n_reported=int(detected.sum()),
+        n_negative=int((~detected).sum()),
     )
-    row.update(score_reported(reported_ext, *gp, max_iter))
-    row.update(score_negatives(negative_ext, *gp))
+    # Interactions reported in backgound, for FDR
+    rep = detected & kept
+    row.update(score_reported(new_o[rep], new_t[rep], *gp, max_iter))
+    # Tested but not reported pairs for FOR
+    neg = ~detected & kept
+    row.update(score_negatives(new_o[neg], new_t[neg], *gp))
     row.update(global_estimates)
-    return row
+
+    # keep the study's counts for phase 2 so it is not loaded twice
+    return row, (pair_ids, s_obs, s_tst)
 
 
 # ----------------------------------------------------------------------------
@@ -173,7 +186,7 @@ def shrink(g_sum, n, prior_mean, k0):
 
 
 def solve_rates(df, global_pi, k0=5.0, eps=1e-9):
-    
+
     # Mean precision weighted by number of overlap from estimation
     m_theta = np.nansum(df.theta_g_sum) / np.nansum(df.n_reported_informative)
     # Mean FOR weighted by number of overlap from estimation
@@ -204,35 +217,25 @@ def solve_rates(df, global_pi, k0=5.0, eps=1e-9):
     return out
 
 
-def _pair_contrib(args):
-    study, w_det, w_non = args
-    s_df = load_study(study)
-    obs = s_df.n_observed.values
-    tst = s_df.n_tested.values
-    # each test is an independent opportunity; detections carry w_det, the rest w_non
-    contrib = obs * w_det + (tst - obs) * w_non
-    return s_df.index.values, contrib
-
-
-def accumulate_log_odds(study_paths, weights, n_pairs, prior_logodds, n_threads):
+def accumulate_log_odds(study_counts, weights, n_pairs, prior_logodds):
     total = np.full(n_pairs, prior_logodds, dtype=np.float64)
-    jobs = [
-        (s, weights.loc[s, "w_detected"], weights.loc[s, "w_not_detected"])
-        for s in study_paths
-        if not np.isnan(weights.loc[s, "w_detected"])
-    ]
-
-    with mp.Pool(n_threads) as pool:
-        for ids, contrib in pool.imap_unordered(_pair_contrib, jobs, chunksize=1):
-            np.add.at(total, ids, contrib)
+    for study, (pair_ids, obs, tst) in study_counts.items():
+        w_det, w_non = weights.loc[study, "w_detected"], weights.loc[study, "w_not_detected"]
+        if np.isnan(w_det):
+            continue
+        # each test is an independent opportunity; detections carry w_det, the rest w_non
+        # pair_ids are unique within a study, so plain fancy-index add is safe
+        total[pair_ids] += obs * w_det + (tst - obs) * w_non
     return total
 
 
 def main():
-    global full_search_df, id_dict, directed, prot_a, prot_b, max_iter
+    global directed, prot_a, prot_b, max_iter, max_tested
+    global id_vocab, pod_keys, pod_key_pair_ids, pod_observed, pod_tested
+    global bg_cells
     prot_a = f"{snakemake.params.id_pattern}_bait"
     prot_b = f"{snakemake.params.id_pattern}_prey"
-    full_search_df = pd.read_parquet(
+    pod_df = pd.read_parquet(
         snakemake.input.pod_file,
         columns=[prot_a, prot_b, "pair_id", "n_tested", "n_observed"],
     )
@@ -249,44 +252,62 @@ def main():
     else:
         raise IOError(f"Unkown network wildcard: {snakemake.wildcards.network_type}")
 
-    id_dict = {
-        (row[prot_a], row[prot_b]): row["pair_id"]
-        for _, row in full_search_df.iterrows()
-    }
-    full_search_df = full_search_df.set_index("pair_id")[["n_tested", "n_observed"]]
+    # (bait, prey) -> pair_id as a sorted int64 key table instead of a dict of tuples:
+    # numpy arrays stay shared across forked workers, a 1e8 entry dict gets copied
+    n_rows = len(pod_df)
+    codes, id_vocab = pd.factorize(
+        np.concatenate([pod_df[prot_a].values, pod_df[prot_b].values]), sort=True
+    )
+    id_vocab = pd.Index(id_vocab)
+    keys = codes[:n_rows].astype(np.int64) * len(id_vocab) + codes[n_rows:]
+    order = np.argsort(keys)
+    pod_keys = keys[order]
+    pod_key_pair_ids = pod_df.pair_id.values[order]
+    del codes, keys, order
 
-    # ---- phase 1: per-study FDR and FOR --------------------------------------
-    with mp.Pool(n_threads) as pool:
-        study_rows = pool.map(_run_study, consituent_studies, chunksize=1)
+    # counts as dense arrays indexed by pair_id
+    pod_pair_ids = pod_df.pair_id.values
+    n_pairs = int(pod_pair_ids.max()) + 1
+    assert np.bincount(pod_pair_ids, minlength=n_pairs).max() <= 1, "Duplicate pair_id in POD"
+    pod_tested = np.zeros(n_pairs, dtype=np.int64)
+    pod_observed = np.zeros(n_pairs, dtype=np.int64)
+    pod_tested[pod_pair_ids] = pod_df.n_tested.values
+    pod_observed[pod_pair_ids] = pod_df.n_observed.values
+    del pod_df
 
-    study_df = pd.DataFrame(study_rows)
+    max_tested = int(pod_tested.max()) + 1
+    t_all, o_all = pod_tested[pod_pair_ids], pod_observed[pod_pair_ids]
 
     # global prior from the full fit
-    global_fit = fit_mixture(full_search_df, max_iter)
+    global_fit = fit_mixture(combinations_count(o_all, t_all), max_iter)
+    bg_cells = combinations_count(o_all[t_all != 0], t_all[t_all != 0])
+    del t_all, o_all
+
+    # ---- phase 1: per-study FDR and FOR --------------------------------------
+    study_rows, study_counts = [], {}
+    with mp.Pool(n_threads) as pool:
+        for row, counts in pool.imap(_run_study, consituent_studies, chunksize=1):
+            study_rows.append(row)
+            study_counts[row["study"]] = counts
+
+    study_df = pd.DataFrame(study_rows)
     study_df = solve_rates(study_df, global_fit["pi"], k0=k0)
     study_df.to_csv(snakemake.output.study_fdr, sep="\t", index=False)
 
     # ---- phase 2: per-pair posterior ----------------------------------------
     weights = study_df.set_index("study")[["w_detected", "w_not_detected"]]
-    weights.index = [
-        os.path.join(os.path.dirname(consituent_studies[0]), f"{s}.csv")
-        for s in weights.index
-    ]
 
     pi0 = global_fit["pi"]
     prior_lo = np.log(pi0 / (1 - pi0))
-    n_pairs = int(full_search_df.index.max()) + 1
 
-    log_odds = accumulate_log_odds(
-        consituent_studies, weights, n_pairs, prior_lo, n_threads
-    )
+    log_odds = accumulate_log_odds(study_counts, weights, n_pairs, prior_lo)
 
     pairs = pd.DataFrame(
         {
-            "pair_id": full_search_df.index.values,
-            "n_tested": full_search_df.n_tested.values,
-            "n_observed": full_search_df.n_observed.values,
-            "log_odds": log_odds[full_search_df.index.values],
+            "pair_id": pod_pair_ids,
+            "n_tested": pod_tested[pod_pair_ids],
+            "n_observed": pod_observed[pod_pair_ids],
+            "log_odds": log_odds[pod_pair_ids],
         }
     )
     pairs["posterior"] = 1.0 / (1.0 + np.exp(-pairs.log_odds))
