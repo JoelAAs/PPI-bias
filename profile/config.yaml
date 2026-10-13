@@ -24,6 +24,13 @@ set-resources:
     mem_mb: 48000
     cpus_per_task: 8  # Pair with sufficient CPUs (node has 96 total)
     runtime: 60  # Adjust based on partition limits (short=8h max)
+  get_prostT5_embeddings:
+    slurm_partition: short  # or medium/long based on your needs
+    slurm_constraint: gpu
+    slurm_extra: "'--gpus=nvidia_h200'"
+    mem_mb: 48000
+    cpus_per_task: 8  # Pair with sufficient CPUs (node has 96 total)
+    runtime: 120  # ProstT5 encoder (~1.2B params) is ~2x ESM2-650M
   # DataSplit
   maxflow_splits:
     mem_mb: 102400
