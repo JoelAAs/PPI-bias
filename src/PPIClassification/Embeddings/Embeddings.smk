@@ -145,6 +145,28 @@ rule get_esm2_embeddings:
         """
 
 
+# will only run with accenssions for now
+rule get_prostT5_embeddings:
+    params:
+        model = config.get("prostt5_model", "Rostlab/ProstT5"),
+        script_location = "src/PPIClassification/Embeddings/get_embeddings_prostt5.py"
+    input:
+        fasta = "work_folder/protein_sequences/uniprot_canonical.fasta"
+    output:
+        embeddings = "work_folder/embeddings/canonical_ProstT5.pt"
+    log:
+        "logs/embeddings/canonical_ProstT5.log"
+    container: "/beegfs/scratch/ieo7513/.snakemake/apptainer/huggingface-transformers-all-latest-gpu-latest.sif" # run with --apptainer-args="--nv"
+    shell:
+        """
+        python3 {params.script_location} \
+        --protein_fasta {input.fasta} \
+        --model_name {params.model} \
+        --embedding_output {output.embeddings} \
+        > {log} 2>&1
+        """
+
+
 rule get_mean_max_features:
     input:
         embeddings = "work_folder/embeddings/canonical_{esm_model}.pt"

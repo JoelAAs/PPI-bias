@@ -86,10 +86,6 @@ rule jaccard_intra_dist_train_negative:
 
 
 rule plot_train_edge_jaccard_boxplot:
-    # Three boxes, each pooling every dataset x pos_limit x neg_limit config:
-    #  - HRNI negatives across the 10 permutations of one config
-    #  - NO negatives across the 10 permutations of one config
-    #  - positives between adjacent positive-threshold configs
     input:
         hrni_negative = expand("work_folder/subsets/dataset_eval/negatives/hrni_{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}-jaccard_distances.csv",
             dataset=config["datasets"],
@@ -103,7 +99,7 @@ rule plot_train_edge_jaccard_boxplot:
             dataset=config["datasets"],
             neg_limit=config["negative_limits"])
     output:
-        jaccard_distances = "work_folder/subsets/dataset_eval/jaccard_dist/{network_type}_train_edge_jaccard_boxplot.png"
+        jaccard_distances = "work_folder/subsets/dataset_eval/jaccard_dist/{network_type}_train_edge_jaccard_boxplot.svg"
     resources:
         mem_gb=2
     script:

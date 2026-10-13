@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     ax.set_xticks(positions)
     ax.set_xticklabels([dataset_labels.get(d, d) for d in datasets])
-    ax.set_ylabel("Delta ROC-AUC (train HRNI - train NO)")
+    ax.set_ylabel("Delta ROC-AUC (train experimental - train NO)")
 
     fig.set_size_inches(3, 4)
     plt.tight_layout()

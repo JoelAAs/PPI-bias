@@ -3,7 +3,14 @@ import random
 def select_row_wise_study_files(study_folder, methods, id_pattern, filename, remove_single=True):
     STUDY_FOLDER = study_folder
 
-    ppi_df = pd.read_csv(filename, sep="\t")
+    # storage.fs() is not auto-prefixed, so add the prefix and retrieve the file ourselves
+    prefix = workflow.storage_settings.default_storage_prefix
+    query = f"{prefix.rstrip('/')}/{filename}" if prefix else filename
+    storage_file = storage.fs(query)
+    storage_object = storage_file.flags["storage_object"]
+    storage_object.local_path().parent.mkdir(parents=True, exist_ok=True)
+    storage_object.retrieve_object()
+    ppi_df = pd.read_csv(storage_file, sep="\t")
     ppi_df = ppi_df[ppi_df["detection_method"].isin(methods)]
     ppi_df = ppi_df[
         ppi_df[f"{id_pattern}_bait"] != ppi_df[f"{id_pattern}_prey"]
@@ -226,3 +233,61 @@ rule check_log_normality:
         {params.min_tested} \
         > {log} 2>&1
         """
+
+
+rule rank_partner_effect:
+    input:
+        row_wise_data="work_folder/analysis/ProteinPromiscuity/row_data/{dataset}_row_wise_detection.tsv",
+    output:
+        ranked="work_folder/analysis/ProteinPromiscuity/autoactivators/{dataset}_{role}_partner_effect.tsv",
+    params:
+        min_pairs=20,
+        rho0=0.3,
+        n_simulations=3000,
+    run:
+        role = wildcards.role
+        partner = "prey" if role == "bait" else "bait"
+        df = pd.read_csv(input.row_wise_data, sep="\t")
+        pair = df.groupby([role, partner], as_index=False).agg(
+            n=("detection", "size"), k=("detection", "sum")
+        )
+        pair = pair[pair["n"] >= 2].copy()     # n==1 pairs are uninformative by construction
+        pair["det"] = pair["k"] > 0            # detected at least once
+        pair["full"] = pair["k"] == pair["n"]  # detected on every test
+        tot = pair.groupby(role).agg(
+            n_pairs=("n", "size"), n_obs=("n", "sum"), n_pos=("k", "sum"),
+            n_det=("det", "sum"), n_full=("full", "sum"),
+        )
+        tot["p"] = tot["n_pos"] / tot["n_obs"]
+        pair = pair.join(tot["p"], on=role)
+        e = pair["n"] * pair["p"]
+        v = pair["n"] * pair["p"] * (1 - pair["p"])
+        pair["chi"] = ((pair["k"] - e) ** 2 / v).where(v > 0, 0.0)
+        tot["D"] = pair.groupby(role)["chi"].sum() / (tot["n_pairs"] - 1)
+        tot["f"] = (tot["n_full"] / tot["n_det"]).where(tot["n_det"] > 0) # Fraction of full replication
+
+        # p = 0 or 1: every pair is uniform by construction, so D carries no information
+        tot.loc[(tot["p"] == 0) | (tot["p"] == 1), "D"] = np.nan
+        tot = tot[tot["n_pairs"] >= params.min_pairs]
+
+        rng = np.random.default_rng(0)
+
+        def uniformity_p(g):
+            n, p, r, B = g["n"].to_numpy(), g["p"].iloc[0], params.rho0, params.n_simulations
+            sim = rng.binomial(n, rng.beta(p * (1 - r) / r, (1 - p) * (1 - r) / r, size=(B, n.size)))
+            q = sim.sum(axis=1, keepdims=True) / n.sum()  # re-estimate p as the observed stat does
+            chi = ((sim - n * q) ** 2 / np.maximum(n * q * (1 - q), 1e-12)).sum(axis=1)
+            return (1 + (chi <= g["chi"].sum()).sum()) / (B + 1)
+
+        tot["p_vs_specific"] = (
+            pair[pair[role].isin(tot.index[tot["D"].notna()])].groupby(role).apply(uniformity_p)
+        )
+
+        detected = tot["n_pos"] > 0
+        tot["score"] = np.nan
+        tot.loc[detected, "score"] = (-tot.loc[detected, "D"]).rank(
+            pct=True
+        ) + tot.loc[detected, "p"].rank(pct=True)
+        tot.sort_values("score", ascending=False, na_position="last").to_csv(
+            output.ranked, sep="\t"
+        )

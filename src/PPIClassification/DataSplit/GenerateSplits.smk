@@ -40,7 +40,7 @@ rule define_max_sets:
         negative_edges.to_csv(output.max_negative, index=False, columns=[bait_col, prey_col], sep="\t")
 
 
-rule balance_to_equal_samples:
+rule generate_threshold_datasets:
     params:
         positive_limits = config["positive_limits"],
         negative_limits = config["negative_limits"]
@@ -53,57 +53,25 @@ rule balance_to_equal_samples:
         mem_gb=130
     output:
         balanced_edges_positive = expand(
-            "work_folder/subsets/train/equal_edge/{{dataset}}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
+            "work_folder/subsets/train/{{dataset}}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
             pos_limit=config["positive_limits"], neg_limit=config["negative_limits"]),
         balanced_edges_negative = expand(
-            "work_folder/subsets/train/equal_edge/{{dataset}}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}_neg.csv",
+            "work_folder/subsets/train/{{dataset}}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}_neg.csv",
             pos_limit=config["positive_limits"], neg_limit=config["negative_limits"])
     log:
-        "logs/subsets/train/equal_edge/{dataset}_{network_type}_balance.log"
+        "logs/subsets/train/{dataset}_{network_type}_balance.log"
     script:
-        "scripts/sample_balance_multi_network.py"
+        "scripts/single_balanced_threshold_datasets.py"
 
-
-
-rule generate_permuted_random_negative:
-    input:
-        balanced_positive_edges = "work_folder/subsets/train/permuted/{permutation}/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
-    output:
-        random_negative_edges = "work_folder/subsets/train/permuted/{permutation}/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}-random_neg.csv"
-    log:
-        "logs/subsets/train/permuted/{permutation}/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_random_neg.log"
-    resources:
-        mem_gb=30
-    script:
-        "scripts/random_negative.py"
-
-
-rule permute_balanced_samples:
-    params:
-        fraction  = config.get("permutation_fraction", 0.95),
-        base_seed = config["seed"],
-        min_flow  = config.get("permutation_min_flow", 0.95)
-    input:
-        balanced_pos = "work_folder/subsets/train/equal_edge/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
-        balanced_neg = "work_folder/subsets/train/equal_edge/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_neg.csv"
-    output:
-        permuted_pos = "work_folder/subsets/train/permuted/{permutation}/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
-        permuted_neg = "work_folder/subsets/train/permuted/{permutation}/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_neg.csv"
-    resources:
-        mem_gb=30
-    log:
-        "logs/subsets/train/permuted/{permutation}/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}.log"
-    script:
-        "scripts/permute_balanced_set.py"
 
 
 rule generate_negative_sample:
     input:
-        balanced_positive_edges = "work_folder/subsets/train/equal_edge/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
+        balanced_positive_edges = "work_folder/subsets/train/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
     output:
-        random_negative_edges = "work_folder/subsets/train/equal_edge/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}-random_neg.csv"
+        random_negative_edges = "work_folder/subsets/train/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}-random_neg.csv"
     log:
-        "logs/subsets/train/equal_edge/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_random_neg.log"
+        "logs/subsets/train/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_random_neg.log"
     resources:
         mem_gb=45
     script:

@@ -39,6 +39,7 @@ include: "src/Analysis/NonInteractionHubs/DegreeQuadrants.smk"
 include: "src/Analysis/MethodConcordance/MethodConcordance.smk"
 include: "src/Analysis/ProteinPromiscuity/ProteinPromiscuity.smk"
 include: "src/Analysis/ProteinPromiscuity/AutoActivatorsContaminants.smk"
+#include: "src/Analysis/ProteinPromiscuity/TestFeatureDetectability.smk"
 
 include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
 include: "src/Analysis/NegatomeComparison/CompareSharedBaits.smk"
@@ -80,4 +81,9 @@ wildcard_constraints:
 
 rule all:
     input:
-        expand( "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq", dataset=datasets, network_type = network_types)
+        #expand("work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq", dataset=datasets, network_type = network_types),
+        expand("work_folder/analysis/FDR_aware/plots/{network_type}_ms_log_odds_vs_pod.png", network_type=network_types),
+        "work_folder/analysis/ProteinPromiscuity/autoactivators/known/ms_prey_added.pdf",
+        "work_folder/analysis/ProteinPromiscuity/autoactivators/known/y2h_bait_added.pdf",
+        #expand("work_folder/analysis/ProteinPromiscuity/features/tests/{dataset}_{network_type}_{feature}.tsv",
+        # dataset=["ms", "y2h"], network_type=["directional", "undirectional"], feature = ["nucleoplasm-vs-cytocol",]),

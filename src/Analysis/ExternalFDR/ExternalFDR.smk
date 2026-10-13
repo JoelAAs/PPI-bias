@@ -35,18 +35,34 @@ rule leave_one_out_FDR_TPR:
     """
     params:
         id_pattern = config["id_pattern"],
-        n_em_iterations = config["n_em_iterations"]
+        n_em_iterations = config["n_em_iterations"],
+        calibration_min_negatives = config.get("calibration_min_negatives", 100),
+        calibration_max_call_rate = config.get("calibration_max_call_rate", 0.5)
     input:
         pod_file = "work_folder/analysis/POD/{network_type}/POD_{dataset}.pq",
         consituent_studies = get_consituent_studies
     output:
         study_fdr = "work_folder/analysis/FDR_aware/study_metrics/{network_type}_{dataset}.tsv",
-        pair_posterior = "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq"
+        pair_posterior = "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq",
+        global_fit = "work_folder/analysis/FDR_aware/global_fit/{network_type}_{dataset}.tsv"
     threads: 20
     log:
         "logs/analysis/FDR_aware/study_metrics/{network_type}_{dataset}.log"
     script:
         "scripts/per_pair_study_fdr.py"
+
+
+rule plot_log_odds_vs_pod:
+    input:
+        pair_posterior = "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq",
+        pod_file = "work_folder/analysis/POD/{network_type}/POD_{dataset}.pq"
+    output:
+        plot = "work_folder/analysis/FDR_aware/plots/{network_type}_{dataset}_log_odds_vs_pod.png",
+        plot_not_observed = "work_folder/analysis/FDR_aware/plots/{network_type}_{dataset}_log_odds_vs_pod_not_observed.png"
+    log:
+        "logs/analysis/FDR_aware/plots/{network_type}_{dataset}_log_odds_vs_pod.log"
+    script:
+        "scripts/plot_log_odds_vs_pod.R"
 
 
 rule plot_observable_prey_vs_bait_count:
@@ -55,6 +71,9 @@ rule plot_observable_prey_vs_bait_count:
     input:
         bp_df = "work_folder/formated/bait_prey_publications.csv"
     output:
-        plot = "work_folder/analysis/FDR_aware/plots/bait_vs_prey.png"
+        plot = "work_folder/analysis/FDR_aware/plots/bait_vs_prey.png",
+        fit_stats = "work_folder/analysis/FDR_aware/plots/bait_vs_prey_fit.tsv"
     script:
         "scripts/baits_vs_bait_saturation.R"
+
+

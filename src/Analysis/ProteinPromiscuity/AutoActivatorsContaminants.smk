@@ -95,13 +95,13 @@ rule potential_crapome_proteins:
         selected_proteins.to_csv(output.crapome_like_proteins, sep="\t", index=False)
 
 
-def what_crap(wc):
-    if wc.dataset == "ms":
-        return "work_folder/analysis/ProteinPromiscuity/autoactivators/crapome_proteins.tsv"
-    elif wc.dataset == "y2h":
-        return "work_folder/analysis/ProteinPromiscuity/autoactivators/y2h_aa_like_proteins.tsv"
-    else:
-        raise Error("wrong wildcard", wc.dataset)
+# def what_crap(wc):
+#     if wc.dataset == "ms":
+#         return "work_folder/analysis/ProteinPromiscuity/autoactivators/crapome_proteins.tsv"
+#     elif wc.dataset == "y2h":
+#         return "work_folder/analysis/ProteinPromiscuity/autoactivators/y2h_aa_like_proteins.tsv"
+#     else:
+#         raise Error("wrong wildcard", wc.dataset)
 
 rule model_select_genes:
     input:        
@@ -122,78 +122,6 @@ rule model_select_genes:
         > {log} 2>&1
         """
 
-rule evaluate_contaminants_aa:
-    input:
-        crap_model = "work_folder/analysis/ProteinPromiscuity/autoactivators/{dataset}_{role}_model.jls",
-    output:
-        bait_detectability = "work_folder/analysis/autoactivators/{dataset}_{role}_bait_detectability.tsv",
-        prey_detectability = "work_folder/analysis/autoactivators/{dataset}_{role}_prey_detectability.tsv",
-        experiment_detectability = "work_folder/analysis/autoactivators/{dataset}_{role}_experiment_detectability.tsv",
-        variance_components = "work_folder/analysis/autoactivators/{dataset}_{role}_variance_components.tsv",
-    log:
-        "logs/analysis/ProteinPromiscuity/{dataset}_{role}_evaluate.log",
-    conda:
-        "julia"
-    threads: 
-        1
-    shell:
-        """
-        julia -t 1 src/Analysis/ProteinPromiscuity/scripts/evaluate_protein_promiscuity_model.jl \
-        {input.crap_model} \
-        {output.bait_detectability} {output.prey_detectability} \
-        {output.experiment_detectability} {output.variance_components} \
-        > {log} 2>&1
-        """
-    
-rule get_dispersion:
-    input:
-        crap_model = "work_folder/analysis/ProteinPromiscuity/autoactivators/{dataset}_{role}_model.jls",
-        what_pro_carp = lambda wc: what_crap(wc),
-        row_wise_data = "work_folder/analysis/ProteinPromiscuity/row_data/{dataset}_row_wise_detection.tsv"
-    output:
-        dispersion = "work_folder/analysis/autoactivators/dispersion/{dataset}_{role}.tsv"
-    conda:
-        "julia"
-    threads:
-        5
-    shell:
-        """
-        OMP_NUM_THREADS={threads} OPENBLAS_NUM_THREADS={threads} julia src/Analysis/ProteinPromiscuity/scripts/check_protein_role_disperstion.jl \
-        {input.row_wise_data} {input.crap_model} {input.what_pro_carp} {wildcards.role} {output.dispersion}
-        """
-
-
-
-rule rank_partner_effect:
-    params:
-        min_pairs = 20
-    input:
-        row_wise_data = "work_folder/analysis/ProteinPromiscuity/row_data/{dataset}_row_wise_detection.tsv"
-    output:
-        ranked = "work_folder/analysis/ProteinPromiscuity/autoactivators/{dataset}_{role}_partner_effect.tsv"
-    run:
-        role = wildcards.role
-        partner = "prey" if role == "bait" else "bait"
-        df = pd.read_csv(input.row_wise_data, sep="\t")
-
-        pair = df.groupby([role, partner], as_index=False).agg(
-            n=("detection", "size"), k=("detection", "sum"))
-
-        pair = pair[pair["n"] >= 2]          # n==1 pairs are uninformative by construction
-        tot = pair.groupby(role).agg(
-            n_pairs=("n", "size"), n_obs=("n", "sum"), n_pos=("k", "sum"))
-        tot["p"] = tot["n_pos"] / tot["n_obs"]
-
-        pair = pair.join(tot["p"], on=role)
-        e = pair["n"] * pair["p"]
-        v = pair["n"] * pair["p"] * (1 - pair["p"])
-        pair["chi"] = ((pair["k"] - e) ** 2 / v).where(v > 0, 0.0)
-
-        tot["D"] = pair.groupby(role)["chi"].sum() / (tot["n_pairs"] - 1)
-        tot = tot[(tot["n_pairs"] >= params.min_pairs) & (tot["n_pos"] > 0)]
-
-        tot["score"] = (-tot["D"]).rank(pct=True) + tot["p"].rank(pct=True)
-        tot.sort_values("score", ascending=False).to_csv(output.ranked, sep="\t")
 
 
 rule plot_partner_effects:
@@ -214,7 +142,6 @@ rule plot_partner_effects:
 
 
 
-
 rule plot_bait_prey_detectability:
     input:
         ms_bait = "work_folder/analysis/ProteinPromiscuity/autoactivators/ms_bait_partner_effect.tsv",
@@ -231,6 +158,7 @@ rule plot_bait_prey_detectability:
         "scripts/plot_bait_prey_detectability.R"
 
 
+
 rule detect_excess_kurtosis:
     params:
         min_pairs = 300
@@ -243,3 +171,23 @@ rule detect_excess_kurtosis:
         1
     script:
         "scripts/plot_excess_kurtosis.R"
+
+
+def what_known(wc):
+    if wc.dataset == "ms":
+        return "work_folder/analysis/ProteinPromiscuity/autoactivators/crapome_proteins.tsv"
+    elif wc.dataset == "y2h":
+        return "data/autoactivators/y2h.csv"
+    else:
+        raise Error("wrong wildcard", wc.dataset)
+
+rule p_val_vs_auto:
+    input:
+        partner_effect = "work_folder/analysis/ProteinPromiscuity/autoactivators/{dataset}_{role}_partner_effect.tsv",
+        selected_proteins = lambda wc: what_known(wc)
+    output:
+        enrichment="work_folder/analysis/ProteinPromiscuity/autoactivators/known/{dataset}_{role}_added.pdf",
+        histogram="work_folder/analysis/ProteinPromiscuity/autoactivators/known/{dataset}_{role}_histogram.pdf"
+    script:
+        "scripts/check_excess_known_problematic.py"
+

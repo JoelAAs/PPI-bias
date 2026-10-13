@@ -372,12 +372,6 @@ def extract_selected_edges(
         g.add_edge_list(selected)
         return g
 
-    # ----- Undirected branch -----
-    # Each {A,B} in source generated TWO arcs in the flow graph:
-    #     (0,A) -> (1,B)   and   (0,B) -> (1,A)
-    # Pair them up:
-    #   both arcs saturated  -> full edge, include in H
-    #   only one arc         -> half-edge, greedy-round against remaining slack
     if len(selected) == 0:
         return g
 
@@ -390,8 +384,6 @@ def extract_selected_edges(
         g.add_edge_list(full_edges)
 
     if len(half_edges):
-        # recover target_degree from source-side capacities
-        # (source vertex was the 2nd-to-last vertex added in build_undirected_flow_graph)
         source_v = flow_g.vertex(flow_g.num_vertices() - 2)
         target_degree = np.zeros(len(node_map), dtype=np.int32)
         for e in source_v.out_edges():
