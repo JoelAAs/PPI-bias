@@ -18,12 +18,17 @@ class EmbeddWorkerProstT5:
         return "<AA2fold> " + " ".join(sequence)
 
     def get_embeddings(self, sequence, i, n):
-        inputs = self.tokenizer(self.prepare_sequence(sequence), return_tensors="pt", add_special_tokens=True)
         m2 = datetime.datetime.now()
-        inputs = {k: v.to("cuda") for k, v in inputs.items()}
-        with torch.no_grad():
-            outputs = self.model(**inputs)
-        token_emb = outputs.last_hidden_state.squeeze(0)[1:len(sequence) + 1]  # strip <AA2fold> prefix and </s>
+        # T5 position bias is L x L x heads: chunk sequences > 15k residues (only titin) to fit on GPU
+        chunk_embs = []
+        for start in range(0, len(sequence), 15000):
+            chunk = sequence[start:start + 15000]
+            inputs = self.tokenizer(self.prepare_sequence(chunk), return_tensors="pt", add_special_tokens=True)
+            inputs = {k: v.to("cuda") for k, v in inputs.items()}
+            with torch.no_grad():
+                outputs = self.model(**inputs)
+            chunk_embs.append(outputs.last_hidden_state.squeeze(0)[1:len(chunk) + 1])  # strip <AA2fold> prefix and </s>
+        token_emb = torch.cat(chunk_embs)
         mean_vec = token_emb.mean(dim=0).float().cpu()
         max_vec = token_emb.max(dim=0).values.float().cpu()
         e = datetime.datetime.now()
