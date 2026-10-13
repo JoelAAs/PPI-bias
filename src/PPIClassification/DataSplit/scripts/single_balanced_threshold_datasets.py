@@ -48,7 +48,7 @@ def main():
     log_file = snakemake.log[0]
     selected_pos = []; selected_neg = []
     
-    with ProcessPoolExecutor(max_workers=n_workers, mp_context=multiprocessing.get_context("spawn")) as executor:
+    with ProcessPoolExecutor(max_workers=workers, mp_context=multiprocessing.get_context("spawn")) as executor:
         futures = [
             executor.submit(degree_balace_edges, pos_edge, neg_edge, 0.95, directed, None, None, log_file, network_id)
             for pos_edge, neg_edge, network_id in zip(edge_list_pos, edge_list_neg, network_ids)

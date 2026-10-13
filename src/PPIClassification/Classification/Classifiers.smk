@@ -1,7 +1,7 @@
 rule random_forest:
     input:
-        train_pos="work_folder/subsets/train/equal_edge/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
-        train_neg="work_folder/subsets/train/equal_edge/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_neg.csv",
+        train_pos="work_folder/subsets/train/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
+        train_neg="work_folder/subsets/train/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_neg.csv",
         validation_pos="work_folder/subsets/validation/{dataset}_{network_type}_pos.csv",
         validation_neg="work_folder/subsets/validation/{dataset}_{network_type}_neg.csv",
         protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz",
@@ -33,8 +33,8 @@ rule random_forest:
 
 rule xgboost:
     input:
-        train_pos="work_folder/subsets/train/equal_edge/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
-        train_neg="work_folder/subsets/train/equal_edge/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_neg.csv",
+        train_pos="work_folder/subsets/train/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
+        train_neg="work_folder/subsets/train/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_neg.csv",
         validation_pos="work_folder/subsets/validation/{dataset}_{network_type}_pos.csv",
         validation_neg="work_folder/subsets/validation/{dataset}_{network_type}_neg.csv",
         protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz",

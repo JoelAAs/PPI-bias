@@ -113,7 +113,7 @@ rule define_no_negative_test_set:
         "scripts/get_equivalent_negative.py"
 
 
-rule get_model_metrics_permuted:
+rule get_model_metrics:
     input:
         test_pos="work_folder/subsets/test/{dataset}_{network_type}_pos.csv",
         test_neg="work_folder/subsets/test/{dataset}_{network_type}_neg.csv",
@@ -229,6 +229,17 @@ rule plot_hrni_no_delta_auc:
     script:
         "scripts/plot_hrni_no_delta_auc.py"
 
+
+rule plot_hrni_no_delta_auc_prost_esm2:
+    input:
+        esm_by_config="work_folder/classification/{classifier}/hrni_no_delta/{network_type}_ESM2_delta_auc_by_config.tsv",
+        prost_by_config="work_folder/classification/{classifier}/hrni_no_delta/{network_type}_ProstT5_delta_auc_by_config.tsv",
+    output:
+        plot="work_folder/classification/{classifier}/hrni_no_delta/plots/{network_type}_embedding_delta_auc_boxplot.png",
+    log:
+        "logs/classification/{classifier}/hrni_no_delta/plots/{network_type}_embeddings_delta_auc_boxplot.log",
+    script:
+        "scripts/plot_hrni_no_delta_auc_prost.py"
 
 rule pos_neg_limit_auc:
     input:
