@@ -73,6 +73,6 @@ rule generate_negative_sample:
     log:
         "logs/subsets/train/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_random_neg.log"
     resources:
-        mem_gb=45
+        mem_gb=80
     script:
         "scripts/random_negative.py"
