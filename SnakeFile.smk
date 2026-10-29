@@ -51,7 +51,6 @@ include: "src/PPIClassification/Embeddings/Embeddings.smk"
 include: "src/PPIClassification/DataSplit/GetGraphs.smk"
 include: "src/PPIClassification/DataSplit/GenePartitions.smk"
 include: "src/PPIClassification/DataSplit/GenerateSplits.smk"
-include: "src/PPIClassification/DataSplit/GetGoldenSplit.smk"
 include: "src/PPIClassification/DataSplit/CheckRedundancy.smk"
 include: "src/PPIClassification/ModelEvaluation/Evaluations.smk"
 include: "src/PPIClassification/DatasetBalance/DatasetBalance.smk"
@@ -74,16 +73,18 @@ wildcard_constraints:
     selected_data="[a-z0-9_.]+",
     network_type="(directional|undirectional)",
     random="(-random)?",
-    esm_model="[A-Z0-9]+",
+    esm_model="[A-Za-z0-9]+",
     permutation="[0-9]+",
     classifier="[a-z]+",
     pair_set="(all|correct)"
 
 rule all:
     input:
+        expand("work_folder/classification/{classifier}/hrni_no_delta/plots/{network_type}_{esm_model}_delta_auc_boxplot.png",
+               classifier="xgboost", network_type=network_types, esm_model=["ESM2", "ProstT5"]),
         #expand("work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq", dataset=datasets, network_type = network_types),
-        expand("work_folder/analysis/FDR_aware/plots/{network_type}_ms_log_odds_vs_pod.png", network_type=network_types),
-        "work_folder/analysis/ProteinPromiscuity/autoactivators/known/ms_prey_added.pdf",
-        "work_folder/analysis/ProteinPromiscuity/autoactivators/known/y2h_bait_added.pdf",
+        #expand("work_folder/analysis/FDR_aware/plots/{network_type}_ms_log_odds_vs_pod.png", network_type=network_types),
+        #"work_folder/analysis/ProteinPromiscuity/autoactivators/known/ms_prey_added.pdf",
+        #"work_folder/analysis/ProteinPromiscuity/autoactivators/known/y2h_bait_added.pdf",
         #expand("work_folder/analysis/ProteinPromiscuity/features/tests/{dataset}_{network_type}_{feature}.tsv",
         # dataset=["ms", "y2h"], network_type=["directional", "undirectional"], feature = ["nucleoplasm-vs-cytocol",]),

@@ -36,8 +36,6 @@ rule leave_one_out_FDR_TPR:
     params:
         id_pattern = config["id_pattern"],
         n_em_iterations = config["n_em_iterations"],
-        calibration_min_negatives = config.get("calibration_min_negatives", 100),
-        calibration_max_call_rate = config.get("calibration_max_call_rate", 0.5)
     input:
         pod_file = "work_folder/analysis/POD/{network_type}/POD_{dataset}.pq",
         consituent_studies = get_consituent_studies
