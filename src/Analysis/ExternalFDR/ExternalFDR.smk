@@ -36,18 +36,21 @@ rule leave_one_out_FDR_TPR:
     params:
         id_pattern = config["id_pattern"],
         n_em_iterations = config["n_em_iterations"],
+        shrinkage_pseudocount = config["shrinkage_pseudocount"],
+        n_reference_studies = config["n_reference_studies"],
     input:
         pod_file = "work_folder/analysis/POD/{network_type}/POD_{dataset}.pq",
         consituent_studies = get_consituent_studies
     output:
         study_fdr = "work_folder/analysis/FDR_aware/study_metrics/{network_type}_{dataset}.tsv",
         pair_posterior = "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq",
-        global_fit = "work_folder/analysis/FDR_aware/global_fit/{network_type}_{dataset}.tsv"
+        global_fit = "work_folder/analysis/FDR_aware/global_fit/{network_type}_{dataset}.tsv",
+        plateau_by_tests = "work_folder/analysis/FDR_aware/global_fit/{network_type}_{dataset}_plateau_by_tests.tsv"
     threads: 20
     log:
         "logs/analysis/FDR_aware/study_metrics/{network_type}_{dataset}.log"
     script:
-        "scripts/per_pair_study_fdr.py"
+        "scripts/refactor.py"
 
 
 rule plot_log_odds_vs_pod:
