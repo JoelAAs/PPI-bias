@@ -52,39 +52,30 @@ def fit_mixture(n, t, w, max_iter, tol=1e-8):
     )
 
 
-T_BINS = np.array([1, 2, 3, 4, 5])  # lower edges of the external-test bins
 
 
-def confirm_counts(n, t):
-    """per bin: [informative pairs, pairs with >= 1 external hit]"""
-    b = np.digitize(t, T_BINS) - 1
-    return np.stack(
-        [
-            np.bincount(b, minlength=len(T_BINS)),
-            np.bincount(b, n > 0, minlength=len(T_BINS)),
-        ]
-    )
-
-
-def score_reported(n, t, c, phi):
+def score_reported(obs, tests, c, phi, tested_bins):
     """theta_s by ML: an informative pair is confirmed (>= 1 external hit) with
     probability c(t) if true and 1 - (1 - phi)^t if a false positive."""
-    if len(n) == 0:
+    if len(obs) == 0:
         return dict(theta_g_sum=np.nan, n_informative=0, mean_t_ext=np.nan)
     
-    conf = n > 0
-    q = 1 - (1 - phi) ** t # chance of at least one FP
-    ct = np.clip(c[np.digitize(t, T_BINS) - 1], q + 1e-12, 1 - 1e-12)
-    likelihood = lambda theata: np.where(conf, theata * ct + (1 - th) * q, 1 - theata * ct - (1 - th) * q)
+    conf = obs > 0
+    q = 1 - (1 - phi) ** tests # chance of at least one FP
+    ct = np.clip(c[np.digitize(tests, tested_bins) - 1], q + 1e-12, 1 - 1e-12)
+    likelihood = lambda theata: np.where(
+        conf,
+        theata * ct + (1 - theata) * q, # chance of observing external confirmation
+        1 - theata * ct - (1 - theata) * q) # chance of not confimed
     theta = minimize_scalar(
         lambda th: -np.log(likelihood(th)).sum(), bounds=(0, 1), method="bounded"
     ).x
-    g = theta * np.where(conf, ct, 1 - ct) / lik(theta)  # P(true | external evidence)
+    g = theta * np.where(conf, ct, 1 - ct) / likelihood(theta)  # P(true | external evidence)
     # the sufficient statistic, not the point estimate: main() shrinks it
     return dict(
         theta_g_sum=g.sum(),
-        n_informative=len(n),
-        mean_t_ext=t.mean(),
+        n_informative=len(obs),
+        mean_t_ext=tests.mean(),
         f_confirmed=conf.mean(),
         f_expected_true=ct.mean(),
     )
@@ -176,28 +167,45 @@ def main():
     assert not fit["swapped"], "Reference fit swapped components"
     fit["reference_studies"] = ",".join(s[0] for s in ref)
 
-    # ---- external evidence of each study's informative pairs -----------------
+    # ---- external evidence of each study -----------------
+    tested_bins = np.array([1, 2, 3, 4, 5])  # bins tested
+
+
+    def _confirm_counts(n, t):
+        b = np.digitize(t, tested_bins) - 1
+        return np.stack(
+            [
+                np.bincount(b, minlength=len(tested_bins)),
+                np.bincount(b, n > 0, minlength=len(tested_bins)),
+            ]
+        )
+
+    
     ext = {}
     for name, ids, obs, tst in studies:
         ext_o, ext_t = pod_obs[ids] - obs, pod_tst[ids] - tst
         rep = (obs > 0) & (ext_t > 0)
         ext[name] = ext_o[rep], ext_t[rep]
-    ref_cnt = {s[0]: confirm_counts(*ext[s[0]]) for s in ref}
-    tot = sum(ref_cnt.values())
+        
+    ref_cnt = {
+            s[0]: _confirm_counts(*ext[s[0]]) for s in ref
+        }
+    tot = sum(ref_cnt.values()) 
 
     # ---- theta_ref: share of the reference detections that are real -----------
     n_r, t_r = ref_obs[m], ref_tst[m]
     pA = fit["pi"] * betabinom.pmf(n_r, t_r, fit["a"], fit["b"]) # Expected true Positives
     pB = (1 - fit["pi"]) * binom.pmf(n_r, t_r, fit["phi"]) # Expected false Positives
     fit["theta_ref_fit"] = (pA / (pA + pB) * n_r).sum() / n_r.sum()
-    # check: the confirmation rate levels off at theta_ref for hits retested >= 10x
-    hi = T_BINS >= 5
-    q5 = 1 - (1 - fit["phi"]) ** 10 # chance of at least one FP
+    min_tested = 5
+    
+    hi = tested_bins >= min_tested
+    qhi = 1 - (1 - fit["phi"]) ** min_tested # chance of at least one FP
     print(f"Number of hits retested >= 10x: {tot[1, hi].sum()}")
     print(f"Number of tests retested >= 10x: {tot[0, hi].sum()}")
-    fit["n_plateau"] = tot[0, hi].sum()
+    fit["n_plateau"] = tot[0, hi].sum() 
     fit["theta_ref_plateau"] = (
-        (tot[1, hi].sum() / fit["n_plateau"] - q5) / (1 - q5)
+        (tot[1, hi].sum() / fit["n_plateau"] - qhi) / (1 - qhi)
         if fit["n_plateau"]
         else np.nan
     )  # nan: no hits retested >= 10x
@@ -208,23 +216,26 @@ def main():
     fit["theta_ref_used"] = theta_ref
     pd.DataFrame([fit]).to_csv(snakemake.output.global_fit, sep="\t", index=False)
 
-    # ---- c(t): confirmation rate of a true hit, corrected for the reference's noise
-    q_mid = 1 - (1 - fit["phi"]) ** T_BINS
-    conf_rate = lambda N, K: (K / N - (1 - theta_ref) * q_mid) / theta_ref
+    # ---- external evidence of other studies, given external evidence of the reference studies
+    q_per_test = 1 - (1 - fit["phi"]) ** tested_bins
+    conf_rate = lambda pairs_tested, pairs_detected: (pairs_detected / pairs_tested - (1 - theta_ref) * q_per_test) / theta_ref
 
-    # ---- per-study precision, scored against every other study ----------------
     rows = []
     for name, ids, obs, tst in studies:
-        N, K = tot - ref_cnt.get(
+        pairs_tested, pairs_observed = tot - ref_cnt.get(
             name, 0
-        )  # leave the scored study out of its own yardstick
+        ) # If its reference study, remove its own counts from the total
         rows.append(
             dict(
                 study=name,
                 k_s=float(obs.sum()),
                 T_s=float(tst.sum()),
                 n_reported=int((obs > 0).sum()),
-                **score_reported(*ext[name], conf_rate(N, K), fit["phi"]),
+                **score_reported(
+                    *ext[name],
+                    conf_rate(pairs_tested, pairs_observed),
+                    fit["phi"],
+                    tested_bins),
             )
         )
     study_df = pd.DataFrame(rows)
