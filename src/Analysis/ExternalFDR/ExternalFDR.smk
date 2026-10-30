@@ -39,18 +39,26 @@ rule leave_one_out_FDR_TPR:
         shrinkage_pseudocount = config["shrinkage_pseudocount"],
         n_reference_studies = config["n_reference_studies"],
     input:
-        pod_file = "work_folder/analysis/POD/{network_type}/POD_{dataset}.pq",
+        pod_file = "work_folder/analysis/POD/directional/POD_{dataset}.pq",
         consituent_studies = get_consituent_studies
     output:
-        study_fdr = "work_folder/analysis/FDR_aware/study_metrics/{network_type}_{dataset}.tsv",
-        pair_posterior = "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq",
-        global_fit = "work_folder/analysis/FDR_aware/global_fit/{network_type}_{dataset}.tsv",
-        plateau_by_tests = "work_folder/analysis/FDR_aware/global_fit/{network_type}_{dataset}_plateau_by_tests.tsv"
+        study_fdr = "work_folder/analysis/FDR_aware/study_metrics/directional_{dataset}.tsv",
+        pair_posterior = "work_folder/analysis/FDR_aware/pair_posterior/directional_{dataset}.pq",
+        global_fit = "work_folder/analysis/FDR_aware/global_fit/directional_{dataset}.tsv",
     threads: 20
     log:
-        "logs/analysis/FDR_aware/study_metrics/{network_type}_{dataset}.log"
+        "logs/analysis/FDR_aware/study_metrics/directional_{dataset}.log"
     script:
-        "scripts/refactor.py"
+        "scripts/per_pair_study_fdr.py"
+
+rule leave_one_out_FDR_TPR_directional:
+    input:
+        study_fdr = "work_folder/analysis/FDR_aware/study_metrics/directional_{dataset}.tsv",
+        pair_posterior = "work_folder/analysis/FDR_aware/pair_posterior/directional_{dataset}.pq",
+        global_fit = "work_folder/analysis/FDR_aware/global_fit/directional_{dataset}.tsv",
+    output:
+        study_fdr = "work_folder/analysis/FDR_aware/study_metrics/undirectional_{dataset}.tsv"
+    # TODO:!
 
 
 rule plot_log_odds_vs_pod:

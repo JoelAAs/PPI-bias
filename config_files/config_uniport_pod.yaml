@@ -97,7 +97,7 @@ include_y2h_self_interactions: False
 keep_non_canonical: False
 n_em_iterations: 1000
 shrinkage_pseudocount: 5
-n_reference_studies: 5    
+n_reference_studies: 5
 
 # --- biological insights ---
 bootstrap_replicates: 5000

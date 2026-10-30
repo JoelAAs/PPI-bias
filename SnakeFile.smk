@@ -80,9 +80,9 @@ wildcard_constraints:
 
 rule all:
     input:
-        expand("work_folder/classification/{classifier}/hrni_no_delta/plots/{network_type}_{esm_model}_delta_auc_boxplot.png",
-               classifier="xgboost", network_type=network_types, esm_model=["ESM2", "ProstT5"]),
-        #expand("work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq", dataset=datasets, network_type = network_types),
+        expand("work_folder/analysis/FDR_aware/global_fit/{network_type}_{dataset}.tsv", dataset=["ms", "y2h"], network_type = "directional"),
+        #expand("work_folder/classification/{classifier}/hrni_no_delta/plots/{network_type}_{esm_model}_delta_auc_boxplot.png",
+        #       classifier="xgboost", network_type=network_types, esm_model=["ESM2", "ProstT5"]),
         #expand("work_folder/analysis/FDR_aware/plots/{network_type}_ms_log_odds_vs_pod.png", network_type=network_types),
         #"work_folder/analysis/ProteinPromiscuity/autoactivators/known/ms_prey_added.pdf",
         #"work_folder/analysis/ProteinPromiscuity/autoactivators/known/y2h_bait_added.pdf",
