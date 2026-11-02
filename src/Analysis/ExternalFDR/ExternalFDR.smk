@@ -5,8 +5,8 @@ import pyarrow.compute as pc
 
 
 @functools.cache
-def _pod_study_ids(network_type, dataset):
-    pod = f"work_folder/analysis/POD/{network_type}/POD_{dataset}.pq"
+def _pod_study_ids(dataset):
+    pod = f"work_folder/analysis/POD/directional/POD_{dataset}.pq"
     prefix = workflow.storage_settings.default_storage_prefix
     pod_path = f"{prefix.rstrip('/')}/{pod}" if prefix else pod
     col = pq.read_table(pod_path, columns=["pubmed_id"], read_dictionary=["pubmed_id"])["pubmed_id"]
@@ -23,33 +23,43 @@ def get_consituent_studies(wc):
     study_folder = checkpoints.infer_experimental_search_space.get(cell_line="_method").output[0]
     study_folder = "work_folder" + study_folder.split("work_folder")[1]
 
-    studies = _pod_study_ids(wc.network_type, wc.dataset)
+    studies = _pod_study_ids(wc.dataset)
     return expand(f"{study_folder}/{{study}}.csv", study=studies)
 
 
 
 
-rule leave_one_out_FDR_TPR:
+rule leave_one_out_FDR_TPR_directional:
     """
     Leave each study out of POD in turn and score the pairs it reported against the rest
     """
     params:
         id_pattern = config["id_pattern"],
         n_em_iterations = config["n_em_iterations"],
-        calibration_min_negatives = config.get("calibration_min_negatives", 100),
-        calibration_max_call_rate = config.get("calibration_max_call_rate", 0.5)
+        shrinkage_pseudocount = config["shrinkage_pseudocount"],
+        n_reference_studies = config["n_reference_studies"],
     input:
-        pod_file = "work_folder/analysis/POD/{network_type}/POD_{dataset}.pq",
+        pod_file = "work_folder/analysis/POD/directional/POD_{dataset}.pq",
         consituent_studies = get_consituent_studies
     output:
-        study_fdr = "work_folder/analysis/FDR_aware/study_metrics/{network_type}_{dataset}.tsv",
-        pair_posterior = "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq",
-        global_fit = "work_folder/analysis/FDR_aware/global_fit/{network_type}_{dataset}.tsv"
+        study_fdr = "work_folder/analysis/FDR_aware/study_metrics/directional_{dataset}.tsv",
+        pair_posterior = "work_folder/analysis/FDR_aware/pair_posterior/directional_{dataset}.pq",
+        global_fit = "work_folder/analysis/FDR_aware/global_fit/directional_{dataset}.tsv",
     threads: 20
     log:
-        "logs/analysis/FDR_aware/study_metrics/{network_type}_{dataset}.log"
+        "logs/analysis/FDR_aware/study_metrics/directional_{dataset}.log"
     script:
         "scripts/per_pair_study_fdr.py"
+
+rule leave_one_out_FDR_TPR_undirectional:
+    input:
+        pair_posterior = "work_folder/analysis/FDR_aware/pair_posterior/directional_{dataset}.pq",
+        global_fit = "work_folder/analysis/FDR_aware/global_fit/directional_{dataset}.tsv",
+    output:
+        study_fdr = "work_folder/analysis/FDR_aware/pair_posterior/undirectional_{dataset}.pq"
+    script:
+        "scripts/join_directional.py"
+
 
 
 rule plot_log_odds_vs_pod:
