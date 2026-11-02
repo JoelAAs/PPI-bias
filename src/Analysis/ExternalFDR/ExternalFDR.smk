@@ -5,8 +5,8 @@ import pyarrow.compute as pc
 
 
 @functools.cache
-def _pod_study_ids(network_type, dataset):
-    pod = f"work_folder/analysis/POD/{network_type}/POD_{dataset}.pq"
+def _pod_study_ids(dataset):
+    pod = f"work_folder/analysis/POD/directional/POD_{dataset}.pq"
     prefix = workflow.storage_settings.default_storage_prefix
     pod_path = f"{prefix.rstrip('/')}/{pod}" if prefix else pod
     col = pq.read_table(pod_path, columns=["pubmed_id"], read_dictionary=["pubmed_id"])["pubmed_id"]
@@ -23,13 +23,13 @@ def get_consituent_studies(wc):
     study_folder = checkpoints.infer_experimental_search_space.get(cell_line="_method").output[0]
     study_folder = "work_folder" + study_folder.split("work_folder")[1]
 
-    studies = _pod_study_ids(wc.network_type, wc.dataset)
+    studies = _pod_study_ids(wc.dataset)
     return expand(f"{study_folder}/{{study}}.csv", study=studies)
 
 
 
 
-rule leave_one_out_FDR_TPR:
+rule leave_one_out_FDR_TPR_directional:
     """
     Leave each study out of POD in turn and score the pairs it reported against the rest
     """
@@ -51,14 +51,15 @@ rule leave_one_out_FDR_TPR:
     script:
         "scripts/per_pair_study_fdr.py"
 
-rule leave_one_out_FDR_TPR_directional:
+rule leave_one_out_FDR_TPR_undirectional:
     input:
-        study_fdr = "work_folder/analysis/FDR_aware/study_metrics/directional_{dataset}.tsv",
         pair_posterior = "work_folder/analysis/FDR_aware/pair_posterior/directional_{dataset}.pq",
         global_fit = "work_folder/analysis/FDR_aware/global_fit/directional_{dataset}.tsv",
     output:
-        study_fdr = "work_folder/analysis/FDR_aware/study_metrics/undirectional_{dataset}.tsv"
-    # TODO:!
+        study_fdr = "work_folder/analysis/FDR_aware/pair_posterior/undirectional_{dataset}.pq"
+    script:
+        "scripts/join_directional.py"
+
 
 
 rule plot_log_odds_vs_pod:

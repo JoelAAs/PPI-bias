@@ -68,9 +68,8 @@ def fit_binomial_mixture(observations, tests, weights, max_iter=10000, tol=1e-8)
     )
 
 
-def pair_keys(ca, cb, k, directed):
-    if not directed:
-        ca, cb = np.minimum(ca, cb), np.maximum(ca, cb)
+def pair_keys(ca, cb, k):
+
     return (ca.astype(np.int64) << k) | cb
 
 
@@ -81,7 +80,7 @@ def get_pair_indexer(pod_df):
     id_vocab = pd.Index(id_vocab)
 
     k = (len(id_vocab) - 1).bit_length()
-    keys = pair_keys(codes[:n_rows], codes[n_rows:], k, directed)
+    keys = pair_keys(codes[:n_rows], codes[n_rows:], k)
     order = np.argsort(keys)
     pod_keys, pod_key_pair_ids = keys[order], pod_df.pair_id.values[order]
     assert (
@@ -92,7 +91,7 @@ def get_pair_indexer(pod_df):
 
 def lookup_pair_ids(bait, prey):
     ca, cb = id_vocab.get_indexer(bait), id_vocab.get_indexer(prey)
-    key = pair_keys(ca, cb, k, directed)
+    key = pair_keys(ca, cb, k)
     pos = np.searchsorted(pod_keys, key).clip(max=len(pod_keys) - 1)
     hit = (ca >= 0) & (cb >= 0) & (pod_keys[pos] == key)
     return np.where(hit, pod_key_pair_ids[pos], -1)
@@ -157,7 +156,7 @@ def confirmed_interaction_rate(tested, detected, summed_q, theta_ref):
 
 
 def main():
-    global directed, prot_a, prot_b
+    global prot_a, prot_b
     global id_vocab, k, pod_keys, pod_key_pair_ids
 
     prot_a = f"{snakemake.params.id_pattern}_bait"
@@ -167,9 +166,6 @@ def main():
     n_ref = snakemake.params.n_reference_studies
     n_bins = 4
 
-    directed = {"undirectional": False, "directional": True}[
-        snakemake.wildcards.network_type
-    ]
     pod_df = pd.read_parquet(
         snakemake.input.pod_file,
         columns=[prot_a, prot_b, "pair_id", "n_tested", "n_observed"],
