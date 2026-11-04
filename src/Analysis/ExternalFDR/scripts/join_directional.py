@@ -9,7 +9,7 @@ def main():
 
     pair_directional_df = pd.read_parquet(
         snakemake.input.pair_posterior,
-        columns=[prot_a, prot_b, "pubmed_id", "log_odds", "n_observed", "n_tested"]
+        columns=[prot_a, prot_b, "pubmed_id", "log_odds", "llr_detected", "llr_not_detected", "n_observed", "n_tested"]
         )
     global_fit_df = pd.read_csv(snakemake.input.global_fit, sep="\t")
 
@@ -20,6 +20,8 @@ def main():
 
     pair_directional_df = pair_directional_df.groupby([prot_a, prot_b]).agg(
         log_odds=("log_odds", "sum"),
+        llr_detected=("llr_detected", "sum"),
+        llr_not_detected=("llr_not_detected", "sum"),
         n_observed=("n_observed", "sum"),
         n_tested=("n_tested", "sum"),
         pubmed_id=("pubmed_id", lambda s: ";".join(sorted(set(";".join(s).split(";"))))),  # union of both directions' studies

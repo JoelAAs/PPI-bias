@@ -86,12 +86,14 @@ oe_lof_low_quantile: 0.25
 classification_sources:
   pod:
     path: "work_folder/analysis/POD/{network_type}/POD_{dataset}.pq"
+    datasets: ["ms", "y2h"]
     positive: {column: lower_bound_pod, op: ">=", strict: 0.29, limits: ["all", 0.02, 0.15]}
     negative: {column: n_tested, op: ">=", strict: 3, limits: [1, 2]}
   fdr:
     path: "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq"
+    datasets: ["ms"]
     positive: {column: posterior, op: ">=", strict: 0.7, limits: [0.1, 0.3, 0.5]}  # placeholder thresholds
-    negative: {column: posterior, op: "<=", strict: 0.0067, limits: [0.0082, 0.011]}
+    negative: {column: posterior, op: "<=", strict: 0.0067, limits: [0.0085, 0.009]}
 
 classification_targets:
   source: ["pod", "fdr"]

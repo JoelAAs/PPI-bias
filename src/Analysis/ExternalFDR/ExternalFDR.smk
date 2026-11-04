@@ -22,6 +22,7 @@ def get_consituent_studies(wc):
     """
     study_folder = checkpoints.infer_experimental_search_space.get(cell_line="_method").output[0]
     study_folder = "work_folder" + study_folder.split("work_folder")[1]
+    pod_path = checkpoints.all_methods_filter_out.get(network_type="directional", data=wc.dataset).output.full_detection # need to exist first
 
     studies = _pod_study_ids(wc.dataset)
     return expand(f"{study_folder}/{{study}}.csv", study=studies)
@@ -45,6 +46,9 @@ rule leave_one_out_FDR_TPR_directional:
         study_fdr = "work_folder/analysis/FDR_aware/study_metrics/directional_{dataset}.tsv",
         pair_posterior = "work_folder/analysis/FDR_aware/pair_posterior/directional_{dataset}.pq",
         global_fit = "work_folder/analysis/FDR_aware/global_fit/directional_{dataset}.tsv",
+        refits = "work_folder/analysis/FDR_aware/diagnostics/refits_directional_{dataset}.tsv",
+        predictive_check = "work_folder/analysis/FDR_aware/diagnostics/predictive_check_directional_{dataset}.tsv",
+        floor_sensitivity = "work_folder/analysis/FDR_aware/diagnostics/floor_sensitivity_directional_{dataset}.tsv",
     threads: 20
     log:
         "logs/analysis/FDR_aware/study_metrics/directional_{dataset}.log"
@@ -61,22 +65,6 @@ rule leave_one_out_FDR_TPR_undirectional:
         pair_posterior = "work_folder/analysis/FDR_aware/pair_posterior/undirectional_{dataset}.pq"
     script:
         "scripts/join_directional.py"
-
-
-
-rule plot_log_odds_vs_pod:
-    params:
-        id_pattern = config["id_pattern"],
-    input:
-        pair_posterior = "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq",
-        pod_file = "work_folder/analysis/POD/{network_type}/POD_{dataset}.pq"
-    output:
-        plot = "work_folder/analysis/FDR_aware/plots/{network_type}_{dataset}_log_odds_vs_pod.png",
-        plot_not_observed = "work_folder/analysis/FDR_aware/plots/{network_type}_{dataset}_log_odds_vs_pod_not_observed.png"
-    log:
-        "logs/analysis/FDR_aware/plots/{network_type}_{dataset}_log_odds_vs_pod.log"
-    script:
-        "scripts/plot_log_odds_vs_pod.R"
 
 
 rule plot_observable_prey_vs_bait_count:
