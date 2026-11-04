@@ -96,7 +96,7 @@ rule get_cellosaurus_human_cl:
 
 rule join_to_pid:
     params:
-        pid_to_drop = config["pid_to_remove"]
+        pid_to_drop = config["pid_to_remove_cl"]
     input:
         pubator = "work_folder/cell_line_annotation/cellline2pubtator3.txt",
         human_cell_lines = "work_folder/data/cellosaurus/cellosaurus_human.txt",
@@ -104,7 +104,7 @@ rule join_to_pid:
         cvcl_0291_bp="work_folder/data/bioplex/CVCL_0291.csv",
         cvcl_0063_bp="work_folder/data/bioplex/CVCL_0063.csv",
         manual_curated = "data/checked_studies.csv",
-        gene_names = "work_folder/gene_names/gene_names.csv"
+        gene_names = "work_folder/gene_names/uniprot_to_gene_name.csv"
     output:
         cvcl_ppi = "work_folder/formated/bait_prey_CVCL.csv"
     log:

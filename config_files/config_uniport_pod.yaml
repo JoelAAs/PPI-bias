@@ -2,11 +2,16 @@ formated_ppi: "work_folder/formated/bait_prey_publications.csv"
 cell_line_ppis: "/home/joel/Projects/Cl-annotated-ppis/work_folder/CL_annotated_bait_prey.csv"
 
 remove_single_publications: True
-pid_to_remove:
+pid_to_remove_cl:
   - "33961781"
 
 pid_pseudo_replication:
   - "28514442"
+
+pid_method_to_remove: # reported twice but only those that are with other mehod in the same study, dependent
+  - ["25416956", "MI-0397"]
+  - ["32296183", "MI-0397"]
+
 min_total_tests: 30
 min_total_observed: 4
 part_or_difference_cutoff: 50
@@ -76,19 +81,23 @@ partitions:
   - "maxpos"
 
 
-positive_max: 0.29
-negative_max: 3
-
 oe_lof_low_quantile: 0.25
 
-positive_limits:
-  - "all"
-  - 0.02
-  - 0.15    
+classification_sources:
+  pod:
+    path: "work_folder/analysis/POD/{network_type}/POD_{dataset}.pq"
+    positive: {column: lower_bound_pod, op: ">=", strict: 0.29, limits: ["all", 0.02, 0.15]}
+    negative: {column: n_tested, op: ">=", strict: 3, limits: [1, 2]}
+  fdr:
+    path: "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq"
+    positive: {column: posterior, op: ">=", strict: 0.7, limits: [0.1, 0.3, 0.5]}  # placeholder thresholds
+    negative: {column: posterior, op: "<=", strict: 0.0067, limits: [0.0082, 0.011]}
 
-negative_limits:
-  - 1
-  - 2
+classification_targets:
+  source: ["pod", "fdr"]
+  classifier: ["xgboost"]
+  network_type: ["directional"]
+  esm_model: ["ESM2", "ProstT5"]
 
 permutation_fraction: 0.95
 n_permutations: 10

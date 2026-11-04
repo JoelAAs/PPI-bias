@@ -6,7 +6,7 @@ rule get_hyrdophobicity_delta:
     Join TASA and THSA from NetSurfP2.0 to POD data
     """
     input:
-        uniprot_gene="work_folder/gene_names/gene_names.csv",
+        uniprot_gene="work_folder/gene_names/uniprot_to_gene_name.csv",
         rhsa_pdb="data/hydrophobicity/NSP2_complete.tab",
         pod_data="work_folder/analysis/POD/POD_{data}.csv"
     output:

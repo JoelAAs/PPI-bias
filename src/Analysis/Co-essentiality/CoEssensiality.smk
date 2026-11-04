@@ -24,12 +24,12 @@ rule get_oe_lof_category:
 
 rule get_balanced_set_coessentiality:
     input:
-        max_positive = f"work_folder/subsets/{{dataset}}_{{network_type}}_limit_{config['positive_max']}_pos.csv",
-        max_negative = f"work_folder/subsets/{{dataset}}_{{network_type}}_limit_{config['negative_max']}_neg.csv",
+        max_positive = f"work_folder/subsets/pod/strict/{{dataset}}_{{network_type}}_pos.csv",
+        max_negative = f"work_folder/subsets/pod/strict/{{dataset}}_{{network_type}}_neg.csv",
         oe_lof_category = "work_folder/analysis/coessentiality/oe_lof_category.tsv"
     output:
-        balanced_positive = f"work_folder/analysis/coessentiality/balanced/{{dataset}}_{{network_type}}_limit_{config['positive_max']}_pos.csv",
-        balanced_negative = f"work_folder/analysis/coessentiality/balanced/{{dataset}}_{{network_type}}_limit_{config['negative_max']}_neg.csv"
+        balanced_positive = f"work_folder/analysis/coessentiality/balanced/{{dataset}}_{{network_type}}_limit_{config['classification_sources']['pod']['positive']['strict']}_pos.csv",
+        balanced_negative = f"work_folder/analysis/coessentiality/balanced/{{dataset}}_{{network_type}}_limit_{config['classification_sources']['pod']['negative']['strict']}_neg.csv"
     log:
         "logs/analysis/coessentiality/balanced/{dataset}_{network_type}.log"
     script:
@@ -38,8 +38,8 @@ rule get_balanced_set_coessentiality:
 
 rule test_coessentiality_hri_hnri:
     input:
-        balanced_positive = f"work_folder/analysis/coessentiality/balanced/{{dataset}}_{{network_type}}_limit_{config['positive_max']}_pos.csv",
-        balanced_negative = f"work_folder/analysis/coessentiality/balanced/{{dataset}}_{{network_type}}_limit_{config['negative_max']}_neg.csv",
+        balanced_positive = f"work_folder/analysis/coessentiality/balanced/{{dataset}}_{{network_type}}_limit_{config['classification_sources']['pod']['positive']['strict']}_pos.csv",
+        balanced_negative = f"work_folder/analysis/coessentiality/balanced/{{dataset}}_{{network_type}}_limit_{config['classification_sources']['pod']['negative']['strict']}_neg.csv",
         oe_lof_category = "work_folder/analysis/coessentiality/oe_lof_category.tsv"
     output:
         coessentiality_OR = "work_folder/analysis/coessentiality/{dataset}_{network_type}_coessentiality_OR.tsv"

@@ -20,8 +20,8 @@ rule test_shared_annotations:
     input:
         gene_names  = "work_folder/gene_names/uniprot_to_gene_name.csv",
         annotation  = "work_folder/analysis/shared_annotation_proportions/annotation_proteins.csv",
-        edges_pos = f"work_folder/subsets/{{dataset}}_{{network_type}}_limit_{config['positive_max']}_pos.csv",
-        edges_neg = f"work_folder/subsets/{{dataset}}_{{network_type}}_limit_{config['negative_max']}_neg.csv"
+        edges_pos = f"work_folder/subsets/pod/strict/{{dataset}}_{{network_type}}_pos.csv",
+        edges_neg = f"work_folder/subsets/pod/strict/{{dataset}}_{{network_type}}_neg.csv"
     output:
         annotation_protortions = "work_folder/analysis/shared_annotation_proportions/{dataset}_{network_type}.tsv"
     threads: 20

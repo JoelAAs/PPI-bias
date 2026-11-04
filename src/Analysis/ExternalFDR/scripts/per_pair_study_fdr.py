@@ -290,16 +290,15 @@ def main():
     with np.errstate(invalid="ignore", divide="ignore"):
         mean_fdr = fdr_tst_sum / tst_sum
 
-    pd.DataFrame(
-        {
-            "pair_id": pair_ids,
-            "n_tested": pod_tst[pair_ids],
-            "n_observed": pod_obs[pair_ids],
-            "mean_fdr_per_test": mean_fdr[pair_ids],
-            "log_odds": log_odds[pair_ids],
-            "posterior": expit(log_odds[pair_ids]),
-        }
-    ).to_parquet(snakemake.output.pair_posterior, index=False)
+    pair_df = pd.read_parquet(
+        snakemake.input.pod_file, columns=[prot_a, prot_b, "pubmed_id"]
+    )
+    pair_df["n_observed"] = pod_obs[pair_ids]
+    pair_df["n_tested"] = pod_tst[pair_ids]
+    pair_df["mean_fdr_per_test"] = mean_fdr[pair_ids]
+    pair_df["log_odds"] = log_odds[pair_ids]
+    pair_df["posterior"] = expit(log_odds[pair_ids])
+    pair_df.to_parquet(snakemake.output.pair_posterior, index=False)
 
 
 if __name__ == "__main__":

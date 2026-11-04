@@ -3,15 +3,17 @@ library(magrittr)
 library(tidyverse)
 library(arrow)
 
+id_cols <- paste0(snakemake@params$id_pattern, c("_bait", "_prey"))
+
 pod <- open_dataset(snakemake@input$pod_file) %>%
-  select(pair_id, p, n_observed) %>%
+  select(all_of(id_cols), p, n_observed) %>%
   filter(n_observed > 0)
 
 posterior <- open_dataset(snakemake@input$pair_posterior) %>%
-  select(pair_id, log_odds, mean_fdr_per_test)
+  select(all_of(id_cols), log_odds, mean_fdr_per_test)
 
 observed <- pod %>%
-  inner_join(posterior, by = "pair_id") %>%
+  inner_join(posterior, by = id_cols) %>%
   mutate(log_p = log10(p)) %>%
   select(log_p, log_odds, mean_fdr_per_test) %>%
   collect()
@@ -40,9 +42,9 @@ ggsave(snakemake@output$plot,
 BIN_ODDS <- 0.05
 
 not_observed <- open_dataset(snakemake@input$pod_file) %>%
-  select(pair_id, p, n_observed) %>%
+  select(all_of(id_cols), p, n_observed) %>%
   filter(n_observed == 0) %>%
-  inner_join(posterior, by = "pair_id") %>%
+  inner_join(posterior, by = id_cols) %>%
   mutate(
     log_p = round(log10(p), 4),
     log_odds_bin = round(log_odds / BIN_ODDS) * BIN_ODDS

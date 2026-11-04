@@ -16,8 +16,8 @@ rule plot_intra_permutation_jaccard_distances:
     input:
         permuted_pos = expand("work_folder/subsets/dataset_eval/{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}-jaccard_distances.csv",
             dataset=config["datasets"],
-            neg_limit=config["negative_limits"],
-            pos_limit=config["positive_limits"])    
+            neg_limit=config["classification_sources"]["pod"]["negative"]["limits"],
+            pos_limit=config["classification_sources"]["pod"]["positive"]["limits"])    
     output:
         jaccard_distances = "work_folder/subsets/dataset_eval/jaccard_dist/{network_type}_intra_permutation_jaccard_distances.png"
     resources:
@@ -28,11 +28,11 @@ rule plot_intra_permutation_jaccard_distances:
 
 rule jaccard_inter_dist_train_positive:
     params:
-        pos_limits= config["positive_limits"]
+        pos_limits= config["classification_sources"]["pod"]["positive"]["limits"]
     input:
         permuted_pos = expand("work_folder/subsets/train/permuted/{permutation}/{{dataset}}_{{network_type}}_limit_{{neg_limit}}_poslim_{pos_limit}_pos.csv",
             permutation=range(config["n_permutations"]),
-            pos_limit=config["positive_limits"])
+            pos_limit=config["classification_sources"]["pod"]["positive"]["limits"])
     output:
         jaccard_distances = "work_folder/subsets/dataset_eval/intra_{dataset}_{network_type}_limit_{neg_limit}_poslim-jaccard_distances.csv"
     log:
@@ -47,7 +47,7 @@ rule plot_inter_permutation_jaccard_distances:
     input:
         permuted_pos = expand("work_folder/subsets/dataset_eval/intra_{dataset}_{{network_type}}_limit_{neg_limit}_poslim-jaccard_distances.csv",
             dataset=config["datasets"],
-            neg_limit=config["negative_limits"])
+            neg_limit=config["classification_sources"]["pod"]["negative"]["limits"])
     output:
         jaccard_distances = "work_folder/subsets/dataset_eval/jaccard_dist/{network_type}_inter_permutation_jaccard_distances.png"
     resources:
@@ -89,15 +89,15 @@ rule plot_train_edge_jaccard_boxplot:
     input:
         hrni_negative = expand("work_folder/subsets/dataset_eval/negatives/hrni_{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}-jaccard_distances.csv",
             dataset=config["datasets"],
-            neg_limit=config["negative_limits"],
-            pos_limit=config["positive_limits"]),
+            neg_limit=config["classification_sources"]["pod"]["negative"]["limits"],
+            pos_limit=config["classification_sources"]["pod"]["positive"]["limits"]),
         no_negative = expand("work_folder/subsets/dataset_eval/negatives/no_{dataset}_{{network_type}}_limit_{neg_limit}_poslim_{pos_limit}-jaccard_distances.csv",
             dataset=config["datasets"],
-            neg_limit=config["negative_limits"],
-            pos_limit=config["positive_limits"]),
+            neg_limit=config["classification_sources"]["pod"]["negative"]["limits"],
+            pos_limit=config["classification_sources"]["pod"]["positive"]["limits"]),
         positive_between_config = expand("work_folder/subsets/dataset_eval/intra_{dataset}_{{network_type}}_limit_{neg_limit}_poslim-jaccard_distances.csv",
             dataset=config["datasets"],
-            neg_limit=config["negative_limits"])
+            neg_limit=config["classification_sources"]["pod"]["negative"]["limits"])
     output:
         jaccard_distances = "work_folder/subsets/dataset_eval/jaccard_dist/{network_type}_train_edge_jaccard_boxplot.svg"
     resources:
