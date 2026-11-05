@@ -152,7 +152,7 @@ def source_grid_metrics(wildcards):
         classifier=wildcards.classifier,
         network_type=wildcards.network_type,
         esm_model=wildcards.esm_model,
-        dataset=config[wildcards.source]["datasets"],
+        dataset=source["datasets"],
         pos_limit=source["positive"]["limits"],
         neg_limit=source["negative"]["limits"],
         random=["", "-random"],

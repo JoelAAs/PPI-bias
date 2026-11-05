@@ -13,7 +13,9 @@ from scipy.special import expit, logit
 import multiprocessing as mp
 
 
-def fit_binomial_mixture(observations, tests, weights, max_iter=10000, tol=1e-8, init=(0.01, 0.5, 2.5, 4e-4)):
+def fit_binomial_mixture(
+    observations, tests, weights, max_iter=10000, tol=1e-8, init=(0.01, 0.5, 2.5, 4e-4)
+):
     pi, a, b, phi = init  # prevalence, alpha, beta, FPR
     ll = ll_old = -np.inf
     converged = False
@@ -21,17 +23,13 @@ def fit_binomial_mixture(observations, tests, weights, max_iter=10000, tol=1e-8,
         A = betabinom.pmf(observations, tests, a, b)  # P(n | t, true)
         B = binom.pmf(observations, tests, phi)  # P(n | t, false)
         density = pi * A + (1 - pi) * B  # Mixture density of detection
-        true_detection = (
-            pi * A
-        ) / density  # P(true | n, t)
+        true_detection = (pi * A) / density  # P(true | n, t)
 
         w_td = weights * true_detection  # expected true pairs per (n,t)
         w_fd = weights * (1 - true_detection)  # expected false pairs per (n,t)
 
         pi = w_td.sum() / weights.sum()  # Update prevalence
-        phi = (w_fd * observations).sum() / (
-            w_fd * tests
-        ).sum()  # Update FPR
+        phi = (w_fd * observations).sum() / (w_fd * tests).sum()  # Update FPR
 
         lh_n = lambda x: -np.sum(
             w_td
@@ -63,7 +61,6 @@ def fit_binomial_mixture(observations, tests, weights, max_iter=10000, tol=1e-8,
 
 
 def pair_keys(ca, cb, k):
-
     return (ca.astype(np.int64) << k) | cb
 
 
@@ -108,90 +105,74 @@ def load_study(path):
 
 
 def padded_reference(ref, pair_bait, pair_prey, n_proteins):
-    """
-    Reference studies on one fixed prey universe U, the preys in the search space of the largest reference study.
-    Every bait of a reference study counts as tested against every prey in U (self pairs excluded), so whether a
-    test counts never depends on its outcome and all reference tests share one prior pi.
-    :param ref: reference studies as returned by load_study, largest first
-    :param pair_bait: (np.ndarray) bait protein code per pair_id
-    :param pair_prey: (np.ndarray) prey protein code per pair_id
-    :param n_proteins: (int) size of the protein vocabulary
-    :return: (dict) pair_bait, pair_prey as given
-                    in_U: per protein, True if in the prey universe
-                    n_ref_baits: per protein, number of reference studies that used it as bait
-                    ref_det: per pair_id, number of reference studies detecting it (prey in U, no self pairs)
-    """
-    in_U = np.zeros(n_proteins, bool)
-    in_U[pair_prey[ref[0][1]]] = True
+    in_main_ref = np.zeros(n_proteins, bool)
+    in_main_ref[pair_prey[ref[0][1]]] = True
     n_ref_baits = np.zeros(n_proteins, np.int64)
     ref_det = np.zeros(len(pair_bait), np.int8)
     for _, ids, obs, _ in ref:
         n_ref_baits[np.unique(pair_bait[ids])] += 1
         det = ids[obs > 0]
-        ref_det[det[in_U[pair_prey[det]] & (pair_bait[det] != pair_prey[det])]] += 1
-    return dict(pair_bait=pair_bait, pair_prey=pair_prey, in_U=in_U, n_ref_baits=n_ref_baits, ref_det=ref_det)
+        ref_det[
+            det[in_main_ref[pair_prey[det]] & (pair_bait[det] != pair_prey[det])]
+        ] += 1
+    return dict(
+        pair_bait=pair_bait,
+        pair_prey=pair_prey,
+        in_main_ref=in_main_ref,
+        n_ref_baits=n_ref_baits,
+        ref_det=ref_det,
+    )
 
 
-def reference_histogram(rs):
-    """
-    Padded reference pairs counted per (n_observed, n_tested), the input of the mixture fit. Never detected
-    pairs are counted per bait, not listed
-    :param rs: (dict) from padded_reference
-    :return: (observed, tested, weights) arrays, one entry per occurring (n_observed, n_tested)
-    """
-    in_U, n_ref_baits = rs["in_U"], rs["n_ref_baits"]
-    pairs_per_bait = in_U.sum() - in_U  # self pair excluded
+def referenace_expanded_observation_tested(rs):
+    in_main_ref, n_ref_baits = rs["in_main_ref"], rs["n_ref_baits"]
+    pairs_per_bait = in_main_ref.sum() - in_main_ref  # remove count for bait-bait
     det_ids = np.flatnonzero(rs["ref_det"])
     det_n = rs["ref_det"][det_ids].astype(np.int64)
     det_t = n_ref_baits[rs["pair_bait"][det_ids]]
     t_max = int(n_ref_baits.max())
     counts = np.zeros((t_max + 1, t_max + 1))  # [n_observed, n_tested]
     np.add.at(counts, (det_n, det_t), 1)
-    counts[0] = np.bincount(n_ref_baits, weights=pairs_per_bait, minlength=t_max + 1) - counts[1:].sum(0)
+    counts[0] = np.bincount(
+        n_ref_baits, weights=pairs_per_bait, minlength=t_max + 1
+    ) - counts[1:].sum(0)
     counts[0, 0] = 0  # proteins no reference study used as bait
     observed, tested = np.nonzero(counts)
     return observed, tested, counts[observed, tested]
 
 
 def external_counts(ids, obs, own, rs):
-    """
-    Padded reference evidence for the pairs a study tested: a reference study tested a pair if it used its bait
-    and the prey is in U
-    :param ids: (np.ndarray) pair_ids the study tested
-    :param obs: (np.ndarray) the study's detections of those pairs
-    :param own: (bool) the study is itself a reference study, left out of its own evidence
-    :param rs: (dict) from padded_reference
-    :return: (ext_o, ext_t) number of reference studies detecting / testing each pair
-    """
     b, p = rs["pair_bait"][ids], rs["pair_prey"][ids]
-    padded = rs["in_U"][p] & (b != p)
-    ext_t = rs["n_ref_baits"][b] * padded - (own & padded)
-    ext_o = rs["ref_det"][ids].astype(np.int64) - (own & padded & (obs > 0))
+    padded = rs["in_main_ref"][p] & (b != p)
+    ext_t = rs["n_ref_baits"][b] * padded - (own & padded) # Number of tests per pair overlapping with the reference
+    ext_o = rs["ref_det"][ids].astype(np.int64) - (own & padded &  (obs > 0)) # Number of detections per pair overlapping with the reference
     return ext_o, ext_t
 
 
-def true_posterior(fit, n, t):
-    """P(true | n of t reference tests detected) under the mixture fit"""
+def precision(fit, n, t):
     pA = fit["pi"] * betabinom.pmf(n, t, fit["a"], fit["b"])  # prior x P(counts | true)
     pB = (1 - fit["pi"]) * binom.pmf(n, t, fit["phi"])  # prior x P(counts | false)
     return pA / (pA + pB)
 
 
 def score_reported(obs, tests, c, phi, tested_bins):
-    if len(obs) == 0: # no overlapping, external evidance
+    if len(obs) == 0:  # no overlapping, external evidance
         return dict(theta_g_sum=np.nan, n_informative=0, mean_t_ext=np.nan)
-    
+
     conf = obs > 0
-    q = 1 - (1 - phi) ** tests # chance of at least one FP
+    q = 1 - (1 - phi) ** tests  # chance of at least one FP
     ct = np.clip(c[np.digitize(tests, tested_bins) - 1], q + 1e-12, 1 - 1e-12)
     likelihood = lambda theata: np.where(
         conf,
-        theata * ct + (1 - theata) * q, # chance of observing external confirmation
-        1 - theata * ct - (1 - theata) * q) # chance of not confimed
+        theata * ct + (1 - theata) * q,  # chance of observing external confirmation
+        1 - theata * ct - (1 - theata) * q,
+    )  # chance of not confimed
     theta = minimize_scalar(
         lambda th: -np.log(likelihood(th)).sum(), bounds=(0, 1), method="bounded"
     ).x
-    g = theta * np.where(conf, ct, 1 - ct) / likelihood(theta)  # P(true | external evidence) = P(Evidance|true)/P(evidance)
+    g = (
+        theta * np.where(conf, ct, 1 - ct) / likelihood(theta)
+    )  # P(true | external evidence) = P(Evidance|true)/P(evidance)
     return dict(
         theta_g_sum=g.sum(),
         n_informative=len(obs),
@@ -199,6 +180,7 @@ def score_reported(obs, tests, c, phi, tested_bins):
         f_confirmed=conf.mean(),
         f_expected_true=ct.mean(),
     )
+
 
 def confirmed_interaction_rate(tested, detected, summed_q, theta_ref):
     mean_q = summed_q / tested
@@ -235,7 +217,10 @@ def diagnose_reference_fit(fit, reference, studies, ref_names, rs, study_df, max
             fit_binomial_mixture, [(n_u, t_u, w_u, max_iter, 1e-8, s) for s in starts]
         )
     pd.DataFrame(
-        [dict(zip(["start_pi", "start_a", "start_b", "start_phi"], s), **r) for s, r in zip(starts, refits)]
+        [
+            dict(zip(["start_pi", "start_a", "start_b", "start_phi"], s), **r)
+            for s, r in zip(starts, refits)
+        ]
     ).to_csv(snakemake.output.refits, sep="\t", index=False)
 
     # 2. Observed vs expected number of reference pairs per (n_tested, n_observed)
@@ -264,13 +249,17 @@ def diagnose_reference_fit(fit, reference, studies, ref_names, rs, study_df, max
     T = int(t_u.max())
     t_g, n_g = np.tril_indices(T + 1)  # every n <= t
     post = np.full((T + 1, T + 1), np.nan)
-    post[n_g, t_g] = true_posterior(fit, n_g, t_g)
+    post[n_g, t_g] = precision(fit, n_g, t_g)
 
     pi_s = np.full(len(studies), np.nan)
     for i, (name, ids, obs, tst) in enumerate(studies):
-        ext_o, ext_t = external_counts(ids, obs, name in ref_names, rs)  # a reference study does not set its own baseline
+        ext_o, ext_t = external_counts(
+            ids, obs, name in ref_names, rs
+        )  # a reference study does not set its own baseline
         tested = ext_t > 0
-        if tested.any():  # no overlap with the reference, no baseline (as in score_reported)
+        if (
+            tested.any()
+        ):  # no overlap with the reference, no baseline (as in score_reported)
             pi_s[i] = post[ext_o[tested], ext_t[tested]].mean()
 
     # 3b. Share of detections affected by where the floor sits
@@ -278,13 +267,21 @@ def diagnose_reference_fit(fit, reference, studies, ref_names, rs, study_df, max
     groups = {
         "all": np.ones(len(theta), bool),
         "below_pi": theta < pi,  # silenced by the floor
-        "near_floor": (theta >= pi / 2) & (theta <= 2 * pi),  # would flip with a 2x different pi
-        "silenced_above_pi_s": (theta > pi_s) & (theta < pi),  # beat their own baseline, silenced anyway
-        "credited_below_pi_s": (theta > pi) & (theta < pi_s),  # lost to their own baseline, credited anyway
+        "near_floor": (theta >= pi / 2)
+        & (theta <= 2 * pi),  # would flip with a 2x different pi
+        "silenced_above_pi_s": (theta > pi_s)
+        & (theta < pi),  # beat their own baseline, silenced anyway
+        "credited_below_pi_s": (theta > pi)
+        & (theta < pi_s),  # lost to their own baseline, credited anyway
     }
     pd.DataFrame(
         [
-            dict(group=g, n_studies=int(m.sum()), n_detections=k[m].sum(), share_detections=k[m].sum() / k.sum())
+            dict(
+                group=g,
+                n_studies=int(m.sum()),
+                n_detections=k[m].sum(),
+                share_detections=k[m].sum() / k.sum(),
+            )
             for g, m in groups.items()
         ]
     ).to_csv(snakemake.output.floor_sensitivity, sep="\t", index=False)
@@ -335,13 +332,16 @@ def main():
     ref = sorted(studies, key=lambda s: -s[3].sum())[
         :n_ref
     ]  # the N studies with the largest amount of tests
-    rs = padded_reference(ref, pair_bait, pair_prey, len(id_vocab))  # prey universe: the largest study's preys
-    reference = reference_histogram(rs)
+    rs = padded_reference(
+        ref, pair_bait, pair_prey, len(id_vocab)
+    )  # Largest study has the most complete coverage of what *could* be detected.
+    reference = referenace_expanded_observation_tested(rs)
     fit = fit_binomial_mixture(*reference, max_iter)
     assert not fit["swapped"], "Reference fit swapped components"
+    assert fit["converged"], "Reference fit did not converge"
     fit["reference_studies"] = ";".join(s[0] for s in ref)
-    fit["prey_universe"] = ref[0][0]
-    fit["n_prey_universe"] = int(rs["in_U"].sum())
+    fit["prey_expanded_from"] = ref[0][0]
+    fit["n_expanded_preys"] = int(rs["in_main_ref"].sum())
 
     # Define probability of confirming a True interaction within N tests
     tested_bins = np.arange(1, n_bins + 1)  # bins of external tests
@@ -352,28 +352,37 @@ def main():
             [
                 np.bincount(pair_tested_bins, minlength=len(tested_bins)),
                 np.bincount(
-                    pair_tested_bins, weights=observations > 0, minlength=len(tested_bins)),
+                    pair_tested_bins,
+                    weights=observations > 0,
+                    minlength=len(tested_bins),
+                ),
                 np.bincount(
-                    pair_tested_bins, weights=1 - (1 - fit["phi"]) ** tests, minlength=len(tested_bins)),
-
+                    pair_tested_bins,
+                    weights=1 - (1 - fit["phi"]) ** tests,
+                    minlength=len(tested_bins),
+                ),
             ]
         )
-    
+
     ref_names = {s[0] for s in ref}
     ext = {}
     for name, ids, obs, tst in studies:
-        ext_o, ext_t = external_counts(ids, obs, name in ref_names, rs)  # a reference study does not confirm itself
-        rep = (obs > 0) & (ext_t > 0)  # the study's own hits that a reference study also tested
+        ext_o, ext_t = external_counts(
+            ids, obs, name in ref_names, rs
+        )  # a reference study does not confirm itself
+        rep = (obs > 0) & (
+            ext_t > 0
+        )  # remove tested 0 from those of single reference studies
         ext[name] = ext_o[rep], ext_t[rep]
-        
-    ref_cnt = {
-            s[0]: _confirm_counts(*ext[s[0]]) for s in ref
-        }
-    tot = sum(ref_cnt.values()) 
-    
+
+    ref_cnt = {s[0]: _confirm_counts(*ext[s[0]]) for s in ref}
+    tot = sum(ref_cnt.values())
+
     # theta_ref: share of the reference detections that come from true pairs (mixture fit)
     n_r, t_r, w_r = reference
-    fit["theta_ref_fit"] = (w_r * true_posterior(fit, n_r, t_r) * n_r).sum() / (w_r * n_r).sum()
+    fit["theta_ref_fit"] = (w_r * precision(fit, n_r, t_r) * n_r).sum() / (
+        w_r * n_r
+    ).sum()
     theta_ref = fit["theta_ref_fit"]
 
     # Output global fit data
@@ -382,7 +391,7 @@ def main():
     # Score studies
     rows = []
     for name, ids, obs, tst in studies:
-        external_tested_seen = tot - ref_cnt.get(name, 0)  # leave a reference study out
+        external_tested_seen = tot - ref_cnt.get(name, 0)  # remove the reference studies own contributuion
         rows.append(
             dict(
                 study=name,
@@ -393,29 +402,34 @@ def main():
                     *ext[name],
                     confirmed_interaction_rate(*external_tested_seen, theta_ref),
                     fit["phi"],
-                    tested_bins),
+                    tested_bins,
+                ),
             )
         )
-        
+
     study_df = pd.DataFrame(rows)
 
     m_theta = np.nansum(study_df.theta_g_sum) / np.nansum(study_df.n_informative)
     theta = (
         (study_df.theta_g_sum.fillna(0) + k0 * m_theta) / (study_df.n_informative + k0)
     ).clip(1e-6, 1 - 1e-6)
-    
+
     td_mean = fit["true_detection_mean"]
-    study_df["theta_s"]    = theta
-    study_df["fdr_s"]      = 1 - theta
-    study_df["w_detected"] = np.maximum(logit(theta) - logit(fit["pi"]), 0) # if a study is worse than random, its uninformative, not, anti-evidence
-    study_df["phi_s"]      = td_mean / np.exp(study_df.w_detected)
+    study_df["theta_s"] = theta
+    study_df["fdr_s"] = 1 - theta
+    study_df["w_detected"] = np.maximum(
+        logit(theta) - logit(fit["pi"]), 0
+    )  # if a study is worse than random, its uninformative, not, anti-evidence
+    study_df["phi_s"] = td_mean / np.exp(study_df.w_detected)
     study_df["w_not_detected"] = np.log((1 - td_mean) / (1 - study_df.phi_s))
     study_df["pi_s"] = diagnose_reference_fit(
         fit, reference, studies, ref_names, rs, study_df, max_iter
     )
     study_df.to_csv(snakemake.output.study_fdr, sep="\t", index=False)
 
-    llr_det, llr_nd = np.zeros(n_pairs), np.zeros(n_pairs)  # summed log Bayes factors of detections / misses
+    llr_det, llr_nd = np.zeros(n_pairs), np.zeros(
+        n_pairs
+    )  # summed log Bayes factors of detections / misses
     fdr_tst_sum, tst_sum = np.zeros(n_pairs), np.zeros(n_pairs)
     w = study_df.set_index("study")
     for name, ids, obs, tst in studies:  # full counts: every hit counts for its pair

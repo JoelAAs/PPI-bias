@@ -748,7 +748,8 @@ def get_edge_list(
     train_df = full_detection_df[~in_excluded]
 
     train_df_ss_pos = filter_on_threshold(train_df, positive, pos_limit)
-    train_df_ss_neg = filter_on_threshold(train_df, negative, neg_limit)
+    neg_df = train_df[train_df["n_observed"] == 0] if pos_limit == "all" else train_df
+    train_df_ss_neg = filter_on_threshold(neg_df, negative, neg_limit)
 
     return (
         train_df_ss_pos[["bait", "prey"]].copy(),

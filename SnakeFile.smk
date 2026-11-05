@@ -85,7 +85,7 @@ rule all:
                **config["classification_targets"]),
         expand("work_folder/classification/{source}/{classifier}/hrni_no_delta/{network_type}_{esm_model}_delta_auc_summary.tsv",
                **config["classification_targets"]),
-        expand("work_folder/analysis/FDR_aware/global_fit/{network_type}_{dataset}.tsv", dataset=["ms", "y2h"], network_type = "directional"),
+        expand("work_folder/analysis/FDR_aware/global_fit/{network_type}_{dataset}.tsv", dataset=["ms"], network_type = "directional"),
         #expand("work_folder/classification/{classifier}/hrni_no_delta/plots/{network_type}_{esm_model}_delta_auc_boxplot.png",
         #       classifier="xgboost", network_type=network_types, esm_model=["ESM2", "ProstT5"]),
         #expand("work_folder/analysis/FDR_aware/plots/{network_type}_ms_log_odds_vs_pod.png", network_type=network_types),

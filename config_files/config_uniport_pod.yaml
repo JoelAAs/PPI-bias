@@ -62,7 +62,7 @@ y2h:
   - "MI-0397" # (two hybrid array) usually involves a mating strategy
   - "MI-1112" # (two hybrid prey pooling approach)
   - "MI-0398" # (two hybrid pooling approach)
-  - "MI-1356" # (validated two hybrid) ... often the entire search space ...
+  #- "MI-1356" # (validated two hybrid)  All gets filtered out
   - "MI-2215" # (barcode fusion genetics two hybrid) all against all
   - "MI-1113" # (two hybrid bait and prey pooling approach)
 
@@ -92,13 +92,13 @@ classification_sources:
   fdr:
     path: "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq"
     datasets: ["ms"]
-    positive: {column: posterior, op: ">=", strict: 0.7, limits: [0.1, 0.3, 0.5]}  # placeholder thresholds
+    positive: {column: posterior, op: ">=", strict: 0.99, limits: ["all", 0.3, 0.5, 0.7]}  # placeholder thresholds
     negative: {column: posterior, op: "<=", strict: 0.0067, limits: [0.0085, 0.009]}
 
 classification_targets:
   source: ["pod", "fdr"]
   classifier: ["xgboost"]
-  network_type: ["directional"]
+  network_type: ["directional", "undirectional"]
   esm_model: ["ESM2", "ProstT5"]
 
 permutation_fraction: 0.95
