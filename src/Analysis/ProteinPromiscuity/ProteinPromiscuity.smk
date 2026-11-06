@@ -63,61 +63,14 @@ rule get_row_wise_detection:
                         w.write("\t".join([bait, prey, exp, detection]) + "\n")
 
 
-
-rule plot_sticky_and_detectable_proteins:
-    input:
-        ms_sticky_proteins = "work_folder/analysis/ProteinPromiscuity/ms_dispersion_prey.tsv",
-        ms_prey_detectability = "work_folder/analysis/ProteinPromiscuity/ms_prey_detectability.tsv",
-    output:
-        sticky_detectable_plot = "work_folder/analysis/ProteinPromiscuity/plot/sticky_and_detectable_proteins.png"
-    threads:
-        1
-    script:
-        "scripts/plot_sticky_and_detectable_proteins.R"
-
-
-rule plot_y2h_auto_activators:
-    input:
-        prey_auto_activators = "work_folder/analysis/ProteinPromiscuity/y2h_prey_auto_activators.tsv",
-        bait_auto_activators = "work_folder/analysis/ProteinPromiscuity/y2h_bait_auto_activators.tsv",
-        y2h_prey_detectability = "work_folder/analysis/ProteinPromiscuity/y2h_prey_detectability.tsv",
-        y2h_bait_detectability = "work_folder/analysis/ProteinPromiscuity/y2h_bait_detectability.tsv",
-    output:
-        auto_activator_plot = "work_folder/analysis/ProteinPromiscuity/plot/y2h_auto_activators_detectability.png"
-    threads:
-        1
-    script:
-        "scripts/plot_y2h_auto_activators.R"
-
-
-rule plot_degree_distribution:
-    input:
-        ms_bait_detectability = "work_folder/analysis/ProteinPromiscuity/ms_bait_detectability.tsv",
-        ms_prey_detectability = "work_folder/analysis/ProteinPromiscuity/ms_prey_detectability.tsv",
-    output:
-        degree_distribution_plot = "work_folder/analysis/ProteinPromiscuity/plot/ms_degree_distribution.png"
-    threads:
-        1
-    script:
-        "scripts/plot_degree_distribution.R"
-
-
-rule check_log_normality:
+rule test_distribution:
     params:
-        min_tested = 300,
+        search_space_minimum = 300
     input:
-        row_wise_data = ancient("work_folder/analysis/ProteinPromiscuity/row_data/ms_row_wise_detection.tsv")
+        row_wise_data = "work_folder/analysis/ProteinPromiscuity/row_data/{dataset}_row_wise_detection.tsv"
     output:
-        log_normality_plot = "work_folder/analysis/ProteinPromiscuity/plot/ms_log_normality.png",
-        log_normality_tsv = "work_folder/analysis/ProteinPromiscuity/ms_log_normality.tsv"
-    log:
-        "logs/analysis/ProteinPromiscuity/check_log_normality.log",
+        plot_distribtuions = "work_folder/analysis/ProteinPromiscuity/plot/{dataset}_detection_distribution.png"
     threads:
         1
-    shell:
-        """
-        python src/Analysis/ProteinPromiscuity/scripts/check_log_normal.py \
-        {input.row_wise_data} {output.log_normality_plot} {output.log_normality_tsv} \
-        {params.min_tested} \
-        > {log} 2>&1
-        """
+    script:
+        "scripts/plot_detection_distribution.R"
