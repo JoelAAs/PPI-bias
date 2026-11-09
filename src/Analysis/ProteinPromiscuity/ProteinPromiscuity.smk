@@ -65,12 +65,34 @@ rule get_row_wise_detection:
 
 rule test_distribution:
     params:
-        search_space_minimum = 300
+        search_space_minimum = [0, 200, 400, 800, 1600],
     input:
-        row_wise_data = "work_folder/analysis/ProteinPromiscuity/row_data/{dataset}_row_wise_detection.tsv"
+        pod_data = "work_folder/analysis/POD/directional/POD_{dataset}.pq",
     output:
-        plot_distribtuions = "work_folder/analysis/ProteinPromiscuity/plot/{dataset}_detection_distribution.png"
+        probabilities = "work_folder/analysis/ProteinPromiscuity/detection_distribution/{dataset}_detectability.tsv",
+        plot_distributions = "work_folder/analysis/ProteinPromiscuity/detection_distribution/plot/{dataset}_detection_distribution.png",
+        plot_bait_prey_cor = "work_folder/analysis/ProteinPromiscuity/detection_distribution/plot/{dataset}_bait_prey_detectability_correlation.png",
     threads:
-        1
+        20
     script:
         "scripts/plot_detection_distribution.R"
+
+
+rule test_degree_distribution:
+    params:
+        pod_limits = [0.02, 0.05, 0.15, 0.3],
+        fdr_limits = [0.1, 0.3, 0.5, 0.99],
+    input:
+        pod_data = "work_folder/analysis/POD/{network_type}/POD_{dataset}.pq",
+        fdr_data = "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq",
+    output:
+        pod_degree = "work_folder/analysis/ProteinPromiscuity/detection_distribution/{network_type}_{dataset}_pod_degree.tsv",
+        fdr_degree = "work_folder/analysis/ProteinPromiscuity/detection_distribution/{network_type}_{dataset}_fdr_degree.tsv",
+        plot_bait_prey_cor_pod = "work_folder/analysis/ProteinPromiscuity/detection_distribution/plot/{network_type}_{dataset}_pod_bait_prey_degree_correlation.png",
+        plot_bait_prey_cor_fdr = "work_folder/analysis/ProteinPromiscuity/detection_distribution/plot/{network_type}_{dataset}_fdr_bait_prey_degree_correlation.png",
+        plot_distributions_pod = "work_folder/analysis/ProteinPromiscuity/detection_distribution/plot/{network_type}_{dataset}_pod_degree_distribution.png",
+        plot_distributions_fdr = "work_folder/analysis/ProteinPromiscuity/detection_distribution/plot/{network_type}_{dataset}_fdr_degree_distribution.png",
+    threads:
+        20
+    script:
+        "scripts/plot_degree_distribution.R"
