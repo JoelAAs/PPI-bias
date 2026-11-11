@@ -34,19 +34,35 @@ rule prepare_classification_source_max_min:
         negative_edges[["bait", "prey"]].to_csv(output.max_negative, index=False, sep="\t")
 
 
-rule generate_test_validation_test:
+# rule generate_test_validation_test:
+#     input:
+#         interaction_data = "work_folder/subsets/{source}/strict/{dataset}_{network_type}_pos.csv",
+#         max_negative = "work_folder/subsets/{source}/strict/{dataset}_{network_type}_neg.csv"
+#     output:
+#         validation_pos = "work_folder/subsets/{source}/validation/{dataset}_{network_type}_pos.csv",
+#         validation_neg = "work_folder/subsets/{source}/validation/{dataset}_{network_type}_neg.csv",
+#         test_pos = "work_folder/subsets/{source}/test/{dataset}_{network_type}_pos.csv",
+#         test_neg = "work_folder/subsets/{source}/test/{dataset}_{network_type}_neg.csv",
+#     log:
+#         "logs/subsets/{source}/validation/{dataset}_{network_type}.log"
+#     script:
+#         "scripts/define_validation_test.py"
+
+
+rule generate_test_set:
+    params:
+        max_size = 10000
     input:
         interaction_data = "work_folder/subsets/{source}/strict/{dataset}_{network_type}_pos.csv",
         max_negative = "work_folder/subsets/{source}/strict/{dataset}_{network_type}_neg.csv"
     output:
-        validation_pos = "work_folder/subsets/{source}/validation/{dataset}_{network_type}_pos.csv",
-        validation_neg = "work_folder/subsets/{source}/validation/{dataset}_{network_type}_neg.csv",
         test_pos = "work_folder/subsets/{source}/test/{dataset}_{network_type}_pos.csv",
         test_neg = "work_folder/subsets/{source}/test/{dataset}_{network_type}_neg.csv",
     log:
         "logs/subsets/{source}/validation/{dataset}_{network_type}.log"
     script:
-        "scripts/define_validation_test.py"
+        "scripts/define_test_set.py"
+
 
 
 rule generate_threshold_datasets:
@@ -54,7 +70,6 @@ rule generate_threshold_datasets:
         source = lambda wildcards: config["classification_sources"][wildcards.source]
     input:
         test_set = "work_folder/subsets/{source}/test/{dataset}_{network_type}_pos.csv",
-        validation_set = "work_folder/subsets/{source}/validation/{dataset}_{network_type}_pos.csv",
         full_detection = "work_folder/subsets/{source}/input/{dataset}_{network_type}.pq"
     threads: 10
     resources:

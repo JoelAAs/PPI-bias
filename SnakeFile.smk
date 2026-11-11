@@ -39,7 +39,6 @@ include: "src/Analysis/NonInteractionHubs/DegreeQuadrants.smk"
 include: "src/Analysis/MethodConcordance/MethodConcordance.smk"
 include: "src/Analysis/ProteinPromiscuity/ProteinPromiscuity.smk"
 include: "src/Analysis/ProteinPromiscuity/AutoActivatorsContaminants.smk"
-#include: "src/Analysis/ProteinPromiscuity/TestFeatureDetectability.smk"
 
 include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
 include: "src/Analysis/NegatomeComparison/CompareSharedBaits.smk"
@@ -88,7 +87,9 @@ rule all:
         expand("work_folder/analysis/FDR_aware/global_fit/{network_type}_{dataset}.tsv", dataset=["ms"], network_type = "directional"),
         "work_folder/analysis/ProteinPromiscuity/autoactivators/known/ms_prey_histogram.pdf",
         "work_folder/analysis/ProteinPromiscuity/autoactivators/known/y2h_bait_histogram.pdf",
-
+        expand("work_folder/analysis/ProteinPromiscuity/detection_distribution/plot/{dataset}_detection_distribution.png", dataset=["ms", "y2h"]),  
+        expand("work_folder/analysis/ProteinPromiscuity/detection_distribution/plot/{network_type}_{dataset}_pod_bait_prey_degree_correlation.png",
+            network_type=network_types, dataset=["ms", "y2h"]),
         #expand("work_folder/classification/{classifier}/hrni_no_delta/plots/{network_type}_{esm_model}_delta_auc_boxplot.png",
         #       classifier="xgboost", network_type=network_types, esm_model=["ESM2", "ProstT5"]),
         #expand("work_folder/analysis/FDR_aware/plots/{network_type}_ms_log_odds_vs_pod.png", network_type=network_types),

@@ -5,7 +5,6 @@ from sample_balance_multi_network_functions import *
 def main():
     # still called bait and prey in columns but they can be protein A and protein B
     test_set = snakemake.input.test_set
-    validation_set = snakemake.input.validation_set
 
     network_type = snakemake.wildcards.network_type
     if network_type == "directional":
@@ -22,14 +21,9 @@ def main():
     neg_limit = snakemake.wildcards.neg_limit
 
     test_df = pd.read_csv(test_set, header=None, names=["bait", "prey"], sep="\t")
-    validation_df = pd.read_csv(
-        validation_set, header=None, names=["bait", "prey"], sep="\t"
-    )
     nodes_to_exclude = (
         set(test_df["bait"])
         | set(test_df["prey"])
-        | set(validation_df["bait"])
-        | set(validation_df["prey"])
     )
 
     edge_pos, edge_neg = get_edge_list(

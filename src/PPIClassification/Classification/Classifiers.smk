@@ -2,8 +2,6 @@ rule random_forest:
     input:
         train_pos="work_folder/subsets/{source}/train/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
         train_neg="work_folder/subsets/{source}/train/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_neg.csv",
-        validation_pos="work_folder/subsets/{source}/validation/{dataset}_{network_type}_pos.csv",
-        validation_neg="work_folder/subsets/{source}/validation/{dataset}_{network_type}_neg.csv",
         protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz",
     output:
         params="work_folder/classification/{source}/randomforest/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_parameters.txt",
@@ -14,14 +12,12 @@ rule random_forest:
     resources:
         mem_gb=40
     params:
-        script_location="src/PPIClassification/Classification/ppi_classify_rf.py",
+        script_location="src/PPIClassification/Classification/scripts/ppi_classify_rf.py",
     shell:
         """
         python3 {params.script_location} \
             --train_ppi_data_pos {input.train_pos} \
             --train_ppi_data_neg {input.train_neg} \
-            --validation_ppi_data_pos {input.validation_pos} \
-            --validation_ppi_data_neg {input.validation_neg} \
             --protein_embeddings {input.protein_embeddings} \
             --params_out {output.params} \
             --threads {threads} \
@@ -35,8 +31,6 @@ rule xgboost:
     input:
         train_pos="work_folder/subsets/{source}/train/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
         train_neg="work_folder/subsets/{source}/train/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_neg.csv",
-        validation_pos="work_folder/subsets/{source}/validation/{dataset}_{network_type}_pos.csv",
-        validation_neg="work_folder/subsets/{source}/validation/{dataset}_{network_type}_neg.csv",
         protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz",
     output:
         params="work_folder/classification/{source}/xgboost/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}{random}_model_{esm_model}_parameters.txt",
@@ -47,14 +41,12 @@ rule xgboost:
     resources:
         mem_gb=40
     params:
-        script_location="src/PPIClassification/Classification/ppi_classify_xgboost.py",
+        script_location="src/PPIClassification/Classification/scripts/ppi_classify_xgboost.py",
     shell:
         """
         python3 {params.script_location} \
             --train_ppi_data_pos {input.train_pos} \
             --train_ppi_data_neg {input.train_neg} \
-            --validation_ppi_data_pos {input.validation_pos} \
-            --validation_ppi_data_neg {input.validation_neg} \
             --protein_embeddings {input.protein_embeddings} \
             --params_out {output.params} \
             --threads {threads} \

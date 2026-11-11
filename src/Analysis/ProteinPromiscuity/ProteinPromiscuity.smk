@@ -80,8 +80,8 @@ rule test_distribution:
 
 rule test_degree_distribution:
     params:
-        pod_limits = [0.02, 0.05, 0.15, 0.3],
-        fdr_limits = [0.1, 0.3, 0.5, 0.99],
+        pod_limits = [0.02, 0.05, 0.15, 0.29],
+        fdr_limits = [0.1, 0.5, 0.7, 0.99],
     input:
         pod_data = "work_folder/analysis/POD/{network_type}/POD_{dataset}.pq",
         fdr_data = "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq",

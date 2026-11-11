@@ -55,7 +55,11 @@ check_degree_distributions <- function(degree, t, n_sim = 500) {
   # Filtered out self-interactions are still part of the searchspace.
 
   pl_fit <- check_powerLaw(degree, t = t, myseed = 1234, n_sim)
-  lognormal_fit <- check_lognorm(degree, t = t, myseed = 1234, n_sim)
+  # LN needs >= 4 distinct degrees for estimate_xmin; drop the fit if it can't be estimated
+  lognormal_fit <- tryCatch(
+    check_lognorm(degree, t = t, myseed = 1234, n_sim),
+    error = function(e) list(bs_p = list(p = NA), fit = NULL)
+  )
 
   return(list(
     bs_p_pl = pl_fit$bs_p,
