@@ -41,17 +41,6 @@ rule xgboost:
     resources:
         mem_gb=40
     params:
-        script_location="src/PPIClassification/Classification/scripts/ppi_classify_xgboost.py",
-    shell:
-        """
-        python3 {params.script_location} \
-            --train_ppi_data_pos {input.train_pos} \
-            --train_ppi_data_neg {input.train_neg} \
-            --protein_embeddings {input.protein_embeddings} \
-            --params_out {output.params} \
-            --threads {threads} \
-            --randomstate 1234 \
-            --saved_model {output.saved_model} \
-            --network_type {wildcards.network_type} \
-            > {log} 2>&1
-        """
+        random_state=1234,
+    script:
+        "scripts/ppi_classify_xgboost.py"

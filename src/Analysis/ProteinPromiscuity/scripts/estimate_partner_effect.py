@@ -73,7 +73,7 @@ def main():
     pair = df.groupby([role, partner], as_index=False).agg(
         n=("detection", "size"), k=("detection", "sum")
     )
-    known_status = pd.read_csv(snakemake.input.known_status, sep="\t")
+
     pair = pair[pair["n"] >= 2].copy()     # n==1 pairs are uninformative by construction
     pair["det"] = pair["k"] > 0            # detected at least once
     pair["full"] = pair["k"] == pair["n"]  # detected on every test
@@ -95,9 +95,8 @@ def main():
 
     rng = np.random.default_rng(0)
 
-    unknown_pairs = pair[~pair[role].isin(known_status.uniprot_id)]
     best_rho = estimate_rho(
-        unknown_pairs,
+        pair,
         role,
         tot,
         rng,

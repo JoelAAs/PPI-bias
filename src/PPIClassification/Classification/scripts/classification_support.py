@@ -43,8 +43,10 @@ def get_dataset(df_pos, df_negative, embedding_dict, embed_length, flip_and_doub
     return X, y
 
 
-def validation_train_split(df_train_pos, df_train_neg, directed, random_state, split=0.2):
-    rng = np.random.default_rng(random_state)
+def validation_train_split(df_train_pos, df_train_neg, directed, random_state, split=0.2, retries=0):
+    rng = np.random.default_rng(random_state + retries*df_train_pos.shape[0])
+    if retries > 5:
+        raise ValueError("Five balancing attemps where made, all with empty splits")
     if directed:
         bait_proteins = df_train_pos["bait"].unique()
         prey_proteins = df_train_pos["prey"].unique()
@@ -61,21 +63,26 @@ def validation_train_split(df_train_pos, df_train_neg, directed, random_state, s
         val = rng.choice(proteins, size=int(split * len(proteins)), replace=False)
         in_val = lambda df: df["bait"].isin(val) & df["prey"].isin(val)
         in_train = lambda df: ~df["bait"].isin(val) & ~df["prey"].isin(val)
-
-    selected_train_pos, selected_train_neg, _ = degree_balace_edges(
-        df_train_pos[in_train(df_train_pos)],
-        df_train_neg[in_train(df_train_neg)],
-        0.95,
-        directed,
-        seed=random_state,
-    )
-    selected_val_pos, selected_val_neg, _ = degree_balace_edges(
-        df_train_pos[in_val(df_train_pos)],
-        df_train_neg[in_val(df_train_neg)],
-        0.95,
-        directed,
-        seed=random_state,
-    )
+    try:
+        selected_train_pos, selected_train_neg, _ = degree_balace_edges(
+            df_train_pos[in_train(df_train_pos)],
+            df_train_neg[in_train(df_train_neg)],
+            0.95,
+            directed,
+            seed=random_state,
+        )
+        selected_val_pos, selected_val_neg, _ = degree_balace_edges(
+            df_train_pos[in_val(df_train_pos)],
+            df_train_neg[in_val(df_train_neg)],
+            0.95,
+            directed,
+            seed=random_state,
+        )
+    except ValueError as e:
+        if "Edge DataFrame is empty" not in str(e):
+            raise e
+        return validation_train_split(df_train_pos, df_train_neg, directed, random_state, split=split, retries=retries+1)
+    
     return selected_train_pos, selected_train_neg, selected_val_pos, selected_val_neg
 
 
@@ -99,6 +106,8 @@ def hyperparameter_tuned_model(
     static_parameters,
     protein_embeddings_file,
     random_state,
+    skip_hyper_parameter_tuning=False,
+    default_parameters=False,
     n_iters=60,
 ):
     print("Hyperparameter tuning started", flush=True)
@@ -118,69 +127,75 @@ def hyperparameter_tuned_model(
 
     print("Reading training data ... ", flush=True)
     n_full = df_train_pos.shape[0] + df_train_neg.shape[0]
-    for i in range(n_iters):
-        s = datetime.datetime.now()
-        pos_train_edges, neg_train_edges, pos_val_edges, neg_val_edges = (
-            validation_train_split(df_train_pos, df_train_neg, directed, random_state + i)
-        )
-        X_train, y_train = get_dataset(
-            pos_train_edges,
-            neg_train_edges,
-            embed_dict,
-            n_embedding,
-            flip_and_double=(not directed),
-        )
-        X_validation, y_validation = get_dataset(
-            pos_val_edges,
-            neg_val_edges,
-            embed_dict,
-            n_embedding,
-            flip_and_double=(not directed),
-        )
+    if not skip_hyper_parameter_tuning:
+        for i in range(n_iters):
+            s = datetime.datetime.now()
+            pos_train_edges, neg_train_edges, pos_val_edges, neg_val_edges = (
+                validation_train_split(df_train_pos, df_train_neg, directed, random_state + i)
+            )
+            X_train, y_train = get_dataset(
+                pos_train_edges,
+                neg_train_edges,
+                embed_dict,
+                n_embedding,
+                flip_and_double=(not directed),
+            )
+            X_validation, y_validation = get_dataset(
+                pos_val_edges,
+                neg_val_edges,
+                embed_dict,
+                n_embedding,
+                flip_and_double=(not directed),
+            )
 
-        
-        params = hyper_optimizer.ask()
-        params_dict = dict(zip([d.name for d in param_dist], params))
-        param_dict = {**params_dict, **static_parameters}
+            
+            params = hyper_optimizer.ask()
+            params_dict = dict(zip([d.name for d in param_dist], params))
+            param_dict = {**params_dict, **static_parameters}
 
-        model = model_function(
-            **param_dict,
-            random_state=random_state,
-            n_jobs=n_threads,
-        )
-        model.fit(X_train, y_train)
-        probs = model.predict_proba(X_validation)[:, 1]
-        probs = np.clip(probs, 1e-15, 1 - 1e-15)
-        c_log_loss = log_loss(y_validation, probs)
+            model = model_function(
+                **param_dict,
+                random_state=random_state,
+                n_jobs=n_threads,
+            )
+            model.fit(X_train, y_train)
+            probs = model.predict_proba(X_validation)[:, 1]
+            probs = np.clip(probs, 1e-15, 1 - 1e-15)
+            c_log_loss = log_loss(y_validation, probs)
 
-        val_acc = balanced_accuracy_score(y_validation, (probs > 0.5).astype(int))
-        hyper_optimizer.tell(params, c_log_loss)
+            val_acc = balanced_accuracy_score(y_validation, (probs > 0.5).astype(int))
+            hyper_optimizer.tell(params, c_log_loss)
 
-        e = datetime.datetime.now()
-        print("------------------------------------------------")
-        print(f"{i + 1} iteration of {n_iters} in {e - s}")
-        print("Current params: " + str(params))
-        print(f"log loss: {c_log_loss}\tAcc: {val_acc} for Validation", flush=True)
-        n_train = pos_train_edges.shape[0] + neg_train_edges.shape[0]
-        n_val = pos_val_edges.shape[0] + neg_val_edges.shape[0]
-        fileout.write("---------------------\n")
-        fileout.write(
-            f"train: {n_train} ({100 * n_train / n_full:.1f}%), "
-            f"validation: {n_val} ({100 * n_val / n_full:.1f}%) "
-            f"of {n_full} edges\n"
-        )
-        fileout.write(f"Training took {e - s} using {n_threads} threads\n")
-        fileout.write("Current params: " + str(params) + "\n")
+            e = datetime.datetime.now()
+            print("------------------------------------------------")
+            print(f"{i + 1} iteration of {n_iters} in {e - s}")
+            print("Current params: " + str(params))
+            print(f"log loss: {c_log_loss}\tAcc: {val_acc} for Validation", flush=True)
+            n_train = pos_train_edges.shape[0] + neg_train_edges.shape[0]
+            n_val = pos_val_edges.shape[0] + neg_val_edges.shape[0]
+            fileout.write("---------------------\n")
+            fileout.write(
+                f"train: {n_train} ({100 * n_train / n_full:.1f}%), "
+                f"validation: {n_val} ({100 * n_val / n_full:.1f}%) "
+                f"of {n_full} edges\n"
+            )
+            fileout.write(f"Training took {e - s} using {n_threads} threads\n")
+            fileout.write("Current params: " + str(params) + "\n")
 
-        if c_log_loss < best_score:
-            best_score = c_log_loss
-            best_model = model
-            best_params = param_dict
+            if c_log_loss < best_score:
+                best_score = c_log_loss
+                best_model = model
+                best_params = param_dict
 
-    fileout.write("Best validation score: " + str(best_score) + "\n")
-    fileout.write("Best params: " + str(best_params) + "\n")
-
-    model = model_function(**best_params, random_state=random_state, n_jobs=n_threads)
+        fileout.write("Best validation score: " + str(best_score) + "\n")
+        fileout.write("Best params: " + str(best_params) + "\n")
+        model = model_function(**best_params, random_state=random_state, n_jobs=n_threads)
+    else:
+        fileout.write("Hyperparameter estimation skipped \n")
+        if default_parameters:
+            model = model_function(random_state=random_state, n_jobs=n_threads)
+        else:
+            model = model_function(**static_parameters, random_state=random_state, n_jobs=n_threads)
 
     X_train_full, y_train_full = get_dataset(
         df_train_pos,
