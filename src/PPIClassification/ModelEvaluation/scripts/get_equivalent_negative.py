@@ -8,7 +8,7 @@ from sample_balance_multi_network_functions import degree_balace_edges
 
 
 def main():
-    sel_neg_df = pd.read_csv(snakemake.input.selected_negative, sep="\t", dtype={"bait": "string", "prey": "string"})
+    sel_neg_df = pd.read_csv(snakemake.input.test_neg, sep="\t", dtype={"bait": "string", "prey": "string"})
     pos_df = pd.read_csv(snakemake.input.test_pos, sep="\t", dtype={"bait": "string", "prey": "string"})
     network_type = snakemake.wildcards.network_type
     if network_type == "directional":

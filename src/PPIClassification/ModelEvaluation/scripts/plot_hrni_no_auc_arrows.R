@@ -24,13 +24,12 @@ df_auc <- tibble(path = unlist(snakemake@input$metrics)) %>%
     ) %>%
     extract(
         model,
-        c("dataset", "neg_limit", "pos_limit", "test_neg"),
-        "^([a-zA-Z0-9]+)_[a-zA-Z]+_limit_([0-9.]+)_poslim_([0-9.]+|all)(?:-random)?_model_[A-Za-z0-9]+_metrics_(hrni|no)\\.txt$"
+        c("dataset", "neg_limit", "pos_limit"),
+        "^([a-zA-Z0-9]+)_[a-zA-Z]+_limit_([0-9.]+)_poslim_([0-9.]+|all)(?:-random)?_model_[A-Za-z0-9]+$"
     )
 stopifnot(!is.na(df_auc$dataset))
 
 df_auc <- df_auc %>%
-    filter(test_neg == "hrni") %>% # always score against the HRNI test set
     pivot_wider(
         id_cols = c(
             source,
