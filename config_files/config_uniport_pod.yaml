@@ -93,7 +93,7 @@ classification_sources:
     path: "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq"
     datasets: ["ms"]
     positive: {column: posterior, op: ">=", strict: 0.99, limits: ["all", 0.3, 0.5, 0.7]}  # placeholder thresholds
-    negative: {column: posterior, op: "<=", strict: 0.0067, limits: [0.0085, 0.009]}
+    negative: {column: posterior, op: "<=", strict: 0.0067, limits: [0.009, 0.0085]}
 
 classification_targets:
   source: ["pod", "fdr"]

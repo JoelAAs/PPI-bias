@@ -73,9 +73,29 @@ rule plot_observable_prey_vs_bait_count:
     input:
         bp_df = "work_folder/formated/bait_prey_publications.csv"
     output:
-        plot = "work_folder/analysis/FDR_aware/plots/bait_vs_prey.png",
+        plot = "work_folder/analysis/FDR_aware/plots/bait_vs_prey.pdf",
+        searchspace_plot = "work_folder/analysis/FDR_aware/plots/bait_vs_prey_searchspace.pdf",
         fit_stats = "work_folder/analysis/FDR_aware/plots/bait_vs_prey_fit.tsv"
     script:
-        "scripts/baits_vs_bait_saturation.R"
+        "scripts/baits_vs_prey_saturation.R"
 
 
+rule plot_fdr_vs_pod:
+    """
+    Per-pair mean study FDR against POD for observed pairs, and the distribution of study precision theta_s
+    """
+    params:
+        id_pattern = config["id_pattern"],
+    input:
+        pod_file = "work_folder/analysis/POD/undirectional/POD_ms.pq",
+        pair_posterior = "work_folder/analysis/FDR_aware/pair_posterior/undirectional_ms.pq",
+        study_fdr = "work_folder/analysis/FDR_aware/study_metrics/directional_ms.tsv",
+        global_fit = "work_folder/analysis/FDR_aware/global_fit/directional_ms.tsv",
+    output:
+        fdr_vs_pod = "work_folder/analysis/FDR_aware/plots/undirectional_ms_fdr_vs_pod.png",
+        log_odds_vs_pod = "work_folder/analysis/FDR_aware/plots/undirectional_ms_log_odds_vs_pod.png",
+        log_odds_vs_n_tested = "work_folder/analysis/FDR_aware/plots/undirectional_ms_log_odds_vs_n_tested.png",
+        pod_vs_n_tested = "work_folder/analysis/FDR_aware/plots/undirectional_ms_pod_vs_n_tested.png",
+        theta_s = "work_folder/analysis/FDR_aware/plots/directional_ms_theta_s_distribution.pdf",
+    script:
+        "scripts/plot_fdr_vs_pod.R"

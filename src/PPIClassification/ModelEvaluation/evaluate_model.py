@@ -3,16 +3,19 @@ import numpy as np
 import sys
 import joblib
 from sklearn.metrics import roc_curve, roc_auc_score
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import SplineTransformer
 import matplotlib.pyplot as plt
 
 
-def generate_and_plot_performance(model, X_test, y_test, roc_png):
+def generate_and_plot_performance(model, X_test, y_test, pairs, unit_emb, roc_png):
     y_pred = model.predict_proba(X_test)[:, 1]
 
     fpr, tpr, _ = roc_curve(y_test, y_pred)
     roc_auc = roc_auc_score(y_test, y_pred)
+    fpr_adj, tpr_adj, roc_auc_adj = adjusted_roc(y_test, y_pred, pairs, unit_emb)
     print("plotting ROC curve", flush=True)
-    get_roc_plot((fpr, tpr), roc_auc, roc_png)
+    get_roc_plot((fpr, tpr), roc_auc, (fpr_adj, tpr_adj), roc_auc_adj, roc_png)
 
     y_pred_label = (y_pred >= 0.5).astype(np.int8)
     pos_mask = y_test == 1
@@ -20,14 +23,16 @@ def generate_and_plot_performance(model, X_test, y_test, roc_png):
     pos_accuracy = (y_pred_label[pos_mask] == y_test[pos_mask]).mean()
     neg_accuracy = (y_pred_label[neg_mask] == y_test[neg_mask]).mean()
 
-    return roc_auc, pos_accuracy, neg_accuracy, y_pred
+    return roc_auc, roc_auc_adj, pos_accuracy, neg_accuracy, y_pred
 
 
-def get_roc_plot(obs_performance, obs_auc, output_png):
+def get_roc_plot(obs_performance, obs_auc, adj_performance, adj_auc, output_png):
     fpr, tpr = obs_performance
+    fpr_adj, tpr_adj = adj_performance
 
     fig, ax = plt.subplots(1, 1, figsize=(8, 6))
     ax.plot(fpr, tpr, color="blue", label=f"Observed ROC (AUC={obs_auc:.4f})")
+    ax.plot(fpr_adj, tpr_adj, color="red", label=f"Adjusted ROC (AUC={adj_auc:.4f})")
     ax.plot([0, 1], [0, 1], linestyle="--", color="grey", label="Random chance")
     ax.set_xlabel("False Positive Rate")
     ax.set_ylabel("True Positive Rate")
@@ -87,8 +92,6 @@ def get_embedding_dict(protein_embeddings_file):
 
 
 def centred_unit_embeddings(embedding_dict):
-    # TODO: Check
-    # as in within_pair_similarity_auc.py: centre over all proteins, unit length -> cosine = dot product
     ids = list(embedding_dict)
     E = np.vstack([embedding_dict[i] for i in ids]).astype(np.float64)
     E -= E.mean(axis=0)
@@ -96,12 +99,19 @@ def centred_unit_embeddings(embedding_dict):
     return dict(zip(ids, E))
 
 
-def adjusted_auc(y, y_pred, pairs, unit_emb, n_bins=5):
-    # TODO: Check
-    sim = np.array([unit_emb[b] @ unit_emb[p] for b, p in zip(pairs["bait"], pairs["prey"])])
-    bins = pd.qcut(sim, n_bins, labels=False)
-    aucs = [roc_auc_score(y[bins == b], y_pred[bins == b]) for b in range(n_bins)]
-    return np.average(aucs, weights=[(y[bins == b] == 1).sum() for b in range(n_bins)])
+def adjusted_roc(y, y_pred, pairs, unit_emb):
+    # Covariate-adjusted ROC (Janes & Pepe 2009) for pair cosine similarity in embedding space.
+    # Negatives' mean score is modelled as a cubic spline of similarity (spread is constant
+    # over similarity), so the AROC is the ROC of the residuals score - mu(sim).
+    sim = np.array(
+        [np.dot(unit_emb[b], unit_emb[p]) for b, p in zip(pairs["bait"], pairs["prey"])]
+    ).reshape(-1, 1)
+    neg = y == 0
+    spline = SplineTransformer(n_knots=5, degree=3).fit(sim[neg])
+    mu = LinearRegression().fit(spline.transform(sim[neg]), y_pred[neg])
+    resid = y_pred - mu.predict(spline.transform(sim))
+    fpr, tpr, _ = roc_curve(y, resid)
+    return fpr, tpr, roc_auc_score(y, resid)
 
 
 if __name__ == "__main__":
@@ -133,23 +143,33 @@ if __name__ == "__main__":
         flip_and_double,
     )
     model = joblib.load(snakemake.input.saved_model)
-
-    roc_auc, pos_accuracy, neg_accuracy, y_pred = generate_and_plot_performance(
-        model, X_test, y_test, snakemake.output.roc_png
-    )
-    roc_auc_no, _, neg_accuracy_no, y_pred_no = generate_and_plot_performance(
-        model, X_test_no, y_test_no, snakemake.output.roc_png_no
-    )
     unit_emb = centred_unit_embeddings(embedding_dict)
-    roc_auc_adj = adjusted_auc(y_test, y_pred, pairs_test, unit_emb)
-    roc_auc_adj_no = adjusted_auc(y_test_no, y_pred_no, pairs_test_no, unit_emb)
-    pairs_test.assign(label=y_test, score=y_pred).to_csv(snakemake.output.pred, sep="\t", index=False)
-    pairs_test_no.assign(label=y_test_no, score=y_pred_no).to_csv(snakemake.output.pred_no, sep="\t", index=False)
+
+    roc_auc, roc_auc_adj, pos_accuracy, neg_accuracy, y_pred = (
+        generate_and_plot_performance(
+            model, X_test, y_test, pairs_test, unit_emb, snakemake.output.roc_png
+        )
+    )
+    roc_auc_no, roc_auc_adj_no, _, neg_accuracy_no, y_pred_no = (
+        generate_and_plot_performance(
+            model,
+            X_test_no,
+            y_test_no,
+            pairs_test_no,
+            unit_emb,
+            snakemake.output.roc_png_no,
+        )
+    )
+    pairs_test.assign(label=y_test, score=y_pred).to_csv(
+        snakemake.output.pred, sep="\t", index=False
+    )
+    pairs_test_no.assign(label=y_test_no, score=y_pred_no).to_csv(
+        snakemake.output.pred_no, sep="\t", index=False
+    )
     n_samples_file = lambda path: pd.read_csv(path, sep="\t", usecols=["bait"]).shape[0]
 
     samples_train_pos = n_samples_file(snakemake.input.train_pos)
     samples_train_neg = n_samples_file(snakemake.input.train_neg)
-    
 
     with open(snakemake.output.metrics, "w") as f:
         f.write(f"ROC: {roc_auc:.4f}\n")

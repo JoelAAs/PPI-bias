@@ -44,7 +44,6 @@ rule get_model_metrics:
     script:
         "evaluate_model.py"
 
-
 def source_grid_metrics(input_path, wildcards):
     source = config["classification_sources"][wildcards.source]
     return expand(
@@ -111,16 +110,15 @@ rule full_run_metrics:
             dfs.append(df)
         pd.concat(dfs).to_csv(output.metrics, sep="\t", index=False)
 
+
 rule plot_hrni_no_auc_arrows:
     input:
         metrics = "work_folder/classification/full_run_metrics.tsv"
     output:
         plot="work_folder/classification/plots/hrni_no_auc_arrows.png",
+        plot_unadjusted="work_folder/classification/plots/hrni_no_auc_arrows_unadjusted.png",
     script:
         "scripts/plot_hrni_no_auc_arrows.R"
-
-
-
 
 
 # Pair-wise Embedding similarity
@@ -166,61 +164,6 @@ rule collect_all_similarities:
         "awk 'FNR > 1 || NR == 1' {input.all_sims} > {output.all_auc}"
 
 
-## Similarity adjusted prediction
-
-# rule get_pair_wise_similarity:
-#     input:
-#         metrics = "work_folder/classification/full_run_metrics.tsv"
-#         sim_auc = "work_folder/classification/embedding_sim_auc/all_classifications.tsv"
-#     output:
-#         delta_metrics = "work_folder/classification/full_run_metrics_sim.tsv"
-#     run:
-
-
-
-rule hrni_no_delta_auc:
-    input:
-        metrics="work_folder/classification/{source}/{classifier}/all_metrics_{network_type}_{esm_model}.csv",
-    output:
-        by_config="work_folder/classification/{source}/{classifier}/hrni_no_delta/{network_type}_{esm_model}_delta_auc_by_config.tsv",
-        summary="work_folder/classification/{source}/{classifier}/hrni_no_delta/{network_type}_{esm_model}_delta_auc_summary.tsv",
-    log:
-        "logs/classification/{source}/{classifier}/hrni_no_delta/{network_type}_{esm_model}_delta_auc.log",
-    run:
-        import re
-        from scipy.stats import ttest_1samp
-
-        model_re = re.compile(
-            r"^(?P<dataset>[a-zA-Z0-9]+)_[a-zA-Z]+_limit_(?P<neg_limit>[0-9.]+)"
-            r"_poslim_(?P<pos_limit>[0-9.]+|all)(?P<random>-random)?_model_[A-Za-z0-9]+$"
-        )
-        df = pd.read_csv(input.metrics, sep="\t")
-        df = pd.concat([df, df["model"].str.extract(model_re)], axis=1)
-        assert df["dataset"].notna().all(), f"unparsed model names: {df.loc[df['dataset'].isna(), 'model'].tolist()}"
-        df["train_type"] = df["random"].notna().map({True: "no", False: "hrni"})
-
-        pivot = df.pivot_table(
-            index=["dataset", "pos_limit", "neg_limit"],
-            columns="train_type", values="roc_auc",
-        )
-        pivot["delta_auc"] = pivot["hrni"] - pivot["no"]
-        pivot = pivot.reset_index()
-        pivot.to_csv(output.by_config, sep="\t", index=False)
-
-        rows = []
-        for dataset, sub in pivot.groupby("dataset"):
-            t, p = ttest_1samp(sub["delta_auc"], 0.0) if len(sub) > 1 else (float("nan"), float("nan"))
-            rows.append({
-                "dataset": dataset,
-                "n_configs": len(sub),  # n(pos_limit x neg_limit)
-                "mean_delta_auc": sub["delta_auc"].mean(),
-                "sem": sub["delta_auc"].std(ddof=1) / len(sub) ** 0.5,
-                "t": t,
-                "p": p,
-            })
-        pd.DataFrame(rows).to_csv(output.summary, sep="\t", index=False)
-
-
 rule plot_hrni_no_delta_auc:
     input:
         by_config="work_folder/classification/{source}/{classifier}/hrni_no_delta/{network_type}_{esm_model}_delta_auc_by_config.tsv",
@@ -243,3 +186,23 @@ rule plot_hrni_no_delta_auc_prost_esm2:
     script:
         "scripts/plot_hrni_no_delta_auc_prost.py"
 
+
+rule plot_pair_embedding_cosine_similarity:
+    params:
+        score_col=lambda wildcards: {"fdr": "log_odds", "pod": "lower_bound_pod"}[wildcards.source],
+        bait_col=f"{config['id_pattern']}_bait",
+        prey_col=f"{config['id_pattern']}_prey",
+        neg_limit=lambda wildcards:config["classification_sources"][wildcards.source]["negative"]["limits"][0],
+    input:
+        dataset=lambda wildcards: config["classification_sources"][wildcards.source]["path"].format(
+            network_type=wildcards.network_type, dataset=wildcards.dataset),
+        protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz",
+    output:
+        emb_sim_vs_score="work_folder/classification/embedding_sim_auc/plots/{dataset}_{source}_{network_type}_{esm_model}_cosine_sim_vs_score.png",
+    log:
+        "logs/classification/{source}/embedding_sim_auc/plots/{dataset}_{network_type}_{esm_model}_cosine_sim_vs_score.log",
+    resources:
+        mem_gb=16,
+    script:
+        "scripts/plot_cosine_sim_vs_score.py"
+        
