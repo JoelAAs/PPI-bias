@@ -236,10 +236,12 @@ def build_entrez_mapping(mitab_file, sec_ac_file, idmapping_gz, gene_info_gz, ou
     rows = []
     dropped = []
     for uid in all_ids:
+        
+        iso = "-" + uid.split("-")[1] if "-" in uid else ""
         primary = id_to_primary[uid]
         entrez = uniprot_to_entrez.get(primary)
         if entrez:
-            rows.append({"uniprot_id": uid, "gene_name": entrez})
+            rows.append({"uniprot_id": primary+iso, "gene_name": entrez})
         else:
             dropped.append({"uniprot_id": uid, "primary_ac": primary})
 

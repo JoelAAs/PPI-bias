@@ -64,7 +64,8 @@ rule format_miTab:
     """
     params:
         pseudo_replicated = config["pid_pseudo_replication"],
-        selected_detection_methods = config["ms"] + config["y2h"]
+        selected_detection_methods = config["ms"] + config["y2h"],
+        sec_ac     = "work_folder/data/uniprot/sec_ac.txt",
     input:
         miTab      = "work_folder/data/intact/human.txt",
         gene_names = "work_folder/gene_names/uniprot_to_gene_name.csv"
@@ -77,6 +78,24 @@ rule format_miTab:
         bait_prey_df = reform_to_bait_prey(mitab_df)
         bait_prey_df = bait_prey_df[~bait_prey_df.pubmed_id.isin(params.pseudo_replicated)]
         bait_prey_df = flag_and_drop_duplicate_studies(bait_prey_df, params.selected_detection_methods)
+      
+        ac_map = parse_sec_ac_mapping(input.sec_ac)  
+        def _map_ac(ac_id):
+            iso_n = None
+            if "-" in ac_id:
+                ac_id_s, iso_n = ac_id.split("-")
+            else:
+                ac_id_s = ac_id
+
+            if ac_id_s in ac_map:
+                if iso_n:
+                    return f"{ac_map[ac_id_s]}-{iso_n}"
+                return ac_map[ac_id_s]
+            return ac_id
+        
+        bait_prey_df["uniprot_id_bait"] = bait_prey_df["uniprot_id_bait"].apply(_map_ac)
+        bait_prey_df["uniprot_id_prey"] = bait_prey_df["uniprot_id_prey"].apply(_map_ac)
+        bait_prey_df = bait_prey_df.drop_duplicates() # if new mapping will join proteins 
 
         gene_name_df = pd.read_csv(input.gene_names, sep="\t")
         bait_prey_df = bait_prey_df.merge(gene_name_df, left_on="uniprot_id_bait", right_on="uniprot_id")
