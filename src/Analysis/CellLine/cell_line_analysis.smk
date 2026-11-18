@@ -22,15 +22,16 @@ def get_input_for_aggregation(wc, filename, cell_line_methods):
     storage_object.local_path().parent.mkdir(parents=True, exist_ok=True)  # retrieve_object() rsyncs, it does not create the target dir
     storage_object.retrieve_object()
     cl_df = pd.read_csv(storage_file, sep="\t")
+    id_pattern = config["id_pattern"]
     cl_df = cl_df[
-        cl_df[f"gene_name_bait"] != cl_df[f"gene_name_prey"]
+        cl_df[f"{id_pattern}_bait"] != cl_df[f"{id_pattern}_prey"]
         ] # remove bait-bait
 
-    cl_df = cl_df[cl_df["detection_method"].isin(cell_line_methods)]    
+    cl_df = cl_df[cl_df["detection_method"].isin(cell_line_methods)]
 
     cl_df = cl_df[
         ~cl_df[[
-            "gene_name_bait", "gene_name_prey",
+            f"{id_pattern}_bait", f"{id_pattern}_prey",
             "pubmed_id", "detection_method", "CVCL"
         ]].duplicated(keep="first")] # remove isoforms
 
@@ -56,4 +57,4 @@ rule aggregate_inferred_studies_cell_line:
     log:
         "logs/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.log"
     run:
-        aggregate_inferred_experiments(input.cl_pids, output.cell_line_counts, "gene_name", single=True) # must be gene name as bioplex only does genes
+        aggregate_inferred_experiments(input.cl_pids, output.cell_line_counts, config["id_pattern"], single=True)

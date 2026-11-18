@@ -75,6 +75,7 @@ n_permutations: 10
 drop_isoforms: True
 include_y2h_self_interactions: False
 keep_non_canonical: False
+require_fasta: True
 n_em_iterations: 1000
 shrinkage_pseudocount: 5
 n_reference_studies: 5

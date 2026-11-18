@@ -65,10 +65,10 @@ rule format_miTab:
     params:
         pseudo_replicated = config["pid_pseudo_replication"],
         selected_detection_methods = config["ms"] + config["y2h"],
-        sec_ac     = "work_folder/data/uniprot/sec_ac.txt",
     input:
         miTab      = "work_folder/data/intact/human.txt",
-        gene_names = "work_folder/gene_names/uniprot_to_gene_name.csv"
+        gene_names = "work_folder/gene_names/uniprot_to_gene_name.csv",
+        sec_ac     = "work_folder/data/uniprot/sec_ac.txt",
     output:
         formated   = "work_folder/formated/bait_prey_publications.csv"
     log:
