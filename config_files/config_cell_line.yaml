@@ -1,32 +1,16 @@
 formated_ppi: "work_folder/formated/bait_prey_publications.csv"
 
-remove_single_publications: True
-pid_to_remove:
+pid_to_remove_cl:
   - "33961781"
-min_total_tests: 30
-min_total_observed: 4
+
+pid_pseudo_replication:
+  - "28514442"
+
 part_or_difference_cutoff: 50
 pseudo_n: 1
-hci_frac: 0.8
-negatome_tested_threshold: 4
-id_pattern: "gene_name"
-prey_n_MCMC_batch: 2000
-MCMC_workers: 45
-batch_per_write: 2000
-mcmc_samples: 4000
-mcmc_burin: 500
+id_pattern: "uniprot_id"
 
-hci_limits:
-  - 0.1
-  - 0.2
-hrni_tested:
-  - 3
-  - 4
-  - 5
-
-kahip_location: "/home/ieo7513/software/KaHIP/deploy/kaffpa"
 seed: 18362
-cdhit_location: "/home/ieo7513/software/cd-hit-v4.8.1-2019-0228"
 embedding_model: "facebook/esm2_t33_650M_UR50D"
 localisation_file: "data/localisation/subcellular_location.tsv"
 
@@ -40,16 +24,66 @@ cell_line_methods:
   - "MI-0007"
   - "MI-0096"
   - "MI-0676"
-  # - "MI-1314"
+  - "MI-1314"
 
-positive_limits:
-  - "all"
-  - 0.02
-  - 0.15    
+ms:
+  - "MI-0006"
+  - "MI-0007"
+  - "MI-0096"
+  - "MI-0676"
+  #- "MI-1314"
 
-negative_limits:
-  - 1
-  - 2
+y2h:
+  - "MI-0397" # (two hybrid array) usually involves a mating strategy
+  - "MI-1112" # (two hybrid prey pooling approach)
+  - "MI-0398" # (two hybrid pooling approach)
+  #- "MI-1356" # (validated two hybrid)  All gets filtered out
+  - "MI-2215" # (barcode fusion genetics two hybrid) all against all
+  - "MI-1113" # (two hybrid bait and prey pooling approach)
 
+flat:
+  - "ms"
+  - "y2h"
+
+datasets:
+  - "ms"
+  - "y2h"
+  - "flat"
+
+oe_lof_low_quantile: 0.25
+
+# Classifier data configuration:
+classification_sources:
+  pod:
+    path: "work_folder/analysis/POD/{network_type}/POD_{dataset}.pq"
+    datasets: ["ms", "y2h"]
+    positive: {column: lower_bound_pod, op: ">=", strict: 0.29, limits: ["all", 0.02, 0.15]}
+    negative: {column: n_tested, op: ">=", strict: 3, limits: [1, 2]}
+  fdr:
+    path: "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq"
+    datasets: ["ms"]
+    positive: {column: posterior, op: ">=", strict: 0.99, limits: ["all", 0.3, 0.5, 0.7]}  # placeholder thresholds
+    negative: {column: posterior, op: "<=", strict: 0.0067, limits: [0.0085, 0.009]}
+
+classification_targets:
+  source: ["pod", "fdr"]
+  classifier: ["xgboost"]
+  network_type: ["directional", "undirectional"]
+  esm_model: ["ESM2", "ProstT5"]
+
+n_permutations: 10
 drop_isoforms: False
 include_y2h_self_interactions: False
+keep_non_canonical: True
+require_fasta: False
+n_em_iterations: 1000
+shrinkage_pseudocount: 5
+n_reference_studies: 5
+
+# --- biological insights ---
+bootstrap_replicates: 5000
+
+hub_limits:
+ - 10
+ - 50
+non_interaction_hub_quantile_cutoff: 0.75
