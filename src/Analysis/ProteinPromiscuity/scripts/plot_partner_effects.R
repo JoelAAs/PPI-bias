@@ -15,6 +15,7 @@ read_ranked <- function(path, known_ids, dataset, role) {
   df <- read.table(path, sep = "\t", header = TRUE)
   names(df)[1] <- "id"
   df %>%
+    filter(n_pos > 0) %>%  # never-detected proteins have no D or score
     mutate(
       known = id %in% known_ids,
       dataset = dataset,

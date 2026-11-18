@@ -1,7 +1,7 @@
 from scipy.stats import beta
 import datetime
 
-rule all_methods_filter_out:
+checkpoint all_methods_filter_out:
     """
     Get upper and lower bound probability of detection given test/observations of each bait-prey combination
     """
@@ -35,7 +35,7 @@ rule all_methods_filter_out:
                 prey_col: "string"
             }
         )
-
+        
         inferred_negative_df = inferred_negative_df[
             inferred_negative_df[bait_col].isin(fasta_ids) &
             inferred_negative_df[prey_col].isin(fasta_ids)

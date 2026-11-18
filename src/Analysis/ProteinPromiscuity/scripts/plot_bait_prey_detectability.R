@@ -4,6 +4,7 @@ library(dplyr)
 read_partner_effect <- function(path) {
   df <- read.table(path, sep = "\t", header = TRUE)
   names(df)[1] <- "id"
+  df <- df[df$n_pos > 0, ]  # log2(p) below needs p > 0
   # p = detected fraction of the tests the protein takes part in,
   # n_pairs = distinct partners it was tested against
   df[, c("id", "p", "n_pairs")]

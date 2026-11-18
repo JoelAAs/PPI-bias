@@ -7,6 +7,18 @@ import numpy as np
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from graph_tool.all import Graph, openmp_set_num_threads
 from graph_tool.flow import push_relabel_max_flow as max_flow
+import operator
+
+def filter_on_threshold(df, settings, limit):
+    OPS = {">=": operator.ge, "<=": operator.le, ">": operator.gt, "<": operator.lt}
+    col = settings["column"]
+    op = OPS[settings["op"]]
+    if limit == "all":
+        return df[df["n_observed"] > 0]
+    threshold = float(limit)
+    if col == "n_tested":
+        return df[op(df["n_tested"], threshold) & (df["n_observed"] == 0)]
+    return df[op(df[col], threshold)]
 
 
 def _log(log_file: str, msg: str) -> None:
@@ -372,12 +384,6 @@ def extract_selected_edges(
         g.add_edge_list(selected)
         return g
 
-    # ----- Undirected branch -----
-    # Each {A,B} in source generated TWO arcs in the flow graph:
-    #     (0,A) -> (1,B)   and   (0,B) -> (1,A)
-    # Pair them up:
-    #   both arcs saturated  -> full edge, include in H
-    #   only one arc         -> half-edge, greedy-round against remaining slack
     if len(selected) == 0:
         return g
 
@@ -390,8 +396,6 @@ def extract_selected_edges(
         g.add_edge_list(full_edges)
 
     if len(half_edges):
-        # recover target_degree from source-side capacities
-        # (source vertex was the 2nd-to-last vertex added in build_undirected_flow_graph)
         source_v = flow_g.vertex(flow_g.num_vertices() - 2)
         target_degree = np.zeros(len(node_map), dtype=np.int32)
         for e in source_v.out_edges():
@@ -711,41 +715,31 @@ def sanity_check(selected_pos, selected_neg, edge_list_pos, edge_list_neg, direc
 
 def get_edge_list(
     full_detection_df,
-    positive_limits,
-    negative_limits,
+    positive,
+    negative,
+    pos_limit,
+    neg_limit,
     nodes_to_exclude,
 ):
-    """Build positive and negative edge lists for every combination of confidence thresholds.
+    """Build the positive and negative edge list for one pair of thresholds.
 
-    Iterates over the Cartesian product of `positive_limits` × `negative_limits`. For
-    each pair the detection DataFrame is filtered into a positive and a negative set, with
-    any protein in `nodes_to_exclude` removed from both (this keeps test/validation
-    proteins out of training).
+    Each side is filtered with from its source config, with any protein in `nodes_to_exclude`
+    removed from both (this keeps test/validation proteins out of training).
 
-    Positive filter:
-        - ``pos_limit == "all"``: any pair with ``n_observed >= 1`` (no POD threshold).
-        - numeric ``pos_limit``: ``lower_bound_pod >= pos_limit``.
-
-    Negative filter (always): ``n_tested >= neg_limit`` AND ``n_observed == 0``.
-
-    Positives and negatives are disjoint by construction because positives require
-    ``n_observed >= 1`` and negatives require ``n_observed == 0``.
+    Positives and negatives must be disjoint; ``sanity_check`` asserts it after balancing.
 
     Args:
-        full_detection_df: DataFrame with columns ``"bait"``, ``"prey"``,
-            ``"lower_bound_pod"``, ``"n_tested"``, ``"n_observed"`` (gene-name or
-            UniProt columns should be renamed to ``"bait"``/``"prey"`` before calling).
-        positive_limits: List of lower_bound_pod thresholds or the sentinel ``"all"``.
-        negative_limits: List of integer n_tested thresholds.
+        full_detection_df: prepared source with columns ``"bait"``, ``"prey"``,
+            ``"n_observed"`` and the columns named in `positive` and `negative`.
+        positive: source config of the positive side {column, op, unobserved}.
+        negative: source config of the negative side {column, op, unobserved}.
+        pos_limit: positive threshold, or ``"all"`` for any observed pair.
+        neg_limit: negative threshold.
         nodes_to_exclude: Set of protein identifiers to exclude from both edge sets
             (typically the union of bait and prey nodes in the test and validation sets).
 
     Returns:
-        Tuple ``(edge_list_pos, edge_list_neg, pairs)`` where:
-        - ``edge_list_pos``: list of positive edge DataFrames (columns: bait, prey).
-        - ``edge_list_neg``: list of negative edge DataFrames (columns: bait, prey).
-        - ``pairs``: list of ``(pos_limit, neg_limit)`` tuples in the same order,
-          matching the Snakemake ``expand()`` output order.
+        Tuple ``(edge_pos, edge_neg)`` of DataFrames with columns bait, prey.
     """
     in_excluded = (
         full_detection_df["bait"].isin(nodes_to_exclude)
@@ -753,20 +747,11 @@ def get_edge_list(
     )
     train_df = full_detection_df[~in_excluded]
 
-    edge_list_pos = []
-    edge_list_neg = []
-    pairs = []
+    train_df_ss_pos = filter_on_threshold(train_df, positive, pos_limit)
+    neg_df = train_df[train_df["n_observed"] == 0] if pos_limit == "all" else train_df
+    train_df_ss_neg = filter_on_threshold(neg_df, negative, neg_limit)
 
-    for pos_limit, neg_limit in itertools.product(positive_limits, negative_limits):
-        if pos_limit == "all":
-            pos_mask = train_df["n_observed"] >= 1
-        else:
-            pos_mask = train_df["lower_bound_pod"] >= pos_limit
-
-        neg_mask = (train_df["n_tested"] >= neg_limit) & (train_df["n_observed"] == 0)
-
-        edge_list_pos.append(train_df.loc[pos_mask, ["bait", "prey"]].copy())
-        edge_list_neg.append(train_df.loc[neg_mask, ["bait", "prey"]].copy())
-        pairs.append((pos_limit, neg_limit))
-
-    return edge_list_pos, edge_list_neg, pairs
+    return (
+        train_df_ss_pos[["bait", "prey"]].copy(),
+        train_df_ss_neg[["bait", "prey"]].copy(),
+    )

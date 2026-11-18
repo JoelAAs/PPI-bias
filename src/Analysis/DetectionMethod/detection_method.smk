@@ -9,7 +9,13 @@ def select_study_files(study_folder, method, id_pattern, filename, remove_single
     :return: (list) list of paths of expected output
     """
     STUDY_FOLDER = study_folder
-    ppi_df = pd.read_csv(filename, sep="\t")
+    prefix = workflow.storage_settings.default_storage_prefix
+    query = f"{prefix.rstrip('/')}/{filename}" if prefix else filename
+    storage_file = storage.fs(query)
+    storage_object = storage_file.flags["storage_object"]
+    storage_object.local_path().parent.mkdir(parents=True, exist_ok=True)
+    storage_object.retrieve_object()
+    ppi_df = pd.read_csv(storage_file, sep="\t")
     ppi_df = ppi_df[ppi_df["detection_method"] == method]
     ppi_df = ppi_df[
         ppi_df[f"{id_pattern}_bait"] != ppi_df[f"{id_pattern}_prey"]

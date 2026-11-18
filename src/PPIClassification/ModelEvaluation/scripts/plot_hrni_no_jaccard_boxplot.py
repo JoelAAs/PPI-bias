@@ -89,4 +89,4 @@ ax.set_xlabel("Dataset")
 legend_handles = [Patch(facecolor=color, alpha=0.8, label=label) for _, color, label in comparisons]
 ax.legend(handles=legend_handles, loc="best", fontsize=8)
 plt.tight_layout()
-plt.savefig(snakemake.output.plot, dpi=150, bbox_inches="tight")
+plt.savefig(snakemake.output.plot, format="svg", bbox_inches="tight")

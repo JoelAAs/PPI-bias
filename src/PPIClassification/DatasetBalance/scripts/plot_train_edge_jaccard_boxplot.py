@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 GROUPS = [
-    ("hrni_negative", "Within permutation\n(HRNI negative)", "tab:blue"),
+    ("hrni_negative", "Within permutation\n(Experimental negative)", "tab:blue"),
     ("no_negative", "Within permutation\n(NO negative)", "tab:green"),
     ("positive_between_config", "Between threshold config\n(positive interaction)", "darkorange"),
 ]
@@ -35,5 +35,5 @@ ax.set_ylabel("Jaccard (edge overlap)")
 ax.set_title("Training-edge overlap between subsets", pad=12)
 
 plt.tight_layout()
-plt.savefig(snakemake.output.jaccard_distances, dpi=150, bbox_inches="tight")
+plt.savefig(snakemake.output.jaccard_distances, format="svg", bbox_inches="tight")
 plt.close(fig)

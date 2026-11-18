@@ -3,7 +3,14 @@ import random
 def select_row_wise_study_files(study_folder, methods, id_pattern, filename, remove_single=True):
     STUDY_FOLDER = study_folder
 
-    ppi_df = pd.read_csv(filename, sep="\t")
+    # storage.fs() is not auto-prefixed, so add the prefix and retrieve the file ourselves
+    prefix = workflow.storage_settings.default_storage_prefix
+    query = f"{prefix.rstrip('/')}/{filename}" if prefix else filename
+    storage_file = storage.fs(query)
+    storage_object = storage_file.flags["storage_object"]
+    storage_object.local_path().parent.mkdir(parents=True, exist_ok=True)
+    storage_object.retrieve_object()
+    ppi_df = pd.read_csv(storage_file, sep="\t")
     ppi_df = ppi_df[ppi_df["detection_method"].isin(methods)]
     ppi_df = ppi_df[
         ppi_df[f"{id_pattern}_bait"] != ppi_df[f"{id_pattern}_prey"]
@@ -56,118 +63,6 @@ rule get_row_wise_detection:
                         w.write("\t".join([bait, prey, exp, detection]) + "\n")
 
 
-rule fit_protein_promiscuity_model:
-    # currently set to top 1000
-    input:
-        row_wise_data = ancient("work_folder/analysis/ProteinPromiscuity/row_data/{dataset}_row_wise_detection.tsv"),
-    output:
-        model_jls = "work_folder/analysis/ProteinPromiscuity/{dataset}_model.jls",
-    log:
-        "logs/analysis/ProteinPromiscuity/{dataset}_fit.log",
-    conda:
-        "julia"
-    threads:
-        15
-    shell:
-        """
-        OMP_NUM_THREADS={threads} OPENBLAS_NUM_THREADS={threads} julia -t 1 src/Analysis/ProteinPromiscuity/scripts/fit_protein_promiscuity_model.jl \
-        {input.row_wise_data} {output.model_jls} 1000 \
-        > {log} 2>&1
-        """
-
-rule evaluate_protein_promiscuity_model:
-    input:
-        model_jls = "work_folder/analysis/ProteinPromiscuity/{dataset}_model.jls",
-    output:
-        bait_detectability = "work_folder/analysis/ProteinPromiscuity/{dataset}_bait_detectability.tsv",
-        prey_detectability = "work_folder/analysis/ProteinPromiscuity/{dataset}_prey_detectability.tsv",
-        experiment_detectability = "work_folder/analysis/ProteinPromiscuity/{dataset}_experiment_detectability.tsv",
-        variance_components = "work_folder/analysis/ProteinPromiscuity/{dataset}_variance_components.tsv",
-    log:
-        "logs/analysis/ProteinPromiscuity/{dataset}_evaluate.log",
-    conda:
-        "julia"
-    threads: 
-        1
-    shell:
-        """
-        julia -t 1 src/Analysis/ProteinPromiscuity/scripts/evaluate_protein_promiscuity_model.jl \
-        {input.model_jls} \
-        {output.bait_detectability} {output.prey_detectability} \
-        {output.experiment_detectability} {output.variance_components} \
-        > {log} 2>&1
-        """
-
-rule plot_cross_method_detectability:
-    input:
-        ms_bait_detectability = "work_folder/analysis/ProteinPromiscuity/ms_bait_detectability.tsv",
-        ms_prey_detectability = "work_folder/analysis/ProteinPromiscuity/ms_prey_detectability.tsv",
-        y2h_bait_detectability = "work_folder/analysis/ProteinPromiscuity/y2h_bait_detectability.tsv",
-        y2h_prey_detectability = "work_folder/analysis/ProteinPromiscuity/y2h_prey_detectability.tsv"
-    output:
-        ms_y2h_plot = "work_folder/analysis/ProteinPromiscuity/plot/cross_method_detectability.png",
-        bait_prey_plot = "work_folder/analysis/ProteinPromiscuity/plot/bait_prey_detectability.png"
-    threads:
-        1
-    script:
-        "scripts/plot_cross_method_detectability.R"
-
-
-rule check_ms_sticky_proteins:
-    params:
-        n_protein_subsample = 1000,
-    input:
-        row_wise_data = ancient("work_folder/analysis/ProteinPromiscuity/row_data/ms_row_wise_detection.tsv"),
-        model_jls = "work_folder/analysis/ProteinPromiscuity/ms_model.jls",
-    output:
-        ms_sticky_proteins = "work_folder/analysis/ProteinPromiscuity/ms_dispersion_prey.tsv"
-    log:
-        "logs/analysis/ProteinPromiscuity/check_ms_sticky_proteins.log",
-    threads:
-        5
-    conda:
-        "julia"
-    shell:
-        """
-        julia -t 1 src/Analysis/ProteinPromiscuity/scripts/check_ms_sticky_proteins.jl \
-        {input.row_wise_data} {input.model_jls} \
-        {params.n_protein_subsample} {output.ms_sticky_proteins} \
-        > {log} 2>&1
-        """
-
-rule plot_ms_sticky_proteins:
-    input:
-        ms_sticky_proteins = "work_folder/analysis/ProteinPromiscuity/ms_dispersion_prey.tsv"
-    output:
-        dispersion_plot = "work_folder/analysis/ProteinPromiscuity/plot/ms_sticky_proteins_dispersion.png"
-    threads:
-        1
-    script:
-        "scripts/plot_ms_sticky_proteins.R"
-
-
-rule get_ad_db_auto_activators:
-    input:
-        row_wise_data = ancient("work_folder/analysis/ProteinPromiscuity/row_data/y2h_row_wise_detection.tsv"),
-        model_jls = "work_folder/analysis/ProteinPromiscuity/y2h_model.jls",
-    params:
-        n_protein_subsample = 1000,
-    output:
-        prey_auto_activators = "work_folder/analysis/ProteinPromiscuity/y2h_prey_auto_activators.tsv",
-        bait_auto_activators = "work_folder/analysis/ProteinPromiscuity/y2h_bait_auto_activators.tsv"
-    log:
-        "logs/analysis/ProteinPromiscuity/get_y2h_auto_activators.log",
-    threads:
-        1
-    conda:
-        "julia"
-    shell:
-        """
-        julia -t 1 src/Analysis/ProteinPromiscuity/scripts/get_y2h_auto_activators.jl \
-        {input.row_wise_data} {input.model_jls} {params.n_protein_subsample} \
-        {output.prey_auto_activators} {output.bait_auto_activators} \
-        > {log} 2>&1
-        """
 
 rule plot_sticky_and_detectable_proteins:
     input:

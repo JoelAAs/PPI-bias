@@ -1,4 +1,4 @@
-configfile: "config_files/config_cell_line.yaml"
+configfile: "config_files/config_uniport_pod.yaml"
 import pandas as pd
 from collections import defaultdict
 from scipy.stats import fisher_exact, false_discovery_control
@@ -7,16 +7,58 @@ from src.support_functions import read_fasta
 
 #### Config
 
+datasets = config["datasets"]
+esm_models = ["ESM2", "ESMC"]
+prediction_models = ["AF", "RF2-PPI", "DCA"]
+network_types = ["directional", "undirectional"]
+#expected_output += colocalisation_plot + go_jaccards_plot + hydro_delta_plot +  do_jaccards_plot
+#expected_output += negatome_compare + matched_colocalisation_plot + negatome_entropy
+
+
 ## Sub workflows
 include: "src/FormatFiltering/FormatingFiltering.smk"
 
 include: "src/ExperimentalSearchSpace/experimental_search_space.smk"
+include: "src/ExperimentalSearchSpace/CountProteinPairs.smk"
 
 include: "src/Analysis/CellLine/cell_line_analysis.smk"
 include: "src/Analysis/CellLine/GetCellLineAnnotation.smk"
 include: "src/Analysis/DetectionMethod/detection_method.smk"
 include: "src/Analysis/ExperimentalNegatome/experimental_negatome.smk"
+include: "src/Analysis/ExternalFDR/ExternalFDR.smk"
+include: "src/Analysis/AbundanceAwareDetection/MCMC_abundance.smk"
 
+include: "src/Analysis/Annotation/AnnotationProbabilities.smk"
+include: "src/Analysis/Annotation/InterfaceStatistics.smk"
+include: "src/Analysis/InterfaceStatistics/ProteinInterfaces.smk"
+
+include: "src/Analysis/Expression/Coexpression.smk"
+include: "src/Analysis/Co-essentiality/CoEssensiality.smk"
+include: "src/Analysis/NonInteractionHubs/NoInteractionHubs.smk"
+include: "src/Analysis/NonInteractionHubs/DegreeQuadrants.smk"
+include: "src/Analysis/MethodConcordance/MethodConcordance.smk"
+include: "src/Analysis/ProteinPromiscuity/ProteinPromiscuity.smk"
+include: "src/Analysis/ProteinPromiscuity/AutoActivatorsContaminants.smk"
+#include: "src/Analysis/ProteinPromiscuity/TestFeatureDetectability.smk"
+
+include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
+include: "src/Analysis/NegatomeComparison/CompareSharedBaits.smk"
+include: "src/Analysis/CompareLocalisationMethod/MethodLocalisation.smk"
+include: "src/Analysis/CheckAgainstPredictions/CheckAgainstPredicted.smk"
+include: "src/Analysis/CheckAgainstPredictions/CheckAgainstOtherMethods.smk"
+
+include: "src/PPIClassification/Embeddings/Embeddings.smk"
+include: "src/PPIClassification/DataSplit/GetGraphs.smk"
+include: "src/PPIClassification/DataSplit/GenePartitions.smk"
+include: "src/PPIClassification/DataSplit/GenerateSplits.smk"
+include: "src/PPIClassification/DataSplit/CheckRedundancy.smk"
+include: "src/PPIClassification/ModelEvaluation/Evaluations.smk"
+include: "src/PPIClassification/DatasetBalance/DatasetBalance.smk"
+
+
+include: "src/PPIClassification/Classification/Classifiers.smk"
+include: "src/PPIClassification/Report/Reporting.smk"
+include: "src/Plotting/get_plots.smk"
 
 wildcard_constraints:
     cell_line="_[_a-zA-Z]+",
@@ -31,13 +73,23 @@ wildcard_constraints:
     selected_data="[a-z0-9_.]+",
     network_type="(directional|undirectional)",
     random="(-random)?",
-    esm_model="[A-Z0-9]+",
+    esm_model="[A-Za-z0-9]+",
     permutation="[0-9]+",
     classifier="[a-z]+",
-    pair_set="(all|correct)"
+    pair_set="(all|correct)",
+    source="[a-zA-Z0-9]+"
 
 rule all:
     input:
-        "work_folder/inferred_search_space/aggregated/cell_line/cell_line_experimental_wise.csv",
-        "work_folder/analysis/POD/undirectional/POD_cell_line.pq",
-        "work_folder/analysis/POD/directional/POD_cell_line.pq",
+        expand("work_folder/classification/{source}/{classifier}/hrni_no_delta/plots/{network_type}_{esm_model}_delta_auc_boxplot.png",
+               **config["classification_targets"]),
+        expand("work_folder/classification/{source}/{classifier}/hrni_no_delta/{network_type}_{esm_model}_delta_auc_summary.tsv",
+               **config["classification_targets"]),
+        expand("work_folder/analysis/FDR_aware/global_fit/{network_type}_{dataset}.tsv", dataset=["ms"], network_type = "directional"),
+        #expand("work_folder/classification/{classifier}/hrni_no_delta/plots/{network_type}_{esm_model}_delta_auc_boxplot.png",
+        #       classifier="xgboost", network_type=network_types, esm_model=["ESM2", "ProstT5"]),
+        #expand("work_folder/analysis/FDR_aware/plots/{network_type}_ms_log_odds_vs_pod.png", network_type=network_types),
+        #"work_folder/analysis/ProteinPromiscuity/autoactivators/known/ms_prey_added.pdf",
+        #"work_folder/analysis/ProteinPromiscuity/autoactivators/known/y2h_bait_added.pdf",
+        #expand("work_folder/analysis/ProteinPromiscuity/features/tests/{dataset}_{network_type}_{feature}.tsv",
+        # dataset=["ms", "y2h"], network_type=["directional", "undirectional"], feature = ["nucleoplasm-vs-cytocol",]),

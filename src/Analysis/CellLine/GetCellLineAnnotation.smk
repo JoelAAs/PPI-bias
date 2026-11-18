@@ -1,6 +1,5 @@
 import pandas as pd
-import re
-
+from src.FormatFiltering.formating import parse_sec_ac_mapping
 
 def parse_cellosaurus(filename, output_file):
     header_passed = False
@@ -25,21 +24,6 @@ def parse_cellosaurus(filename, output_file):
                     header_passed = True
 
 
-def format_bioplex(bp_f, gene_name_df, cl):
-        bp_df = pd.read_csv(bp_f, sep="\t")[["Bait GeneID", "Prey GeneID"]]
-        bp_df.columns = ["gene_name_bait", "gene_name_prey"]
-        bp_df[["pubmed_id", "detection_method", "CVCL"]] = ["33961781", "MI-0007", cl]
-
-
-        bp_df = bp_df.merge(gene_name_df, left_on="gene_name_bait", right_on="gene_name")
-        del bp_df["gene_name"]
-        bp_df = bp_df.merge(gene_name_df, left_on="gene_name_prey", right_on="gene_name", suffixes=("_bait", "_prey"))
-        del bp_df["gene_name"]
-
-        return bp_df
-
-
-
 rule get_pubtator:
     output:
         "work_folder/cell_line_annotation/cellline2pubtator3.txt"
@@ -56,16 +40,92 @@ rule get_pubtator:
 
 rule get_bioplex:
     output:
-        cvcl_0291_bp="work_folder/data/bioplex/CVCL_0291.csv",
-        cvcl_0063_bp="work_folder/data/bioplex/CVCL_0063.csv"
+        cvcl_0291_bp="work_folder/data/bioplex/CVCL_0291_bp.csv",
+        cvcl_0063_bp="work_folder/data/bioplex/CVCL_0063_bp.csv",
+        cvcl_0291_net="work_folder/data/bioplex/CVCL_0291_net.csv",
+        cvcl_0063_net="work_folder/data/bioplex/CVCL_0063_net.csv",
     log:
         "logs/data/bioplex/bioplex.log"
     shell:
         """
         exec > {log} 2>&1
         wget https://bioplex.hms.harvard.edu/data/BioPlex_3.0_293T_DirectedEdges.tsv -O {output.cvcl_0063_bp}
+        wget https://bioplex.hms.harvard.edu/data/BioPlex_293T_Network_10K_Dec_2019.tsv -O {output.cvcl_0063_net}
         wget https://bioplex.hms.harvard.edu/data/BioPlex_3.0_HCT116_DirectedEdges.tsv -O {output.cvcl_0291_bp}
+        wget https://bioplex.hms.harvard.edu/data/BioPlex_HCT116_Network_5.5K_Dec_2019.tsv -O {output.cvcl_0291_net}
         """
+
+
+
+rule format_bioplex:
+    input:
+        bp="work_folder/data/bioplex/{bp_cl}_bp.csv",
+        network="work_folder/data/bioplex/{bp_cl}_net.csv",
+        sec_ac="work_folder/data/uniprot/sec_ac.txt",
+        gene_names = "work_folder/gene_names/uniprot_to_gene_name.csv"
+    output:
+        formated="work_folder/data/bioplex/{bp_cl}.csv",
+    log:
+        "logs/data/bioplex/{bp_cl}_format.log"
+    run:
+        df_bp = pd.read_csv(input.bp, sep="\t")[["Bait GeneID", "Prey GeneID"]]
+        df_bp.columns = ["gene_id_bait", "gene_id_prey"]
+        df_network = pd.read_csv(input.network, sep="\t")[["GeneA", "GeneB", "UniprotA", "UniprotB"]]
+
+        net_fwd = df_network.rename(columns={
+            "GeneA": "gene_id_bait", "GeneB": "gene_id_prey",
+            "UniprotA": "uniprot_id_bait", "UniprotB": "uniprot_id_prey"})
+        net_rev = df_network.rename(columns={
+            "GeneB": "gene_id_bait", "GeneA": "gene_id_prey",
+            "UniprotB": "uniprot_id_bait", "UniprotA": "uniprot_id_prey"})
+        net_both = pd.concat([net_fwd, net_rev]).drop_duplicates(["gene_id_bait", "gene_id_prey"])
+
+        df_joined = df_bp.merge(net_both, on=["gene_id_bait", "gene_id_prey"], how="left", validate="many_to_one")
+
+        n_missing = df_joined["uniprot_id_bait"].isna().sum()
+        assert n_missing == 0, f"{n_missing} bp edges not found in network"
+        assert len(df_joined) == len(df_bp), "Join changed number of bp edges"
+
+        net_keys = set(tuple(sorted(s)) for s in zip(df_network["GeneA"], df_network["GeneB"]))
+        bp_keys = set(tuple(sorted(s)) for s in zip(df_bp["gene_id_bait"], df_bp["gene_id_prey"]))
+        
+        assert net_keys == bp_keys, f"{len(net_keys - bp_keys)} network edges not in bp, {len(bp_keys - net_keys)} bp edges not in network"
+
+        ac_map = parse_sec_ac_mapping(input.sec_ac)
+        
+        def _map_ac(ac_id):
+            iso_n = None
+            if "-" in ac_id:
+                ac_id_s, iso_n = ac_id.split("-")
+            else:
+                ac_id_s = ac_id
+
+            if ac_id_s in ac_map:
+                if iso_n:
+                    return f"{ac_map[ac_id_s]}-{iso_n}"
+                return ac_map[ac_id_s]
+            return ac_id
+
+        df_joined["uniprot_id_bait"] = df_joined["uniprot_id_bait"].apply(_map_ac)
+        df_joined["uniprot_id_prey"] = df_joined["uniprot_id_prey"].apply(_map_ac)
+
+
+        gene_name_df = pd.read_csv(input.gene_names, sep="\t")
+        df_joined = df_joined.merge(gene_name_df, left_on="uniprot_id_bait", right_on="uniprot_id")
+        del df_joined["uniprot_id"]
+        df_joined = df_joined.merge(gene_name_df, left_on="uniprot_id_prey", right_on="uniprot_id", suffixes=("_bait", "_prey"))
+        del df_joined["uniprot_id"]
+
+        df_joined["pubmed_id"] = "33961781"
+        df_joined["detection_method"] = "MI-0007"
+        df_joined["CVCL"] = wildcards.bp_cl
+        column_order =[
+            'uniprot_id_bait', 'uniprot_id_prey', 'pubmed_id', 'detection_method',
+            'gene_name_bait', 'gene_name_prey', 'CVCL'
+        ]
+        df_joined[column_order].to_csv(output.formated, sep="\t", index=False)
+        
+
 
 rule get_cellosaurus:
     output:
@@ -96,15 +156,14 @@ rule get_cellosaurus_human_cl:
 
 rule join_to_pid:
     params:
-        pid_to_drop = config["pid_to_remove"]
+        pid_to_drop = config["pid_to_remove_cl"]
     input:
         pubator = "work_folder/cell_line_annotation/cellline2pubtator3.txt",
         human_cell_lines = "work_folder/data/cellosaurus/cellosaurus_human.txt",
         formatted_intact = "work_folder/formated/bait_prey_publications.csv",
         cvcl_0291_bp="work_folder/data/bioplex/CVCL_0291.csv",
         cvcl_0063_bp="work_folder/data/bioplex/CVCL_0063.csv",
-        manual_curated = "data/checked_studies.csv",
-        gene_names = "work_folder/gene_names/gene_names.csv"
+        manual_curated = "data/checked_studies.csv"
     output:
         cvcl_ppi = "work_folder/formated/bait_prey_CVCL.csv"
     log:
@@ -141,9 +200,8 @@ rule join_to_pid:
         ppi_cvcl_df = ppi_cvcl_df[~ppi_cvcl_df["CVCL"].isna()]
 
         # Get_bioplex
-        gene_name_df = pd.read_csv(input.gene_names, sep="\t")
-        bioplex_0291 = format_bioplex(input.cvcl_0291_bp, gene_name_df, "CVCL_0291")
-        bioplex_0063 = format_bioplex(input.cvcl_0063_bp, gene_name_df, "CVCL_0063")
+        bioplex_0291 = pd.read_csv(input.cvcl_0291_bp, sep="\t")
+        bioplex_0063 = pd.read_csv(input.cvcl_0063_bp, sep="\t")
 
         all_cvcl_ppi = pd.concat([
             ppi_cvcl_df[column_order],
