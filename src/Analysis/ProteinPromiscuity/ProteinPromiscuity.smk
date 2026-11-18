@@ -65,7 +65,7 @@ rule get_row_wise_detection:
 
 rule test_distribution:
     params:
-        search_space_minimum = [0, 200, 400, 800, 1600],
+        search_space_minimum = [0, 200, 400],
     input:
         pod_data = "work_folder/analysis/POD/directional/POD_{dataset}.pq",
     output:
@@ -80,8 +80,8 @@ rule test_distribution:
 
 rule test_degree_distribution:
     params:
-        pod_limits = [0.02, 0.05, 0.15, 0.29],
-        fdr_limits = [0.1, 0.5, 0.7, 0.99],
+        pod_limits = [0.02, 0.15, 0.29],
+        fdr_limits = [0.1, 0.7, 0.99],
     input:
         pod_data = "work_folder/analysis/POD/{network_type}/POD_{dataset}.pq",
         fdr_data = "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq",

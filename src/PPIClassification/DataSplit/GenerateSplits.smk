@@ -73,7 +73,7 @@ rule generate_threshold_datasets:
         full_detection = "work_folder/subsets/{source}/input/{dataset}_{network_type}.pq"
     threads: 10
     resources:
-        mem_gb=130
+        mem_gb=50
     output:
         balanced_edges_positive = "work_folder/subsets/{source}/train/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_pos.csv",
         balanced_edges_negative = "work_folder/subsets/{source}/train/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_neg.csv"
@@ -92,6 +92,6 @@ rule generate_negative_sample:
     log:
         "logs/subsets/{source}/train/{dataset}_{network_type}_limit_{neg_limit}_poslim_{pos_limit}_random_neg.log"
     resources:
-        mem_gb=80
+        mem_gb=50
     script:
         "scripts/random_negative.py"

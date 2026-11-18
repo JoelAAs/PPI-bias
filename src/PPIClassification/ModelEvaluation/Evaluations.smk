@@ -92,6 +92,53 @@ def all_metrics_in_run(input_path, wildcards):
         esm_model=classification_targets["esm_model"]
     )
 
+rule naive_model_metrics:
+    input:
+        saved_model="work_folder/classification/naive_split/{classifier}/model/{network_type}_{pos_set}_{neg_set}{no}_seed_{seed}_{esm_model}.joblib",
+        train="work_folder/naive_split/seed_{seed}_train/{network_type}/balanced/{pos_set}_{neg_set}{no}.tsv",
+        test="work_folder/naive_split/seed_{seed}_test/{network_type}/balanced/{pos_set}_{neg_set}{test_no}.tsv",
+        protein_embeddings="work_folder/embeddings/canonical_{esm_model}_mean_max.csv.gz",
+    output:
+        metrics="work_folder/classification/naive_split/{classifier}/metrics/{network_type}_{pos_set}_{neg_set}{no}_seed_{seed}_{esm_model}_test{test_no}_metrics.tsv",
+        pred="work_folder/classification/naive_split/{classifier}/predictions/{network_type}_{pos_set}_{neg_set}{no}_seed_{seed}_{esm_model}_test{test_no}_pred.tsv.gz",
+    log:
+        "logs/classification/naive_split/{classifier}/metrics/{network_type}_{pos_set}_{neg_set}{no}_seed_{seed}_{esm_model}_test{test_no}_metrics.log",
+    threads: 1
+    resources:
+        mem_gb=3,
+    script:
+        "scripts/evaluate_naive_split.py"
+
+
+rule naive_all_metrics:
+    input:
+        metrics=lambda wc: expand(
+            "work_folder/classification/naive_split/{classifier}/metrics/{network_type}_{pos_set}_{neg_set}{no}_seed_{seed}_{esm_model}_test{test_no}_metrics.tsv",
+            **dict(wc.items()),  # classifier, network_type, esm_model
+            pos_set=["hippie"] + list(config["naive_split"]["positive"]),
+            neg_set=list(config["naive_split"]["negative"]),
+            no=["", "-no"],
+            test_no=["", "-no"],
+            seed=config["naive_split"]["seeds"],
+        ),
+    output:
+        all_metrics="work_folder/classification/naive_split/{classifier}/all_metrics_{network_type}_{esm_model}.tsv",
+    shell:
+        "awk 'FNR > 1 || NR == 1' {input.metrics} > {output.all_metrics}"
+
+rule plot_naive_performance:
+    input:
+        all_metrics=expand("work_folder/classification/naive_split/{{classifier}}/all_metrics_{{network_type}}_{esm_model}.tsv",
+            esm_model=config["classification_targets"]["esm_model"]
+        )
+    output:
+        auc="work_folder/classification/naive_split/plots/{network_type}_{classifier}_auc_hrni_test.svg",
+        auc_embedding="work_folder/classification/naive_split/plots/{network_type}_{classifier}_auc_hrni_test_by_embedding.svg",
+        delta_test="work_folder/classification/naive_split/plots/{network_type}_{classifier}_delta_hrni_vs_no_test.svg",
+        delta_adj="work_folder/classification/naive_split/plots/{network_type}_{classifier}_delta_auc_vs_adjusted.svg",
+    script:
+        "scripts/plot_naive_performance.R"
+
 rule full_run_metrics:
     input:
         metrics=lambda wc: all_metrics_in_run(

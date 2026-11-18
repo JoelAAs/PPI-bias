@@ -86,9 +86,27 @@ p_pod_vs_n_tested <- ggplot(observed, aes(x = n_tested, y = p)) +
   ) +
   theme_pod
 
-ggsave(snakemake@output$log_odds_vs_pod, p_log_odds_vs_pod, width = 5, height = 3.5, dpi = 300)
-ggsave(snakemake@output$log_odds_vs_n_tested, p_log_odds_vs_n_tested, width = 5, height = 3.5, dpi = 300)
-ggsave(snakemake@output$pod_vs_n_tested, p_pod_vs_n_tested, width = 5, height = 3.5, dpi = 300)
+ggsave(
+  snakemake@output$log_odds_vs_pod,
+  p_log_odds_vs_pod,
+  width = 5,
+  height = 3.5,
+  dpi = 300
+)
+ggsave(
+  snakemake@output$log_odds_vs_n_tested,
+  p_log_odds_vs_n_tested,
+  width = 5,
+  height = 3.5,
+  dpi = 300
+)
+ggsave(
+  snakemake@output$pod_vs_n_tested,
+  p_pod_vs_n_tested,
+  width = 5,
+  height = 3.5,
+  dpi = 300
+)
 
 ## ---- theta_s distribution --------------------------------------------------
 study <- read_tsv(snakemake@input$study_fdr, show_col_types = FALSE) %>%

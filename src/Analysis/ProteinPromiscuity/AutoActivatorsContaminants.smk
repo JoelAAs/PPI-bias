@@ -69,14 +69,16 @@ rule get_localisation_file:
 
 rule group_uniform:
     input:
-        ranked="work_folder/analysis/ProteinPromiscuity/autoactivators/{dataset}_{role}_partner_effect.tsv",
+        ranked=expand("work_folder/analysis/ProteinPromiscuity/autoactivators/{{dataset}}_{role}_partner_effect.tsv",
+            role = ["bait", "prey"]
+            ),
         pax_db_data="work_folder/data/paxdb_human.tsv",
         localisation="work_folder/data/localisation/uniprot_localisation.csv",
         crapome_proteins="work_folder/analysis/ProteinPromiscuity/autoactivators/crapome_proteins.tsv"
     output:
-        annotated="work_folder/analysis/ProteinPromiscuity/autoactivators/groups/{dataset}_{role}_partner_effect.tsv",
-        tests="work_folder/analysis/ProteinPromiscuity/autoactivators/groups/{dataset}_{role}_feature_tests.tsv",
-        plot_or="work_folder/analysis/ProteinPromiscuity/autoactivators/groups/{dataset}_{role}_feature_log_or.svg",
-        plot_ratio="work_folder/analysis/ProteinPromiscuity/autoactivators/groups/{dataset}_{role}_feature_ratio.svg"
+        annotated="work_folder/analysis/ProteinPromiscuity/autoactivators/groups/{dataset}_partner_effect.tsv",
+        tests="work_folder/analysis/ProteinPromiscuity/autoactivators/groups/{dataset}_feature_tests.tsv",
+        plot_or="work_folder/analysis/ProteinPromiscuity/autoactivators/groups/{dataset}_feature_log_or.svg",
+        plot_ratio="work_folder/analysis/ProteinPromiscuity/autoactivators/groups/{dataset}_feature_ratio.svg"
     script:
         "scripts/significant_grouping.py"
