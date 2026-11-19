@@ -4,19 +4,6 @@ import pandas as pd
 from random_negative import get_no_edges
 
 
-def never_observed_candidates(nodes, excluded_df, directed):
-
-    n = len(nodes)
-    ex_a = np.searchsorted(nodes, excluded_df["bait"].to_numpy()).astype(np.int64)
-    ex_b = np.searchsorted(nodes, excluded_df["prey"].to_numpy()).astype(np.int64)
-    if directed:
-        cand_a, cand_b = np.nonzero(~np.eye(n, dtype=bool))
-    else:
-        ex_a, ex_b = np.minimum(ex_a, ex_b), np.maximum(ex_a, ex_b)
-        cand_a, cand_b = np.triu_indices(n, k=1)
-    keep = ~np.isin(cand_a.astype(np.int64) * n + cand_b, ex_a * n + ex_b)
-    return pd.DataFrame({"bait": nodes[cand_a[keep]], "prey": nodes[cand_b[keep]]})
-
 
 def main():
     sys.stdout = sys.stderr = open(snakemake.log[0], "w")

@@ -1,8 +1,3 @@
-## Naive edge-level split
-# 3 positive sets (hippie, fdr, pod) x 2 negative sets (pod, fdr) x {observed, -no} = 12 models per seed.
-# After balancing, positives and negatives travel together as one dataset: bait, prey, interaction (bool).
-
-
 def naive_set_settings(wildcards):
     side = "positive" if wildcards.edge_type == "pos" else "negative"
     return config["naive_split"][side][wildcards.exp_set]
@@ -25,9 +20,9 @@ rule format_hippie_positive:
     input:
         hippie = "work_folder/data/hippie/HIPPIE-current.txt.gz"
     output:
-        edges = "work_folder/naive_split/{network_type}/full/pos/hippie.tsv"
+        edges = "work_folder/naive_split/undirectional/full/pos/hippie.tsv"
     log:
-        "logs/naive_split/{network_type}/full/pos/hippie.log"
+        "logs/naive_split/undirectional/full/pos/hippie.log"
     run:
         hippie = pd.read_csv(input.hippie, sep="\t", usecols=["uniprot_accession_A", "uniprot_accession_B"])
         hippie = hippie.rename(columns={"uniprot_accession_A": "bait", "uniprot_accession_B": "prey"})
@@ -98,4 +93,12 @@ rule get_naive_no_negative:
         "scripts/naive_no_negative.py"
 
 
-
+rule generete_sets_for_ppi_split_pipeline:
+    input:
+        pos = "work_folder/naive_split/undirectional/full/pos/{pos_set}.tsv",
+        neg = "work_folder/naive_split/undirectional/full/neg/{neg_set}.tsv"
+    output:
+        pos = "work_folder/naive_split/matched_for_ppi-split/pos/{pos_set}_{neg_set}.csv",
+        neg = "work_folder/naive_split/matched_for_ppi-split/neg/{pos_set}_{neg_set}.csv"
+    script:
+        "scripts/prepare_for_ppi-split_pl.py"
