@@ -56,6 +56,7 @@ include: "src/PPIClassification/DatasetBalance/DatasetBalance.smk"
 
 
 include: "src/PPIClassification/Classification/Classifiers.smk"
+include: "src/PPIClassification/Classification/EvaluatePredefinedSplits.smk"
 include: "src/PPIClassification/Report/Reporting.smk"
 include: "src/Plotting/get_plots.smk"
 
@@ -84,7 +85,9 @@ wildcard_constraints:
     seed="[0-9]+",
     edge_type="(pos|neg)",
     exp_set="(fdr|pod)",
-    set="seed_[0-9]+_(train|test)"
+    set="seed_[0-9]+_(train|test)",
+    state="(cand|nonobs)",
+    test_state="(cand|nonobs)"
 
 rule all:
     input:
@@ -103,6 +106,7 @@ rule all:
         expand("work_folder/classification/naive_split/{classifier}/all_metrics_{network_type}_{esm_model}.tsv",
             classifier=config["naive_split"]["classifier"], network_type=config["naive_split"]["network_type"],
             esm_model=config["naive_split"]["esm_model"]),
+        "work_folder/classification/predef/xgboost/all_metrics_undirectional.tsv",
         expand("work_folder/classification/naive_split/plots/{network_type}_{classifier}_{plot}.svg",
             network_type=config["naive_split"]["network_type"], classifier=config["naive_split"]["classifier"],
             plot=["auc_hrni_test", "auc_hrni_test_by_embedding", "delta_hrni_vs_no_test", "delta_auc_vs_adjusted"]),

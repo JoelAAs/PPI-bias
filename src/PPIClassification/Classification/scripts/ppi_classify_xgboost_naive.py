@@ -12,7 +12,13 @@ RANDOM_STATE = snakemake.params.random_state
 threads = snakemake.threads
 directed = {"directional": True, "undirectional": False}[snakemake.wildcards.network_type]
 
-df_train = pd.read_csv(snakemake.input.train, sep="\t", dtype={"bait": str, "prey": str})
+if snakemake.input.train.endswith(".csv"):
+    # Predefined split from the ppi-split pipeline: protein1,protein2,label
+    df_train = pd.read_csv(snakemake.input.train, dtype={"protein1": str, "protein2": str})
+    df_train = df_train.rename(columns={"protein1": "bait", "protein2": "prey"})
+    df_train["interaction"] = df_train.pop("label").astype(bool)
+else:
+    df_train = pd.read_csv(snakemake.input.train, sep="\t", dtype={"bait": str, "prey": str})
 df_pos = df_train.loc[df_train["interaction"], ["bait", "prey"]]
 df_negative = df_train.loc[~df_train["interaction"], ["bait", "prey"]]
 
