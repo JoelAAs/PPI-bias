@@ -44,7 +44,7 @@ def main():
         "negative": f"{wc.neg_set}{STATE_SUFFIX[wc.state]}",
         "seed": "predefined",
         "esm_model": wc.esm_model,
-        "classifier": wc.classifier,
+        "classifier": "xgboost",
         "roc_auc": roc_auc_score(y_test, y_pred),
         "roc_auc_adj": roc_auc_adj,
         "pr_auc": average_precision_score(y_test, y_pred),
@@ -55,9 +55,7 @@ def main():
         "n_test_pos": int(test_df["interaction"].sum()),
         "n_test_neg": int((~test_df["interaction"]).sum()),
         "test_set": "no" if wc.test_state == "nonobs" else "exp",
-        "train_state": wc.state,
-        "test_state": wc.test_state,
-        "test_type": wc.test_type,
+        "train_state": wc.state
     }])
     metrics.to_csv(snakemake.output.metrics, sep="\t", index=False)
     pairs_test.assign(label=y_test, score=y_pred).to_csv(snakemake.output.pred, sep="\t", index=False)
