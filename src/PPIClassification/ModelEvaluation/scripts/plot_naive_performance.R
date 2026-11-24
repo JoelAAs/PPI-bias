@@ -19,13 +19,15 @@ df_metrics <- read_tsv(
         .default = "-"
     )
 ) %>%
+    # negative is "<source>-<exp|no>", e.g. "pod-exp" (HRNI) or "fdr-no" (NO)
     mutate(
         train_neg = factor(
-            if_else(str_ends(negative, "-no"), "NO", "HRNI"),
-            levels = c("HRNI", "NO")
+            str_extract(negative, "[^-]+$"),
+            levels = c("exp", "no"),
+            labels = c("HRNI", "NO")
         ),
         neg_source = factor(
-            str_remove(negative, "-no$"),
+            str_remove(negative, "-[^-]+$"),
             levels = c("fdr", "pod"),
             labels = c("FDR", "POD")
         ),
@@ -43,6 +45,7 @@ df_metrics <- read_tsv(
 stopifnot(
     !is.na(df_metrics$positive),
     !is.na(df_metrics$neg_source),
+    !is.na(df_metrics$train_neg),
     !is.na(df_metrics$test_set)
 )
 

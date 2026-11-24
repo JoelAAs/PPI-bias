@@ -83,41 +83,21 @@ partitions:
 
 oe_lof_low_quantile: 0.25
 
-classification_sources:
-  pod:
-    path: "work_folder/analysis/POD/{network_type}/POD_{dataset}.pq"
-    datasets: ["ms", "y2h"]
-    positive: {column: lower_bound_pod, op: ">=", strict: 0.29, limits: ["all", 0.02, 0.15]}
-    negative: {column: n_tested, op: ">=", strict: 3, limits: [1, 2]}
-  fdr:
-    path: "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_{dataset}.pq"
-    datasets: ["ms"]
-    positive: {column: posterior, op: ">=", strict: 0.99, limits: ["all", 0.3, 0.5, 0.7]}  # placeholder thresholds
-    negative: {column: posterior, op: "<=", strict: 0.0067, limits: [0.009, 0.0085]}
 
-classification_targets:
-  source: ["pod", "fdr"]
-  classifier: ["xgboost"]
-  network_type: ["directional", "undirectional"]
-  esm_model: ["ESM2", "ProstT5"]
-
-# Naive edge-level split: 3 positive x 2 negative x {observed, -no} = 12 models per seed
 naive_split:
   seeds: [1, 2, 3]
   test_fraction: 0.2
-  network_type: ["undirectional"]
+  network_type: ["directional", "undirectional"]
   classifier: ["xgboost"]
   esm_model: ["ESM2", "ProstT5"]
   hippie_url: "https://cbdm-01.zdv.uni-mainz.de/hippie/downloads/HIPPIE-current.txt.gz"
-  positive:  # thresholds = classification_sources strict values, placeholders
+  positive:
     fdr: {path: "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_ms.pq", column: posterior, op: ">", threshold: 0.5}
     pod: {path: "work_folder/analysis/POD/{network_type}/POD_flat.pq", column: lower_bound_pod, op: ">", threshold: 0.15}
   negative:
     pod: {path: "work_folder/analysis/POD/{network_type}/POD_flat.pq", column: n_tested, op: ">", threshold: 2}
     fdr: {path: "work_folder/analysis/FDR_aware/pair_posterior/{network_type}_ms.pq", column: posterior, op: "<", threshold: 0.0085}
 
-permutation_fraction: 0.95
-n_permutations: 10
 drop_isoforms: True
 include_y2h_self_interactions: False
 keep_non_canonical: False

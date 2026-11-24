@@ -91,38 +91,4 @@ wildcard_constraints:
 
 rule all:
     input:
-        # expand("work_folder/classification/{source}/{classifier}/hrni_no_delta/plots/{network_type}_{esm_model}_delta_auc_boxplot.png",
-        #        **config["classification_targets"]),
-        # expand("work_folder/classification/{source}/{classifier}/hrni_no_delta/{network_type}_{esm_model}_delta_auc_summary.tsv",
-        #        **config["classification_targets"]),
-        # expand("work_folder/analysis/FDR_aware/global_fit/{network_type}_{dataset}.tsv", dataset=["ms"], network_type = "directional"),
-        # "work_folder/analysis/FDR_aware/plots/undirectional_ms_fdr_vs_pod.png",
-        # expand("work_folder/analysis/ProteinPromiscuity/autoactivators/groups/{dataset}_feature_log_or.svg",
-        #     dataset=["ms", "y2h"]),
-        # expand("work_folder/analysis/ProteinPromiscuity/detection_distribution/plot/{dataset}_detection_distribution.png", dataset=["ms", "y2h"]),  
-        # expand("work_folder/analysis/ProteinPromiscuity/detection_distribution/plot/{network_type}_{dataset}_pod_bait_prey_degree_correlation.png",
-        #     network_type=network_types, dataset=["ms", "y2h"]),
-        # "work_folder/classification/plots/hrni_no_auc_arrows.png",
-        #expand("work_folder/classification/naive_split/{classifier}/all_metrics_{network_type}_{esm_model}.tsv",
-        #    classifier=config["naive_split"]["classifier"], network_type=config["naive_split"]["network_type"],
-        #    esm_model=config["naive_split"]["esm_model"]),
-        #"work_folder/classification/predef/xgboost/all_metrics.tsv",
-        expand("work_folder/embeddings/predef_{esm_model}_mean_max.csv.gz", esm_model=["ESM2", "ProstT5"]),
-
-        #expand("work_folder/classification/naive_split/plots/{network_type}_{classifier}_{plot}.svg",
-        #    network_type=config["naive_split"]["network_type"], classifier=config["naive_split"]["classifier"],
-        #    plot=["auc_hrni_test", "auc_hrni_test_by_embedding", "delta_hrni_vs_no_test", "delta_auc_vs_adjusted"]),
-        #"work_folder/classification/embedding_sim_auc/all_classifications.tsv",
-        # expand("work_folder/classification/embedding_sim_auc/plots/{dataset}_{source}_{network_type}_{esm_model}_cosine_sim_vs_score.png",
-        #     source = ["pod", "fdr"], dataset="ms", network_type=["directional", "undirectional"], esm_model=["ESM2", "ProstT5"]
-        # ),
-        # expand("work_folder/classification/embedding_sim_auc/plots/{dataset}_{source}_{network_type}_{esm_model}_cosine_sim_vs_score.png",
-        #     source = "pod", dataset="y2h", network_type=["directional", "undirectional"], esm_model=["ESM2", "ProstT5"]
-        # ),
-        #expand("work_folder/classification/{classifier}/hrni_no_delta/plots/{network_type}_{esm_model}_delta_auc_boxplot.png",
-        #       classifier="xgboost", network_type=network_types, esm_model=["ESM2", "ProstT5"]),
-        #expand("work_folder/analysis/FDR_aware/plots/{network_type}_ms_log_odds_vs_pod.png", network_type=network_types),
-        #"work_folder/analysis/ProteinPromiscuity/autoactivators/known/ms_prey_added.pdf",
-        #"work_folder/analysis/ProteinPromiscuity/autoactivators/known/y2h_bait_added.pdf",
-        #expand("work_folder/analysis/ProteinPromiscuity/features/tests/{dataset}_{network_type}_{feature}.tsv",
-        # dataset=["ms", "y2h"], network_type=["directional", "undirectional"], feature = ["nucleoplasm-vs-cytocol",]),
+        "work_folder/classification/performance/predef_and_naive.tsv"
