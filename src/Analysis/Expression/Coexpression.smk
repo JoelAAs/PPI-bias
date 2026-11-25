@@ -47,41 +47,40 @@ rule build_coexpression:
 
 rule get_balanced_set:
     input:
-        max_positive = f"work_folder/subsets/pod/strict/{{dataset}}_{{network_type}}_pos.csv",
-        max_negative = f"work_folder/subsets/pod/strict/{{dataset}}_{{network_type}}_neg.csv",
+        max_positive = "work_folder/naive_split/{network_type}/full/pos/{exp_set}.tsv",
+        max_negative = "work_folder/naive_split/{network_type}/full/neg/{exp_set}.tsv",
         gene_index="work_folder/analysis/coexpression/coexpr_gene_index.tsv",
     output:
-        balanced_positive = f"work_folder/expression/balanced/{{dataset}}_{{network_type}}_limit_{config['classification_sources']['pod']['positive']['strict']}_pos.csv",
-        balanced_negative = f"work_folder/expression/balanced/{{dataset}}_{{network_type}}_limit_{config['classification_sources']['pod']['negative']['strict']}_neg.csv"
+        balanced_positive = "work_folder/expression/balanced/{exp_set}_{network_type}_pos.csv",
+        balanced_negative = "work_folder/expression/balanced/{exp_set}_{network_type}_neg.csv"
     script:
         "scripts/balance_coexpression.py"
         
 
 rule test_hri_vs_hrni:
     input:
-        balanced_positive = f"work_folder/expression/balanced/{{dataset}}_{{network_type}}_limit_{config['classification_sources']['pod']['positive']['strict']}_pos.csv",
-        balanced_negative = f"work_folder/expression/balanced/{{dataset}}_{{network_type}}_limit_{config['classification_sources']['pod']['negative']['strict']}_neg.csv",
+        balanced_positive = "work_folder/expression/balanced/{exp_set}_{network_type}_pos.csv",
+        balanced_negative = "work_folder/expression/balanced/{exp_set}_{network_type}_neg.csv",
         corr_npy="work_folder/analysis/coexpression/coexpr_matrix.npy",
         gene_index="work_folder/analysis/coexpression/coexpr_gene_index.tsv"
     output:
-        hrni_vs_hri="work_folder/analysis/coexpression/{dataset}_{network_type}_hri_hnri.tsv",
-        expression_OR="work_folder/analysis/coexpression/{dataset}_{network_type}_expression_OR.tsv"
+        hrni_vs_hri="work_folder/analysis/coexpression/{exp_set}_{network_type}_hri_hnri.tsv",
+        expression_OR="work_folder/analysis/coexpression/{exp_set}_{network_type}_expression_OR.tsv"
     threads: 10
     log:
-        "logs/analysis/coexpression/{dataset}_{network_type}.log"
+        "logs/analysis/coexpression/{exp_set}_{network_type}.log"
     script:
         "scripts/test_coexpression_hri_hnri.py"
 
 
 rule plot_expression_bin_stats:
     input:
-        hrni_vs_hri=expand(
-            "work_folder/analysis/coexpression/{dataset}_{{network_type}}_hri_hnri.tsv",
-            dataset=config["datasets"]
+        hrni_vs_hri=expand("work_folder/analysis/coexpression/{exp_set}_{{network_type}}_hri_hnri.tsv",
+            exp_set=["fdr", "pod"]
         ),
         expression_OR=expand(
-            "work_folder/analysis/coexpression/{dataset}_{{network_type}}_expression_OR.tsv",
-            dataset=config["datasets"]
+            "work_folder/analysis/coexpression/{exp_set}_{{network_type}}_expression_OR.tsv",
+            exp_set=["fdr", "pod"]
         )
     output:
         box_plot="work_folder/analysis/coexpression/plots/{network_type}_expression_boxplot.png",

@@ -6,14 +6,14 @@ network_type <- snakemake@wildcards$network_type
 
 dataset_label <- function(dataset) {
   case_when(
-    dataset == "flat" ~ "Combined",
-    dataset == "ms" ~ "MS",
-    dataset == "y2h" ~ "Y2H",
+    dataset == "fdr" ~ "FDR",
+    dataset == "pod" ~ "POD",
     TRUE ~ dataset
   )
 }
+dataset_levels <- c("FDR", "POD")
 
-dataset_colors <- c("Combined" = "blue", "MS" = "darkgreen", "Y2H" = "darkorange")
+dataset_colors <- c("FDR" = "#1b9e77", "POD" = "#e7298a")
 
 read_hri_hrni <- function(path) {
   dataset <- sub(paste0("_", network_type, "_hri_hnri\\.tsv$"), "", basename(path))
@@ -21,11 +21,11 @@ read_hri_hrni <- function(path) {
     mutate(dataset = dataset)
 }
 
-group_levels <- unlist(lapply(c("Combined", "MS", "Y2H"), function(d) paste(d, c("HRNI", "HRI"), sep = "\n")))
+group_levels <- unlist(lapply(dataset_levels, function(d) paste(d, c("HRNI", "HRI"), sep = "\n")))
 
 df <- bind_rows(lapply(snakemake@input$hrni_vs_hri, read_hri_hrni)) %>%
   mutate(
-    dataset_label = factor(dataset_label(dataset), levels = c("Combined", "MS", "Y2H")),
+    dataset_label = factor(dataset_label(dataset), levels = dataset_levels),
     pos_label = factor(pos, levels = c(0, 1), labels = c("HRNI", "HRI")),
     group_label = factor(paste(dataset_label, pos_label, sep = "\n"), levels = group_levels)
   )
@@ -33,11 +33,7 @@ df <- bind_rows(lapply(snakemake@input$hrni_vs_hri, read_hri_hrni)) %>%
 g_box <- ggplot(df, aes(x = group_label, y = coexpr, fill = dataset_label)) +
   geom_boxplot(outlier.size = 0.5, alpha = 0.7) +
   geom_signif(
-    comparisons = list(
-      c("Combined\nHRNI", "Combined\nHRI"),
-      c("MS\nHRNI", "MS\nHRI"),
-      c("Y2H\nHRNI", "Y2H\nHRI")
-    ),
+    comparisons = lapply(dataset_levels, function(d) paste(d, c("HRNI", "HRI"), sep = "\n")),
     test = wilcox.test, map_signif_level = FALSE, textsize = 3.5
   ) +
   scale_fill_manual(values = dataset_colors) +
@@ -58,7 +54,7 @@ read_expression_or <- function(path) {
 
 or_df <- bind_rows(lapply(snakemake@input$expression_OR, read_expression_or)) %>%
   mutate(
-    dataset_label = factor(dataset_label(dataset), levels = c("Combined", "MS", "Y2H")),
+    dataset_label = factor(dataset_label(dataset), levels = dataset_levels),
     log_or = log10(OR),
     sig = case_when(
       p.value < 0.001 ~ "***",

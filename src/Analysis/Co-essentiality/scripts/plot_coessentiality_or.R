@@ -5,14 +5,14 @@ network_type <- snakemake@wildcards$network_type
 
 dataset_label <- function(dataset) {
   case_when(
-    dataset == "flat" ~ "Combined",
-    dataset == "ms" ~ "MS",
-    dataset == "y2h" ~ "Y2H",
+    dataset == "fdr" ~ "FDR",
+    dataset == "pod" ~ "POD",
     TRUE ~ dataset
   )
 }
+dataset_levels <- c("FDR", "POD")
 
-dataset_colors <- c("Combined" = "blue", "MS" = "darkgreen", "Y2H" = "darkorange")
+dataset_colors <- c("FDR" = "#1b9e77", "POD" = "#e7298a")
 
 read_one <- function(path) {
   dataset <- sub(paste0("_", network_type, "_coessentiality_OR\\.tsv$"), "", basename(path))
@@ -22,7 +22,7 @@ read_one <- function(path) {
 
 df <- bind_rows(lapply(snakemake@input$coessentiality_OR, read_one)) %>%
   mutate(
-    dataset_label = factor(dataset_label(dataset), levels = c("Combined", "MS", "Y2H")),
+    dataset_label = factor(dataset_label(dataset), levels = dataset_levels),
     log10_or = log10(odds_ratio),
     log10_ci_lo = log10(ci_lo),
     log10_ci_hi = log10(ci_hi)

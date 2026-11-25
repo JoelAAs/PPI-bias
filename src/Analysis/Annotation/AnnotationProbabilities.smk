@@ -15,26 +15,27 @@ rule get_annotation_proteins:
 
 rule test_shared_annotations:
     params:
-        bait_column = f"{config['id_pattern']}_bait",
-        prey_column = f"{config['id_pattern']}_prey"
+        # naive_split edge files have bait/prey columns
+        bait_column = "bait",
+        prey_column = "prey"
     input:
         gene_names  = "work_folder/gene_names/uniprot_to_gene_name.csv",
         annotation  = "work_folder/analysis/shared_annotation_proportions/annotation_proteins.csv",
-        edges_pos = f"work_folder/subsets/pod/strict/{{dataset}}_{{network_type}}_pos.csv",
-        edges_neg = f"work_folder/subsets/pod/strict/{{dataset}}_{{network_type}}_neg.csv"
+        edges_pos = "work_folder/naive_split/{network_type}/full/pos/{exp_set}.tsv",
+        edges_neg = "work_folder/naive_split/{network_type}/full/neg/{exp_set}.tsv"
     output:
-        annotation_protortions = "work_folder/analysis/shared_annotation_proportions/{dataset}_{network_type}.tsv"
+        annotation_protortions = "work_folder/analysis/shared_annotation_proportions/{exp_set}_{network_type}.tsv"
     threads: 20
     log:
-        "logs/analysis/shared_annotation_proportions/{dataset}_{network_type}.log"
+        "logs/analysis/shared_annotation_proportions/{exp_set}_{network_type}.log"
     script:
         "scripts/test_shared_annotations.py"
 
 
 rule plot_shared_annotations:
     input:
-        expand("work_folder/analysis/shared_annotation_proportions/{dataset}_{{network_type}}.tsv",
-            dataset=config["datasets"])
+        expand("work_folder/analysis/shared_annotation_proportions/{exp_set}_{{network_type}}.tsv",
+            exp_set=["fdr", "pod"])
     output:
         "work_folder/analysis/shared_annotation_proportions/plots/{network_type}_OR.png"
     log:

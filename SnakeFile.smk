@@ -33,15 +33,12 @@ include: "src/Analysis/InterfaceStatistics/ProteinInterfaces.smk"
 
 include: "src/Analysis/Expression/Coexpression.smk"
 include: "src/Analysis/Co-essentiality/CoEssensiality.smk"
-include: "src/Analysis/NonInteractionHubs/NoInteractionHubs.smk"
-include: "src/Analysis/NonInteractionHubs/DegreeQuadrants.smk"
 include: "src/Analysis/MethodConcordance/MethodConcordance.smk"
 include: "src/Analysis/ProteinPromiscuity/ProteinPromiscuity.smk"
 include: "src/Analysis/ProteinPromiscuity/AutoActivatorsContaminants.smk"
 
 include: "src/Analysis/NegatomeComparison/NegatomeAnalysis.smk"
 include: "src/Analysis/NegatomeComparison/CompareSharedBaits.smk"
-include: "src/Analysis/CompareLocalisationMethod/MethodLocalisation.smk"
 include: "src/Analysis/CheckAgainstPredictions/CheckAgainstPredicted.smk"
 include: "src/Analysis/CheckAgainstPredictions/CheckAgainstOtherMethods.smk"
 
@@ -91,4 +88,14 @@ wildcard_constraints:
 
 rule all:
     input:
-        "work_folder/classification/performance/predef_and_naive.tsv"
+        # ML predef vs naive
+        "work_folder/classification/performance/predef_and_naive.tsv",
+
+        # Coessence
+        expand("work_folder/analysis/coessentiality/plots/{network_type}_coessentiality_OR.png", network_type=network_types),
+
+        # Coexp
+        expand("work_folder/analysis/coexpression/plots/{network_type}_expression_or_barplot.png", network_type=network_types),
+
+        # Shared annotation
+        expand("work_folder/analysis/shared_annotation_proportions/plots/{network_type}_OR.png", network_type=network_types),
